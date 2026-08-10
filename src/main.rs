@@ -6,7 +6,7 @@ mod monte_carlo;
 mod mc_display;
 mod economic_regimes;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ArgAction};
 use requirements::{LifeStage, PersonalRequirements, PreferenceWeights};
 use tax::TaxSchedule;
 use optimizer::{OptimizerConfig, LifeOptimizer};
@@ -33,7 +33,7 @@ enum Commands {
         age: u32,
 
         /// Are you married?
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
         married: bool,
 
         /// Number of children
@@ -80,7 +80,7 @@ enum Commands {
         age: u32,
 
         /// Are you married?
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
         married: bool,
 
         /// Number of children
@@ -107,7 +107,7 @@ enum Commands {
         age: u32,
 
         /// Are you married?
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
         married: bool,
 
         /// Number of children
@@ -133,7 +133,7 @@ enum Commands {
         age: u32,
 
         /// Are you married?
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
         married: bool,
 
         /// Work percentage to simulate (e.g. 0.8 for 80%)
