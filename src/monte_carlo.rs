@@ -285,9 +285,6 @@ impl PensionSimulator {
 
         let n = self.n_simulations;
 
-        let total_monthly_median = ahv_monthly + monthly_pensions[n / 2] / 12.0
-            * bvg_conversion * 12.0 / 12.0;
-
         // Compute median depletion age
         let depletion_ages_flat: Vec<u32> = depletion_ages
             .iter()

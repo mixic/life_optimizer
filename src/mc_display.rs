@@ -176,24 +176,6 @@ pub fn print_work_pct_pension_comparison(comparisons: &[WorkPctComparison], mont
     println!("{}", "═══════════════════════════════════════════════════════════\n".cyan());
 }
 
-/// One-line summary for the optimal result display
-pub fn print_pension_one_liner(base: &MonteCarloResult, monthly_needs: f64) {
-    let coverage = (base.median_total_monthly / monthly_needs * 100.0) as u32;
-    let icon = if coverage >= 100 { "✓" } else { "⚠" };
-    let color_fn: Box<dyn Fn(String) -> String> = if coverage >= 100 {
-        Box::new(|s: String| s.green().to_string())
-    } else {
-        Box::new(|s: String| s.yellow().to_string())
-    };
-
-    println!("  Pension (base):      {}",
-        color_fn(format!("{} CHF {:.0}/month  ({:.0}% of needs)",
-            icon, base.median_total_monthly, coverage)));
-    println!("  Pension risk:        {:.0}% chance adequate until age 90  |  {:.0}% depletion risk",
-        base.prob_adequate * 100.0,
-        base.prob_depletion * 100.0);
-}
-
 /// Display the regime-switching (recession/inflation-aware) simulation
 pub fn print_regime_switching_result(result: &RegimeSwitchingResult, monthly_needs: f64) {
     println!("\n{}", "═══════════════════════════════════════════════════════════".magenta());
