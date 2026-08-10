@@ -1,12 +1,12 @@
 # Life Optimizer - Complete Implementation
 
-## 🎯 Project Overview
+## Project Overview
 
 This is a complete, production-ready Rust implementation of a **multi-objective life optimization tool** that solves the fundamental question:
 
 **"What work percentage maximizes my lifetime utility, considering taxes, personal requirements, time value, and long-term security?"**
 
-## ✨ What Makes This Novel
+## What Makes This Novel
 
 Unlike simple inflation calculators or financial tools, this optimizer addresses **all three aspects** you identified:
 
