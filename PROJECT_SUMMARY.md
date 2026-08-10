@@ -310,7 +310,7 @@ cargo test
 
 MIT License - Free to use, modify, distribute
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Inspired by:
 - Operations Research (optimization theory)
@@ -318,7 +318,7 @@ Inspired by:
 - Swiss tax system (progressive taxation)
 - Life satisfaction research (happiness studies)
 
-## 📞 Support
+## Support
 
 - Read QUICKSTART.md for beginner guide
 - Check EXAMPLES.md for scenarios
@@ -331,11 +331,11 @@ Inspired by:
 
 This is a **complete, working implementation** of a life optimization tool that goes far beyond traditional financial calculators by incorporating:
 
-1. ✅ Variable progressive taxes
-2. ✅ Personal spending requirements
-3. ✅ Time value (leisure, family, health)
-4. ✅ Long-term security (pension)
-5. ✅ Life stage dynamics
+1. Variable progressive taxes
+2. Personal spending requirements
+3. Time value (leisure, family, health)
+4. Long-term security (pension)
+5. Life stage dynamics
 
 The tool provides **actionable insights** like:
 - "80% work gives you better life quality than 100%"
