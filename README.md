@@ -275,7 +275,13 @@ fund — not replace one.
 
 ## License
 
-MIT — do whatever you'd like with it.
+Starting with version [X.Y.Z / current development], this project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. 
+
+* **Why the change?** I've transitioned from the MIT License to GPL v3.0 to ensure that this standalone application remains free and open-source for everyone, and that all future derivative works and improvements are contributed back to the community.
+* **Previous Versions:** Legacy versions remain available under the terms of the MIT License.
+
+For more details, see the [LICENSE](LICENSE) file.
+
 
 ## Contributing
 
