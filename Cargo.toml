@@ -1,0 +1,22 @@
+[package]
+name = "life-optimizer"
+version = "0.1.0"
+edition = "2021"
+authors = ["Life Optimizer Team"]
+description = "Optimize work-life balance considering taxes, personal requirements, and long-term sustainability"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+tabled = "0.15"
+prettytable-rs = "0.10"
+chrono = "0.4"
+rand = "0.8"
+rand_distr = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
