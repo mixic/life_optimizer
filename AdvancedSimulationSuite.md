@@ -1,278 +1,330 @@
-AdvancedSimulationSuite.md
+# Advanced Simulation Suite
 
-Advanced Simulation Methods, Hybrid Model, Implementation Blueprint, Benchmarking, and Future Work for Life Optimizer
+Advanced Simulation Methods, Hybrid Model, Implementation Blueprint, Benchmarking, and Future Work for Life Optimizer.
 
-1. Introduction
+## 1. Introduction
 
-This document defines an advanced simulation suite for Life Optimizer, including:
+This document defines an advanced simulation suite for Life Optimizer and covers:
 
-Advanced price and pension simulation methods
+- advanced price and pension simulation methods
+- a hybrid model specification combining multiple techniques
+- a Rust implementation blueprint
+- a simulation benchmarking report design
+- integration into the existing future work roadmap
 
-A hybrid model specification combining multiple techniques
+The goal is to move Life Optimizer toward institution-grade modeling used by pension funds, insurers, and quantitative finance practitioners.
 
-A Rust implementation blueprint
+## 2. Advanced Simulation Methods — Technical Specifications
 
-A simulation benchmarking report design
+### 2.1 Geometric Brownian Motion (GBM)
 
-Integration into the existing Future Work roadmap
+**Purpose:** Baseline stochastic process for asset prices.
 
-The goal is to move Life Optimizer toward institution‑grade modeling used by pension funds, insurers, and quantitative finance practitioners.
+**Model:**
 
-2. Advanced Simulation Methods — Technical Specifications
+$$
+dS_t = \mu S_t\,dt + \sigma S_t\,dW_t
+$$
 
-2.1 Geometric Brownian Motion (GBM)
+**Properties:**
 
-Purpose: Baseline stochastic process for asset prices.
+- Log-normal distribution
+- Constant volatility
+- No mean reversion
 
-Model: $$ dS_t = \mu S_t,dt + \sigma S_t,dW_t $$
+**Implementation Notes:**
 
-Properties:
+- Euler–Maruyama discretization
+- Time step: monthly or yearly
+- Good baseline for BVG projections
 
-Log‑normal distribution
+### 2.2 Ornstein–Uhlenbeck (OU) / Vasicek Process
 
-Constant volatility
+**Purpose:** Mean-reverting processes for inflation, interest rates, and salary growth.
 
-No mean reversion
+**Model:**
 
-Implementation Notes:
+$$
+dx_t = \theta(\mu - x_t)\,dt + \sigma\,dW_t
+$$
 
-Euler–Maruyama discretization
+**Properties:**
 
-Time step: monthly or yearly
+- Stationary distribution
+- Captures economic cycles
 
-Good baseline for BVG projections
+**Implementation Notes:**
 
-2.2 Ornstein–Uhlenbeck (OU) / Vasicek Process
+- Closed-form discretization
+- Calibrate using historical inflation and salary data
 
-Purpose: Mean‑reverting processes for inflation, interest rates, salary growth.
+### 2.3 Heston Stochastic Volatility Model
 
-Model: $$ dx_t = \theta(\mu - x_t),dt + \sigma,dW_t $$
+**Purpose:** Realistic modeling of volatility clustering.
 
-Properties:
+**Model:**
 
-Stationary distribution
+$$
+dS_t = \mu S_t\,dt + \sqrt{v_t} S_t\,dW_t^S$$
 
-Captures economic cycles
+$$
+dv_t = \kappa(\theta - v_t)\,dt + \xi\sqrt{v_t}\,dW_t^v
+$$
 
-Implementation Notes:
+**Properties:**
 
-Closed‑form discretization
+- Volatility clustering
+- More realistic than GBM
 
-Calibrate using historical inflation/salary data
+**Implementation Notes:**
 
-2.3 Heston Stochastic Volatility Model
+- Correlated Brownian motions
+- Suitable for long-term pension risk modeling
 
-Purpose: Realistic modeling of volatility clustering.
+### 2.4 Jump-Diffusion Models (Merton, Kou)
 
-Model: $$ dS_t = \mu S_t,dt + \sqrt{v_t} S_t,dW_t^S $$ $$ dv_t = \kappa(\theta - v_t),dt + \xi\sqrt{v_t},dW_t^v $$
+**Purpose:** Model sudden market crashes or inflation spikes.
 
-Properties:
+**Model:**
 
-Volatility clustering
+$$
+dS_t = \mu S_t\,dt + \sigma S_t\,dW_t + J_t S_t
+$$
 
-More realistic than GBM
+Where $J_t$ is a Poisson jump process.
 
-Implementation Notes:
+**Properties:**
 
-Correlated Brownian motions
+- Fat tails
+- Crisis events
 
-Suitable for long‑term pension risk modeling
+**Implementation Notes:**
 
-2.4 Jump‑Diffusion Models (Merton, Kou)
+- Simulate Poisson jump times
+- Use jump magnitude distributions such as normal or double-exponential
 
-Purpose: Model sudden market crashes or inflation spikes.
+### 2.5 Regime-Switching SDE (Markov Switching)
 
-Model: $$ dS_t = \mu S_t,dt + \sigma S_t,dW_t + J_t S_t $$
+**Purpose:** Combine SDEs with economic regimes.
 
-Where (J_t) is a Poisson jump process.
+**Model:**
 
-Properties:
+Regime $i$ has:
 
-Fat tails
+$$
+dS_t = \mu_i S_t\,dt + \sigma_i S_t\,dW_t
+$$
 
-Crisis events
+Regime transitions:
 
-Implementation Notes:
+$$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
-Simulate Poisson jump times
+**Properties:**
 
-Jump magnitude distribution (normal or double‑exponential)
+- Booms, recessions, stagflation
+- Smooth transitions
 
-2.5 Regime‑Switching SDE (Markov Switching)
+**Implementation Notes:**
 
-Purpose: Combine SDEs with economic regimes.
+- Calibrate transition matrix from historical data
+- Can be combined with OU or Heston models
 
-Model: Regime (i) has: $$ dS_t = \mu_i S_t,dt + \sigma_i S_t,dW_t $$
+### 2.6 Block Bootstrap (Historical Resampling)
 
-Regime transitions: $$ P(X_{t+1} = j \mid X_t = i) = p_{ij} $$
+**Purpose:** Non-parametric simulation preserving real market structure.
 
-Properties:
+**Method:**
 
-Booms, recessions, stagflation
+- Split historical returns into blocks
+- Sample blocks with replacement
+- Concatenate blocks to form synthetic paths
 
-Smooth transitions
+**Properties:**
 
-Implementation Notes:
+- Preserves autocorrelation
+- Preserves volatility clustering
+- Includes real crisis periods
 
-Calibrate transition matrix from historical data
+**Implementation Notes:**
 
-Can be combined with OU or Heston
+- Block size: 6–24 months
+- Requires long historical datasets
 
-2.6 Block Bootstrap (Historical Resampling)
+### 2.7 Copula-Based Multivariate Simulation
 
-Purpose: Non‑parametric simulation preserving real market structure.
+**Purpose:** Simulate correlated variables such as salary, inflation, returns, and rates.
 
-Method:
+**Method:**
 
-Split historical returns into blocks
+- Fit marginal distributions
+- Fit a copula (Gaussian, t-copula, Clayton, Gumbel)
+- Sample the joint distribution
 
-Sample blocks with replacement
+**Properties:**
 
-Concatenate to form synthetic paths
+- Nonlinear dependencies
+- Multi-factor modeling
 
-Properties:
+**Implementation Notes:**
 
-Preserves autocorrelation
+- Use rank correlation (Kendall’s tau)
+- Rust crates: `copulas`, `statrs`
 
-Preserves volatility clustering
+### 2.8 Scenario-Tree Optimization (Stochastic Programming)
 
-Includes real crisis periods
+**Purpose:** Robust decision-making under uncertainty.
 
-Implementation Notes:
+**Method:**
 
-Block size: 6–24 months
+- Build a tree of future states
+- Attach probabilities and decisions to each node
+- Optimize expected utility or CVaR
 
-Requires long historical datasets
+**Properties:**
 
-2.7 Copula‑Based Multivariate Simulation
+- Used by pension funds and insurers
+- Strong for robust optimization
 
-Purpose: Simulate correlated variables (salary, inflation, returns, rates).
+**Implementation Notes:**
 
-Method:
+- Use `good_lp` or similar Rust LP/MIP libraries
+- Tree depth: 3–5 stages
 
-Fit marginal distributions
+### 2.9 Reinforcement Learning Simulation
 
-Fit copula (Gaussian, t‑copula, Clayton, Gumbel)
+**Purpose:** Adaptive work-percentage policies over life phases.
 
-Sample joint distribution
+**Method:**
 
-Properties:
+- State: regime, salary, BVG balance, life phase
+- Action: work percentage
+- Reward: utility (income + leisure − stress)
+- Train PPO/DQN agents
 
-Nonlinear dependencies
+**Properties:**
 
-Multi‑factor modeling
+- Learns adaptive strategies
+- Experimental but powerful
 
-Implementation Notes:
+**Implementation Notes:**
 
-Use rank correlation (Kendall’s tau)
+- Use `tch-rs` (PyTorch for Rust)
+- Careful reward shaping and regularization
 
-Rust crates: copulas, statrs
+### 2.10 Summary Table
 
-2.8 Scenario‑Tree Optimization (Stochastic Programming)
+| Method                       | Realism | Complexity | Best Use Case                          |
+|-----------------------------|:-------:|:----------:|----------------------------------------|
+| GBM                         | Low     | Low        | Baseline pension model                 |
+| OU / Vasicek                | Medium  | Low        | Salary & inflation modeling            |
+| Heston                      | High    | Medium     | Volatility clustering                  |
+| Jump-Diffusion              | High    | Medium     | Crisis and tail-risk modeling          |
+| Regime-Switching SDE        | High    | High       | Economic regime modeling               |
+| Block Bootstrap             | Medium  | Medium     | Historical resampling and autocorrelation |
+| Copula-Based Multivariate   | High    | High       | Correlated multi-factor simulation     |
+| Scenario-Tree Optimization   | High    | High       | Robust decision making                 |
+| Reinforcement Learning      | High    | High       | Adaptive policy optimization           |
 
-Purpose: Robust decision‑making under uncertainty.
+## 3. Hybrid Model Specification
 
-Method:
+The hybrid model combines multiple simulation methods into a coherent suite for pension planning and retirement decision support.
 
-Build a tree of future states
+- Base dynamics:
+  - Use GBM or Heston for asset returns.
+  - Use OU/Vasicek for inflation, interest rates, and salary growth.
+- Regime switching:
+  - Use a Markov-switching process to represent macro regimes such as expansion, recession, and stagflation.
+  - Allow regime-dependent model parameters for returns, volatility, and inflation.
+- Crisis events:
+  - Add jump-diffusion components for rare but severe market shocks.
+  - Calibrate jump intensity and magnitude from historical crisis data.
+- Joint dependence:
+  - Model correlated state variables with copulas.
+  - Use rank-based dependence to preserve nonlinear relationships.
+- Non-parametric validation:
+  - Use block bootstrap resampling to compare synthetic paths with historical patterns.
 
-Each node has probability and decisions
+The hybrid specification should be modular, with each model component accessible through a common simulation interface. This enables the optimizer to select the appropriate method, combine models, or switch between scenarios dynamically.
 
-Optimize expected utility or CVaR
+## 4. Implementation Blueprint
 
-Properties:
+The Rust implementation should be organized around reusable simulation modules and a central orchestration layer.
 
-Used by pension funds and insurers
+### Core components
 
-Strong for robust optimization
+- `price_sim`: asset price generators (GBM, Heston, jump-diffusion).
+- `rate_sim`: interest rate and inflation models (OU/Vasicek).
+- `salary_sim`: salary growth paths, including mean reversion and regime effects.
+- `regime_model`: Markov chain transitions and regime-specific parameters.
+- `copula_model`: multivariate sampling and dependence calibration.
+- `bootstrap_resampler`: historical block sampling and synthetic validation paths.
+- `simulation_runner`: path generation, aggregation, and output formatting.
+- `benchmark`: timing, convergence, and diagnostic metrics.
 
-Implementation Notes:
+### Data and calibration
 
-Use good_lp or similar Rust LP/MIP libraries
+- Load historical time series for returns, inflation, salary, and rates.
+- Calibrate parameters for each model using maximum likelihood, moments, or historical fit.
+- Store calibrated parameters in a shared configuration format (`serde` + JSON/TOML).
 
-Tree depth: 3–5 stages
+### Execution
 
-2.9 Reinforcement Learning Simulation
+- Use multi-threading with `rayon` for parallel path generation.
+- Use deterministic seeds for reproducible experiments.
+- Provide a CLI or config-driven runner to select model modes and output formats.
 
-Purpose: Adaptive work‑percentage policies over life phases.
+### Validation
 
-Method:
+- Unit test each simulator against theoretical moments and known edge cases.
+- Compare simulated output distributions to historical benchmarks.
+- Validate regime transitions, jump frequencies, and copula correlations.
 
-State: regime, salary, BVG balance, life phase
+## 5. Benchmarking and Reporting
 
-Action: work percentage
+Design benchmarking around performance, realism, and decision utility.
 
-Reward: utility (income + leisure − stress)
+### Benchmark categories
 
-Train PPO/DQN agents
+- Computational performance
+  - Paths per second
+  - Memory consumption
+- Statistical fidelity
+  - Distributional fit
+  - Autocorrelation and clustering
+- Risk metrics
+  - Value at Risk (VaR)
+  - Conditional Value at Risk (CVaR)
+  - Tail event frequency
 
-Properties:
+### Benchmark plan
 
-Learns adaptive strategies
+- Compare method families using identical sample size and horizon.
+- Benchmark GBM, Heston, regime-switching, block bootstrap, and reinforcement learning.
+- Evaluate both single-factor and multivariate simulations.
+- Produce charts for expected return, volatility, drawdown, and tail risk.
 
-Experimental but powerful
+### Reporting output
 
-Implementation Notes:
+- Summary tables of method strengths and weaknesses.
+- Visualizations for calibration fit, scenario coverage, and stress-test outcomes.
+- Recommendations for which model family is appropriate by use case.
 
-Use tch-rs (PyTorch for Rust)
+## 6. Future Work Integration
 
-Careful reward shaping and regularization
+The advanced simulation suite should be integrated into the Life Optimizer roadmap in stages.
 
-2.10 Summary Table
+- Phase 1: implement the core simulator modules and add calibration support.
+- Phase 2: integrate with `src/monte_carlo.rs` for end-to-end pension path projection.
+- Phase 3: add benchmarking and reporting support to validate model choices.
+- Phase 4: expose scenario-driven inputs for users and researchers.
 
-Method
+Key benefits for Life Optimizer:
 
-Realism
+- more realistic pension and retirement forecasts
+- better support for regime-aware planning
+- a stronger foundation for stress testing and robustness analysis
+- a clearer path to institution-grade quantitative modeling
 
-Complexity
-
-Best Use Case
-
-GBM
-
-Low
-
-Low
-
-Baseline pension model
-
-OU/Vasicek
-
-Medium
-
-Low
-
-Salary & inflation modeling
-
-Heston
-
-High
-
-Medium
-
-Volatility clustering
-
-Jump‑Diffusion
-
-High
-
-Medium
-
-Crash & inflation stress tests
-
-Regime‑Switching SDE
-
-Very High
-
-Medium
-
-Long‑term pension realism
-
-Block Bootstrap
-
-Very High
-
-Low
 
 Historical realism
 
