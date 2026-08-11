@@ -6,7 +6,7 @@
 "Should I work 100%, 80%, or something else — and can I actually afford it, now and in retirement?"**
 
 [![Rust](https://img.shields.io/badge/rust-2021-orange.svg)](https://www.rust-lang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](#license)
 
 </div>
 
