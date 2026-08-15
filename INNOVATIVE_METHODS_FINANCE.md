@@ -127,7 +127,7 @@ where $\mathcal{U}$ = uncertainty set of plausible distributions (e.g., all dist
 
 **Mathematical form:**
 
-$$\mathcal{U} = \big\{ \mathcal{P} : W(\mathcal{P}, \hat{\mathcal{P}}) \leq \rho \big\}$$
+$$\mathcal{U} = \{ \mathcal{P} : W(\mathcal{P}, \hat{\mathcal{P}}) \leq \rho \}$$
 
 where $W$ = Wasserstein distance, $\rho$ = confidence radius.
 
@@ -210,9 +210,9 @@ $$u(c_t, l_t, f_t, h_t, s_t; z_t) = w_c \log(c_t) + w_l \log(l_t) + w_f \log(f_t
 
 **Problem:** Weights $w_i$ are subjective; different people have different preferences.
 
-**Multi-objective approach:** Compute **Pareto frontier** — set of non-dominated solutions
+**Multi-objective approach:** Compute **Pareto frontier** — set of non-dominated solutions:
 
-$$\text{Pareto} = \big\{ x : \not\exists \, x' \text{ that improves all objectives} \big\}$$
+$$\text{Pareto} = \{ x : \forall x', \exists \text{ objective where } x \text{ is better} \}$$
 
 **Algorithms:**
 - **NSGA-II** (Non-dominated Sorting Genetic Algorithm): Evolutionary algorithm for multi-objective optimization
