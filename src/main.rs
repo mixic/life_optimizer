@@ -56,6 +56,10 @@ enum Commands {
         #[arg(long)]
         custom_tax_rate: Option<f64>,
 
+        /// Use enhanced family/childcare deductions for married parents with children.
+        #[arg(long, default_value_t = false)]
+        family_tax_mode: bool,
+
         /// Retirement age (default: 65, supports deferred retirement up to 70)
         #[arg(long, default_value = "65")]
         retirement_age: u32,
@@ -94,6 +98,10 @@ enum Commands {
         /// Custom tax rate (as decimal, e.g., 0.1382 for 13.82%). Overrides official tables.
         #[arg(long)]
         custom_tax_rate: Option<f64>,
+
+        /// Use enhanced family/childcare deductions for married parents with children.
+        #[arg(long, default_value_t = false)]
+        family_tax_mode: bool,
     },
 
     /// Calculate lifetime strategy (work % by age)
@@ -171,11 +179,12 @@ fn main() {
             canton,
             profile,
             custom_tax_rate,
+            family_tax_mode,
             retirement_age,
             life_expectancy,
             pillar3a,
         } => {
-            run_optimization(salary, age, married, children, youngest_child_age, &canton, &profile, custom_tax_rate, retirement_age, life_expectancy, pillar3a);
+            run_optimization(salary, age, married, children, youngest_child_age, &canton, &profile, custom_tax_rate, family_tax_mode, retirement_age, life_expectancy, pillar3a);
         }
         Commands::Compare {
             salary,
@@ -184,8 +193,9 @@ fn main() {
             children,
             percentages,
             custom_tax_rate,
+            family_tax_mode,
         } => {
-            run_comparison(salary, age, married, children, &percentages, custom_tax_rate);
+            run_comparison(salary, age, married, children, &percentages, custom_tax_rate, family_tax_mode);
         }
         Commands::Lifetime {
             salary,
@@ -223,6 +233,7 @@ fn run_optimization(
     _canton: &str,
     profile: &str,
     custom_tax_rate: Option<f64>,
+    family_tax_mode: bool,
     retirement_age: u32,
     life_expectancy: u32,
     pillar3a: f64,
@@ -230,12 +241,13 @@ fn run_optimization(
     println!("\n{}", "=== LIFE OPTIMIZER ===".bold().cyan());
     println!("Finding optimal work percentage for your situation...\n");
 
-    let tax_schedule = if let Some(rate) = custom_tax_rate {
+    let mut tax_schedule = if let Some(rate) = custom_tax_rate {
         println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
         TaxSchedule::custom_rate(rate)
     } else {
         TaxSchedule::bern_city_default(married, children)
     };
+    tax_schedule.family_tax_mode = family_tax_mode || (married && children > 0);
 
     let requirements = PersonalRequirements::bern_family_default(children);
 
@@ -255,7 +267,7 @@ fn run_optimization(
 
     let mut config = OptimizerConfig::new(
         salary,
-        tax_schedule,
+        tax_schedule.clone(),
         requirements.clone(),
         life_stage,
         preferences,
@@ -266,6 +278,7 @@ fn run_optimization(
     let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let (optimal, all_scenarios) = optimizer.find_optimal(&candidates);
 
+    display::print_tax_deduction_breakdown(&tax_schedule, optimal.gross_income);
     // Display work-life balance results
     display::print_optimal_result(&optimal);
 
@@ -331,6 +344,7 @@ fn run_comparison(
     children: u32,
     percentages_str: &str,
     custom_tax_rate: Option<f64>,
+    family_tax_mode: bool,
 ) {
     println!("\n{}", "=== SCENARIO COMPARISON ===".bold().cyan());
     
@@ -339,20 +353,21 @@ fn run_comparison(
         .filter_map(|s| s.trim().parse().ok())
         .collect();
 
-    let tax_schedule = if let Some(rate) = custom_tax_rate {
+    let mut tax_schedule = if let Some(rate) = custom_tax_rate {
         println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
         TaxSchedule::custom_rate(rate)
     } else {
         TaxSchedule::bern_city_default(married, children)
     };
-    
+    tax_schedule.family_tax_mode = family_tax_mode || (married && children > 0);
+
     let requirements = PersonalRequirements::bern_family_default(children);
     let life_stage = LifeStage::determine_from_age(age, children > 0, &[]);
     let preferences = PreferenceWeights::balanced();
 
     let config = OptimizerConfig::new(
         salary,
-        tax_schedule,
+        tax_schedule.clone(),
         requirements,
         life_stage,
         preferences,
@@ -365,6 +380,9 @@ fn run_comparison(
         .map(|&pct| optimizer.evaluate_scenario(pct))
         .collect();
 
+    for scenario in &scenarios {
+        display::print_tax_deduction_breakdown(&tax_schedule, scenario.gross_income);
+    }
     display::print_comparison_table(&scenarios);
 }
 
@@ -450,7 +468,7 @@ fn run_interactive() {
 
     println!("\n{}", "Analyzing your situation...".yellow());
     
-    run_optimization(salary, age, married, children, youngest_age, "ZH", profile, None, 65, 90, 0.0);
+    run_optimization(salary, age, married, children, youngest_age, "ZH", profile, None, married && children > 0, 65, 90, 0.0);
 }
 
 fn run_pension_simulation(

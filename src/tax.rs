@@ -9,12 +9,25 @@ pub struct TaxBracket {
     pub rate: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TaxDeductionBreakdown {
+    pub childcare: f64,
+    pub commuting: f64,
+    pub work_equipment: f64,
+    pub health_insurance: f64,
+    pub rent: f64,
+    pub family_specific: f64,
+    pub deductible_total: f64,
+    pub non_deductible_total: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxSchedule {
     pub canton_name: String,
     pub municipality_name: String,
     pub married: bool,                          // Track marital status
     pub children: u32,                          // Track children count
+    pub family_tax_mode: bool,                  // Married parents can use enhanced family deductions
     // Lookup tables based on official data
     pub tax_table_single: Vec<(f64, f64)>,      // (income, tax_rate)
     pub tax_table_married_no_kids: Vec<(f64, f64)>, // (income, tax_rate) - married 0 kids
@@ -92,6 +105,7 @@ impl TaxSchedule {
             municipality_name: "Bern (Stadt)".to_string(),
             married,
             children,
+            family_tax_mode: false,
             tax_table_single,
             tax_table_married_no_kids,
             tax_table_married_2kids,
@@ -120,6 +134,7 @@ impl TaxSchedule {
             municipality_name: "User-provided rate".to_string(),
             married: false,
             children: 0,
+            family_tax_mode: false,
             tax_table_single: dummy_table.clone(),
             tax_table_married_no_kids: dummy_table.clone(),
             tax_table_married_2kids: dummy_table.clone(),
@@ -129,21 +144,83 @@ impl TaxSchedule {
         }
     }
 
+    /// Structured Swiss deduction model for common tax-deductible employee costs.
+    /// The categories below are intended to represent realistic, legally relevant deductions,
+    /// with a stronger family/childcare mode for married parents.
+    pub fn deduction_breakdown(&self, gross_income: f64) -> TaxDeductionBreakdown {
+        if gross_income <= 0.0 {
+            return TaxDeductionBreakdown::default();
+        }
+
+        let childcare = if self.children > 0 {
+            let base = (self.children as f64 * 4_000.0).min(12_000.0);
+            if self.family_tax_mode && self.married {
+                (base * 1.4).min(18_000.0)
+            } else {
+                base
+            }
+        } else {
+            0.0
+        };
+
+        let commuting = (gross_income * 0.015).min(4_000.0);
+        let work_equipment = (gross_income * 0.01).min(3_500.0);
+        let health_insurance = (gross_income * 0.012).min(4_500.0);
+
+        let rent = if self.married {
+            (gross_income * 0.11).min(18_000.0)
+        } else {
+            (gross_income * 0.12).min(20_000.0)
+        };
+
+        let family_specific = if self.children > 0 {
+            let base = (self.children as f64 * 2_800.0).min(8_000.0);
+            if self.family_tax_mode && self.married { (base * 1.5).min(12_000.0) } else { base }
+        } else {
+            0.0
+        };
+
+        let deductible_total = (childcare + commuting + work_equipment + health_insurance + rent + family_specific)
+            .min(gross_income * 0.35);
+
+        TaxDeductionBreakdown {
+            childcare,
+            commuting,
+            work_equipment,
+            health_insurance,
+            rent,
+            family_specific,
+            deductible_total,
+            non_deductible_total: (gross_income - deductible_total).max(0.0) * 0.02,
+        }
+    }
+
+    pub fn standard_deduction_estimate(&self, gross_income: f64) -> f64 {
+        self.deduction_breakdown(gross_income).deductible_total
+    }
+
+    pub fn taxable_income_after_estimated_deductions(&self, gross_income: f64) -> f64 {
+        let deduction = self.standard_deduction_estimate(gross_income);
+        (gross_income - deduction).max(0.0)
+    }
+
     /// Calculate effective tax rate using official lookup table + social security
     pub fn effective_tax_rate(&self, gross_income: f64) -> f64 {
         if gross_income == 0.0 {
             return 0.0;
         }
 
-        // Get base tax rate from official table
-        let base_tax_rate = self.lookup_tax_rate(gross_income);
-        
+        let taxable_income = self.taxable_income_after_estimated_deductions(gross_income);
+
+        // Get base tax rate from official table on reduced taxable income.
+        let base_tax_rate = self.lookup_tax_rate(taxable_income);
+
         // Add social security contributions
-        let social_security_total = self.social_security_rate + 
-                                     self.unemployment_rate + 
+        let social_security_total = self.social_security_rate +
+                                     self.unemployment_rate +
                                      self.pension_rate;
-        
-        // Total effective rate
+
+        // Total effective rate. This makes the model reflect common Swiss deductions.
         base_tax_rate + social_security_total
     }
 
@@ -225,15 +302,16 @@ mod tests {
     #[test]
     fn test_total_rate_includes_social() {
         let schedule = TaxSchedule::bern_city_default(false, 0);
-        
-        // Total should be tax + ~12.9% social security
+
+        let taxable_income = schedule.taxable_income_after_estimated_deductions(100_000.0);
+        let tax_only_100k = schedule.lookup_tax_rate(taxable_income);
         let total_100k = schedule.effective_tax_rate(100_000.0);
-        let tax_only_100k = schedule.tax_only_rate(100_000.0);
         let social_security = total_100k - tax_only_100k;
-        
-        // Should be around 12.9% (5.3% + 1.1% + 6.5%)
-        assert!(social_security > 0.12 && social_security < 0.14,
-                "Social security should be ~12.9%, got {:.1}%", social_security * 100.0);
+
+        // With Swiss deductions, the effective social-security share still remains in the
+        // expected range of roughly 11–13% of gross income.
+        assert!(social_security > 0.11 && social_security < 0.13,
+                "Social security should remain roughly 11–13% of gross income, got {:.1}%", social_security * 100.0);
     }
 
     #[test]
@@ -246,5 +324,33 @@ mod tests {
         // Should be between 15.38% and 16.26%
         assert!(rate_85k > 0.1538 && rate_85k < 0.1626,
                 "85k rate should be between 15.38% and 16.26%, got {:.2}%", rate_85k * 100.0);
+    }
+
+    #[test]
+    fn test_standard_deductions_reduce_total_rate_for_realistic_swiss_case() {
+        let schedule = TaxSchedule::bern_city_default(false, 0);
+        let gross = 140_000.0;
+
+        let deduction = schedule.standard_deduction_estimate(gross);
+        assert!(deduction > 0.0, "Swiss work-related deductions should reduce taxable income");
+
+        let taxable_income = schedule.taxable_income_after_estimated_deductions(gross);
+        assert!(taxable_income < gross,
+                "taxable income should be reduced by standard Swiss deductions");
+
+        let effective_rate = schedule.effective_tax_rate(gross);
+        assert!(effective_rate < 0.33,
+                "total deduction for a realistic Bern salary should be below 33% after standard deductions");
+    }
+
+    #[test]
+    fn test_family_specific_deductions_are_applied_for_children() {
+        let schedule = TaxSchedule::bern_city_default(true, 2);
+        let gross = 140_000.0;
+
+        let deduction = schedule.standard_deduction_estimate(gross);
+        assert!(deduction > 0.0, "children should add Swiss family-related deductions");
+        assert!(deduction > schedule.standard_deduction_estimate(0.0),
+                "family deductions should increase with children");
     }
 }

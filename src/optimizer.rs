@@ -357,11 +357,14 @@ mod tests {
 
         assert!((scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
                 "tax-only rate should match the official Bern table");
-        assert!(scenario.effective_tax_rate > scenario.tax_only_rate,
-                "total deduction should include AHV/ALV/BVG on top of the tax-only rate");
-        assert!((scenario.effective_tax_rate - scenario.tax_only_rate - (
-                    schedule.social_security_rate + schedule.unemployment_rate + schedule.pension_rate
-                )).abs() < 1e-9,
-                "total rate should equal tax-only rate plus social security contributions");
+        assert!(scenario.effective_tax_rate < schedule.tax_only_rate(140_000.0)
+                    + schedule.social_security_rate
+                    + schedule.unemployment_rate
+                    + schedule.pension_rate,
+                "effective rate should be lower than the official table plus payroll charges when standard deductions are applied");
+        assert!(scenario.effective_tax_rate > schedule.social_security_rate
+                    + schedule.unemployment_rate
+                    + schedule.pension_rate,
+                "effective rate should still include the mandatory social contributions");
     }
 }

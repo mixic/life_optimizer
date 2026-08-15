@@ -1,5 +1,6 @@
 // Display module for pretty printing results
 use crate::optimizer::WorkScenario;
+use crate::tax::TaxSchedule;
 use colored::*;
 use tabled::{Table, Tabled, settings::Style};
 
@@ -62,6 +63,23 @@ pub fn print_optimal_result(scenario: &WorkScenario) {
     println!("  {} {:.2}", "TOTAL UTILITY:".bold(), breakdown.total.to_string().cyan().bold());
 
     println!("\n{}", "=".repeat(60));
+}
+
+pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f64) {
+    let deduction = tax_schedule.deduction_breakdown(gross_income);
+
+    println!("\n{}", "💸 TAX DEDUCTION BREAKDOWN".bold().cyan());
+    println!("  Gross income: CHF {:.0}", gross_income);
+    println!("  Deductible items:");
+    println!("    • Childcare:         CHF {:.0}", deduction.childcare);
+    println!("    • Commuting:         CHF {:.0}", deduction.commuting);
+    println!("    • Work equipment:    CHF {:.0}", deduction.work_equipment);
+    println!("    • Health insurance:  CHF {:.0}", deduction.health_insurance);
+    println!("    • Rent/apartment:    CHF {:.0}", deduction.rent);
+    println!("    • Family-specific:   CHF {:.0}", deduction.family_specific);
+    println!("    • Total deductible:  CHF {:.0}", deduction.deductible_total);
+    println!("  Non-deductible estimate: CHF {:.0}", deduction.non_deductible_total);
+    println!("  Taxable income after deductions: CHF {:.0}", tax_schedule.taxable_income_after_estimated_deductions(gross_income));
 }
 
 pub fn print_comparison_table(scenarios: &[WorkScenario]) {
