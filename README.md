@@ -31,6 +31,34 @@ that actually determines whether reducing your work percentage is a good idea:
 utility, and Monte Carlo pension projections — and searches for the work percentage
 that maximizes your overall quality of life, not just your paycheck.
 
+### Motivation and design philosophy
+
+In 2025, there are faster and more powerful ways to model retirement decisions using
+AI, gradient-based optimization, black-box simulators, and large-scale data-driven
+approaches. Those methods can be extremely useful for prediction, scenario generation,
+and policy search.
+
+But for a life decision as important as retirement and work percentage, the real challenge
+is not just finding a numerically attractive answer quickly. It is understanding whether the
+answer is structurally sound, explainable, and robust to wrong assumptions.
+
+This project was created with that principle in mind:
+
+- we do not want to hide important assumptions inside a black box
+- we want the trade-offs to be mathematically transparent
+- we want each variable — taxes, inflation, pension contributions, utility, health stress,
+  and regime dependence — to be visible and auditable
+- we want the model to support reasoning, not just prediction
+
+In other words, modern AI can be extremely helpful for acceleration, pattern discovery,
+and scenario exploration. But for long-term financial planning, transparent mathematics
+remains essential. A model that is easy to explain and challenge is usually more useful
+than one that produces a clever-looking answer without revealing how it was formed.
+
+This project therefore prioritizes explicit formulas, interpretable utility functions,
+calibrated assumptions, and scenario analysis over opaque optimization. The goal is not
+only to pick a number, but to make the reasoning behind that number understandable.
+
 ---
 
 ## What it does
