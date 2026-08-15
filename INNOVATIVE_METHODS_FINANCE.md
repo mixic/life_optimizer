@@ -145,7 +145,8 @@ where $W$ = Wasserstein distance, $\rho$ = confidence radius.
 **Problem it solves:** Correlation ≠ causation. Regime transitions may be caused by exogenous shocks.
 
 **Classical approach:** Estimate transition matrix from historical data
-$$P_{ij} = \frac{\#(\text{transitions from i to j})}{\#(\text{times in state i})}$$
+
+$$P_{ij} = \frac{|\{t: S_t = i, S_{t+1} = j\}|}{|\{t: S_t = i\}|}$$
 
 **Causal approach:** Model underlying drivers
 $$S_t = f(\text{Oil price}, \text{Policy rate}, \text{Unemployment}, \text{Credit spread}, \epsilon_t)$$
@@ -209,7 +210,8 @@ $$u(c_t, l_t, f_t, h_t, s_t; z_t) = w_c \log(c_t) + w_l \log(l_t) + w_f \log(f_t
 **Problem:** Weights $w_i$ are subjective; different people have different preferences.
 
 **Multi-objective approach:** Compute **Pareto frontier** — set of non-dominated solutions
-$$\text{Pareto} = \left\{ x : \nexists x' \text{ that improves all objectives} \right\}$$
+
+$$\text{Pareto} = \left\{ x : \not\exists \, x' \text{ that improves all objectives} \right\}$$
 
 **Algorithms:**
 - **NSGA-II** (Non-dominated Sorting Genetic Algorithm): Evolutionary algorithm for multi-objective optimization
