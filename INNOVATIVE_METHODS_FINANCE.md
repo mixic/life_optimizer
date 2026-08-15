@@ -126,7 +126,8 @@ $$\min_{\theta} \max_{\mathcal{P} \in \mathcal{U}} \mathbb{E}_{\mathcal{P}}[L(\t
 where $\mathcal{U}$ = uncertainty set of plausible distributions (e.g., all distributions with Wasserstein distance < $\epsilon$ from empirical)
 
 **Mathematical form:**
-$$\mathcal{U} = \left\{ \mathcal{P} : W(\mathcal{P}, \hat{\mathcal{P}}) \leq \rho \right\}$$
+
+$$\mathcal{U} = \big\{ \mathcal{P} : W(\mathcal{P}, \hat{\mathcal{P}}) \leq \rho \big\}$$
 
 where $W$ = Wasserstein distance, $\rho$ = confidence radius.
 
@@ -211,7 +212,7 @@ $$u(c_t, l_t, f_t, h_t, s_t; z_t) = w_c \log(c_t) + w_l \log(l_t) + w_f \log(f_t
 
 **Multi-objective approach:** Compute **Pareto frontier** — set of non-dominated solutions
 
-$$\text{Pareto} = \left\{ x : \not\exists \, x' \text{ that improves all objectives} \right\}$$
+$$\text{Pareto} = \big\{ x : \not\exists \, x' \text{ that improves all objectives} \big\}$$
 
 **Algorithms:**
 - **NSGA-II** (Non-dominated Sorting Genetic Algorithm): Evolutionary algorithm for multi-objective optimization
