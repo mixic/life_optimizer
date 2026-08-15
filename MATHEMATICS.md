@@ -43,48 +43,54 @@ $$
 
 subject to:
 
-1. Budget constraint:
-   $$
-   c_t = (1 - \tau(I_t)) I_t + y_t - r_t - p_t
-   $$
+1. **Weekly budget constraint:**
+
+   $$c_t = (1 - \tau(I_t)) I_t + y_t - r_t - p_t$$
+
    where:
-   - $c_t$ is consumption
-   - $y_t$ is non-labor income
-   - $r_t$ are required recurring expenses
-   - $p_t$ are period-specific financial outflows
+   - $c_t$ = consumption expenditure (£/week)
+   - $I_t$ = gross labor income (£/week)
+   - $\tau(I_t)$ = effective tax rate on income $I_t$
+   - $y_t$ = non-labor income (pension, investments, etc.; £/week)
+   - $r_t$ = required recurring expenses (mortgage, utilities, insurance; £/week)
+   - $p_t$ = discretionary/period-specific outflows (savings, debt repayment; £/week)
 
-2. Time resource constraint:
-   $$
-   l_t + f_t + h_t^{work} + h_t^{sleep} + h_t^{other} = 168
-   $$
+2. **Weekly time budget constraint:**
+
+   $$l_t + f_t + h_t^{\text{work}} + h_t^{\text{sleep}} + h_t^{\text{other}} = 168$$
+
    where:
-   - $l_t$ is leisure time
-   - $f_t$ is family time
-   - $h_t^{work}$ is work time
-   - $h_t^{sleep}$ and $h_t^{other}$ are fixed allocations
+   - $l_t$ = leisure time (hours/week)
+   - $f_t$ = family/caregiving time (hours/week)
+   - $h_t^{\text{work}}$ = paid work time (hours/week)
+   - $h_t^{\text{sleep}}$ = sleep (typically 49–56 hours/week)
+   - $h_t^{\text{other}}$ = personal care, commute, administration (hours/week)
 
-3. Work-hours identity:
-   $$
-   h_t^{work} = \theta_t H_{full}
-   $$
-   where $H_{full}$ is full-time working hours per week.
+3. **Work intensity identity:**
 
-4. Requirement floor:
-   $$
-   c_t \geq R_t
-   $$
-   where $R_t$ is the minimum required consumption level for the household at time $t$.
+   $$h_t^{\text{work}} = \theta_t H_{\text{full}}$$
 
-5. Pension adequacy constraint:
-   $$
-   P_{T+1} \geq P_{min}
-   $$
-   where $P_{T+1}$ is the retirement income stream at retirement and $P_{min}$ is a minimum adequacy target.
+   where:
+   - $\theta_t \in [0,1]$ = employment intensity (fraction of full-time)
+   - $H_{\text{full}}$ = standard full-time hours per week (typically 37–40)
 
-6. Feasibility bounds:
-   $$
-   0 \leq \theta_t \leq 1
-   $$
+4. **Consumption adequacy constraint:**
+
+   $$c_t \geq R_t$$
+
+   where $R_t$ = minimum required consumption to meet basic needs and household obligations at time $t$
+
+5. **Retirement income adequacy:**
+
+   $$P_{T+1} \geq P_{\min}$$
+
+   where:
+   - $P_{T+1}$ = total retirement income stream (pension + other sources; £/week)
+   - $P_{\min}$ = target retirement income replacement rate (typically 60–80% of working income)
+
+6. **Non-negativity and feasibility bounds:**
+
+   $$0 \leq \theta_t \leq 1, \quad c_t \geq 0, \quad l_t \geq 0, \quad f_t \geq 0, \quad p_t \geq 0$$
 
 ### Interpretation
 
