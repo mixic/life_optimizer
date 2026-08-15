@@ -1,26 +1,30 @@
 # Advanced Simulation Suite
 
-Advanced Simulation Methods, Hybrid Model, Implementation Blueprint, Benchmarking, and Future Work for Life Optimizer.
+Advanced Simulation Methods, Hybrid Modeling, Implementation Blueprint, Benchmarking, and Future Work for Life Optimizer.
 
 ## 1. Introduction
 
-This document defines an advanced simulation suite for Life Optimizer and covers:
+This document specifies an advanced simulation framework for Life Optimizer and outlines the modeling approaches required to support long-horizon pension planning, retirement optimization, and macroeconomic stress testing.
+
+It addresses the following areas:
 
 - advanced price and pension simulation methods
-- a hybrid model specification combining multiple techniques
+- a hybrid model architecture combining multiple stochastic approaches
 - a Rust implementation blueprint
-- a simulation benchmarking report design
-- integration into the existing future work roadmap
+- a simulation benchmarking and reporting framework
+- integration into the project roadmap and long-term development strategy
 
-The goal is to move Life Optimizer toward institution-grade modeling used by pension funds, insurers, and quantitative finance practitioners.
+The objective is to advance Life Optimizer toward institution-grade quantitative modeling suitable for pension funds, insurers, and applied finance practitioners.
 
 ## 2. Advanced Simulation Methods — Technical Specifications
+
+The methods described below constitute a layered simulation toolkit for asset dynamics, macroeconomic factors, and pension-relevant outcomes. Each model serves a distinct purpose: baseline market behavior, mean reversion, volatility dynamics, regime effects, or robust planning under uncertainty.
 
 ### 2.1 Geometric Brownian Motion (GBM)
 
 **Purpose:** Baseline stochastic process for asset prices.
 
-**Model:**
+**Model specification:**
 
 $$
 dS_t = \mu S_t\,dt + \sigma S_t\,dW_t
@@ -40,9 +44,9 @@ $$
 
 ### 2.2 Ornstein–Uhlenbeck (OU) / Vasicek Process
 
-**Purpose:** Mean-reverting processes for inflation, interest rates, and salary growth.
+**Purpose:** Mean-reverting dynamics for inflation, interest rates, and salary growth.
 
-**Model:**
+**Model specification:**
 
 $$
 dx_t = \theta(\mu - x_t)\,dt + \sigma\,dW_t
@@ -60,15 +64,15 @@ $$
 
 ### 2.3 Heston Stochastic Volatility Model
 
-**Purpose:** Realistic modeling of volatility clustering.
+**Purpose:** Modeling of volatility clustering and stochastic variance.
 
-**Model:**
-
-$$
-dS_t = \mu S_t\,dt + \sqrt{v_t} S_t\,dW_t^S$$
+**Model specification:**
 
 $$
-dv_t = \kappa(\theta - v_t)\,dt + \xi\sqrt{v_t}\,dW_t^v
+\begin{aligned}
+dS_t &= \mu S_t\,dt + \sqrt{v_t} S_t\,dW_t^S \\
+dv_t &= \kappa(\theta - v_t)\,dt + \xi\sqrt{v_t}\,dW_t^v
+\end{aligned}
 $$
 
 **Properties:**
@@ -83,9 +87,9 @@ $$
 
 ### 2.4 Jump-Diffusion Models (Merton, Kou)
 
-**Purpose:** Model sudden market crashes or inflation spikes.
+**Purpose:** Representation of sudden market crashes or inflation spikes.
 
-**Model:**
+**Model specification:**
 
 $$
 dS_t = \mu S_t\,dt + \sigma S_t\,dW_t + J_t S_t
@@ -105,9 +109,9 @@ Where $J_t$ is a Poisson jump process.
 
 ### 2.5 Regime-Switching SDE (Markov Switching)
 
-**Purpose:** Combine SDEs with economic regimes.
+**Purpose:** Integration of stochastic dynamics with discrete macroeconomic regimes.
 
-**Model:**
+**Model specification:**
 
 Regime $i$ has:
 
@@ -131,9 +135,9 @@ $$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
 ### 2.6 Block Bootstrap (Historical Resampling)
 
-**Purpose:** Non-parametric simulation preserving real market structure.
+**Purpose:** Non-parametric simulation preserving the empirical structure of historical market data.
 
-**Method:**
+**Methodology:**
 
 - Split historical returns into blocks
 - Sample blocks with replacement
@@ -152,9 +156,9 @@ $$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
 ### 2.7 Copula-Based Multivariate Simulation
 
-**Purpose:** Simulate correlated variables such as salary, inflation, returns, and rates.
+**Purpose:** Simulation of dependent variables such as salary, inflation, returns, and interest rates.
 
-**Method:**
+**Methodology:**
 
 - Fit marginal distributions
 - Fit a copula (Gaussian, t-copula, Clayton, Gumbel)
@@ -172,9 +176,9 @@ $$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
 ### 2.8 Scenario-Tree Optimization (Stochastic Programming)
 
-**Purpose:** Robust decision-making under uncertainty.
+**Purpose:** Decision-making under uncertainty in a robust optimization framework.
 
-**Method:**
+**Methodology:**
 
 - Build a tree of future states
 - Attach probabilities and decisions to each node
@@ -192,9 +196,9 @@ $$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
 ### 2.9 Reinforcement Learning Simulation
 
-**Purpose:** Adaptive work-percentage policies over life phases.
+**Purpose:** Adaptive labor-allocation policies across life phases.
 
-**Method:**
+**Methodology:**
 
 - State: regime, salary, BVG balance, life phase
 - Action: work percentage
@@ -227,7 +231,7 @@ $$P(X_{t+1}=j \mid X_t=i) = p_{ij}$$
 
 ## 3. Hybrid Model Specification
 
-The hybrid model combines multiple simulation methods into a coherent suite for pension planning and retirement decision support.
+The hybrid model integrates multiple simulation methods into a coherent framework for pension planning and retirement decision support.
 
 - Base dynamics:
   - Use GBM or Heston for asset returns.
@@ -244,11 +248,11 @@ The hybrid model combines multiple simulation methods into a coherent suite for 
 - Non-parametric validation:
   - Use block bootstrap resampling to compare synthetic paths with historical patterns.
 
-The hybrid specification should be modular, with each model component accessible through a common simulation interface. This enables the optimizer to select the appropriate method, combine models, or switch between scenarios dynamically.
+The hybrid specification is designed to be modular: each component exposes a common simulation interface, enabling the optimizer to select methods dynamically, combine them as needed, and switch between scenario configurations without disrupting the overall architecture.
 
 ## 4. Implementation Blueprint
 
-The Rust implementation should be organized around reusable simulation modules and a central orchestration layer.
+The Rust implementation should be organized around reusable simulation modules and a central orchestration layer to support modular calibration, execution, and validation.
 
 ### Core components
 
@@ -281,7 +285,7 @@ The Rust implementation should be organized around reusable simulation modules a
 
 ## 5. Benchmarking and Reporting
 
-Design benchmarking around performance, realism, and decision utility.
+Benchmarking should be designed around performance, realism, and decision utility.
 
 ### Benchmark categories
 
@@ -311,125 +315,87 @@ Design benchmarking around performance, realism, and decision utility.
 
 ## 6. Future Work Integration
 
-The advanced simulation suite should be integrated into the Life Optimizer roadmap in stages.
+The advanced simulation suite should be integrated into the Life Optimizer roadmap in a staged implementation plan.
 
 - Phase 1: implement the core simulator modules and add calibration support.
 - Phase 2: integrate with `src/monte_carlo.rs` for end-to-end pension path projection.
 - Phase 3: add benchmarking and reporting support to validate model choices.
 - Phase 4: expose scenario-driven inputs for users and researchers.
 
-Key benefits for Life Optimizer:
+### Key benefits for Life Optimizer
 
 - more realistic pension and retirement forecasts
 - better support for regime-aware planning
 - a stronger foundation for stress testing and robustness analysis
 - a clearer path to institution-grade quantitative modeling
 
+### Method selection snapshot
 
-Historical realism
+| Method family | Core strength | Main challenge | Best use case |
+|---|---|---|---|
+| Block bootstrap | Historical realism | Limited extrapolation | Stress-testing against past crises |
+| Regime-switching SDE | Macro regime awareness | Model calibration | Recession/expansion scenario analysis |
+| Jump-diffusion | Crash sensitivity | Tail-event calibration | Tail-risk and crisis modeling |
+| Copulas | Multi-factor dependence | Dependency specification | Salary, inflation, rates, returns jointly |
+| Scenario-tree optimization | Robust decision-making | Computational cost | Strategic allocation and pension planning |
+| Reinforcement learning | Adaptive policy learning | Training complexity | Long-horizon work/retirement strategy optimization |
 
-Copulas
+### Hybrid model goals
 
-High
+The hybrid model is designed to combine:
 
-Medium
+- historical realism via block bootstrap
+- regime-aware dynamics via regime-switching SDEs
+- crash sensitivity via jump-diffusion components
+- multi-factor dependencies via copulas
 
-Multi‑factor modeling
+This combination is particularly relevant for BVG and pension simulations, where both macroeconomic regime transitions and sudden market stress materially affect long-term outcomes.
 
-Scenario‑Tree
+### Hybrid model components
 
-Very High
+#### Macro regime process
 
-High
+- Markov chain with regimes: boom, normal, recession, stagflation
+- Transition matrix calibrated from historical data
 
-Robust optimization
+#### Return dynamics per regime
 
-Reinforcement Learning
+- Base dynamics: GBM or OU/Vasicek
+- Optional Heston volatility in high-volatility regimes
 
-Experimental
+#### Jump layer
 
-High
+- Poisson jumps with regime-dependent intensity
+- Larger jumps in recession and stagflation periods
 
-Adaptive work‑percentage policies
+#### Block bootstrap overlay
 
-3. Hybrid Model Specification
+- Use historical blocks to validate and stress-test synthetic paths
+- Hybrid approach: synthetic SDE paths plus occasional historical segments
 
-3.1 Goals
-
-The hybrid model aims to:
-
-Combine historical realism (block bootstrap)
-
-Regime‑aware dynamics (regime‑switching SDE)
-
-Crash sensitivity (jump‑diffusion)
-
-Multi‑factor dependencies (copulas)
-
-for BVG and pension simulations.
-
-3.2 Hybrid Components
-
-Macro Regime Process
-
-Markov chain with regimes: Boom, Normal, Recession, Stagflation
-
-Transition matrix calibrated from historical data
-
-Return Dynamics per Regime
-
-Base: GBM or OU
-
-Optional: Heston volatility in high‑vol regimes
-
-Jump Layer
-
-Poisson jumps with regime‑dependent intensity
-
-Larger jumps in Recession/Stagflation
-
-Block Bootstrap Overlay
-
-Use historical blocks to validate and stress‑test synthetic paths
-
-Hybrid approach: synthetic SDE paths + occasional historical segments
-
-Copula‑Based Multi‑Factor Layer
+#### Copula-based multi-factor layer
 
 Joint simulation of:
 
-Market returns
+- market returns
+- inflation
+- salary growth
+- interest rates
 
-Inflation
+### Hybrid simulation workflow
 
-Salary growth
+1. Sample the initial macro regime.
+2. For each year, evolve the regime via a Markov chain.
+3. Simulate returns using the regime-specific SDE (GBM, OU/Vasicek, or Heston).
+4. Add jumps via a Poisson process.
+5. Sample inflation, salary growth, and rates jointly via a copula.
+6. Periodically replace segments with block-bootstrapped historical blocks for realism.
+7. Accumulate BVG contributions and returns.
+8. Compute pension distributions and key risk metrics such as percentiles and CVaR.
 
-Interest rates
+### Rust implementation blueprint
 
-3.3 Hybrid Simulation Workflow
-
-Sample initial regime.
-
-For each year:
-
-Evolve regime via Markov chain.
-
-Simulate returns via regime‑specific SDE (GBM/OU/Heston).
-
-Add jumps via Poisson process.
-
-Sample inflation/salary/rates via copula.
-
-Periodically replace segments with block‑bootstrap historical blocks for realism.
-
-Accumulate BVG contributions and returns.
-
-Compute pension distribution and risk metrics (percentiles, CVaR).
-
-4. Rust Implementation Blueprint
-
-4.1 Module Structure
-
+```text
 /src
   domain/
     taxes.rs
@@ -459,175 +425,24 @@ Compute pension distribution and risk metrics (percentiles, CVaR).
     stats.rs
     config.rs
     logging.rs
+```
 
-4.2 Key Traits and Interfaces
+### Testing and benchmarking priorities
 
-Simulation Trait:
+- Unit tests for GBM, OU/Vasicek, Heston, jump models, and regime logic
+- Statistical checks against theoretical moments and transition frequencies
+- Integration tests for the hybrid engine
+- Regression tests for BVG payout distributions
+- Benchmarking of realism, stability, performance, and robustness
 
-pub trait SimulationEngine {
-    fn simulate_path(&self, years: usize) -> Vec<f64>;
-}
+## 7. Conclusion
 
-Hybrid Engine:
+This document defines:
 
-pub struct HybridEngine {
-    pub regime_model: RegimeModel,
-    pub sde_model: Box<dyn SDEModel>,
-    pub jump_model: Option<JumpModel>,
-    pub copula_model: Option<CopulaModel>,
-    pub bootstrap_model: Option<BlockBootstrapModel>,
-}
+- a full catalog of advanced simulation methods
+- a hybrid model specification tailored to long-term pension modeling
+- a Rust implementation blueprint with clear module structure and interfaces
+- a simulation benchmarking framework
+- direct integration points into the project roadmap and future work plan
 
-impl SimulationEngine for HybridEngine {
-    fn simulate_path(&self, years: usize) -> Vec<f64> {
-        // orchestrate regime, SDE, jumps, copula, bootstrap
-    }
-}
-
-4.3 Configuration
-
-Use a TOML/YAML config:
-
-[simulation.hybrid]
-use_heston = true
-use_jumps = true
-use_block_bootstrap = true
-use_copulas = true
-years = 40
-paths = 10000
-
-4.4 Testing Strategy
-
-Unit tests for each model (GBM, OU, Heston, jumps, regimes).
-
-Statistical tests:
-
-Mean/variance vs. theoretical values
-
-Regime frequencies vs. transition matrix
-
-Integration tests for hybrid engine.
-
-Regression tests for BVG distributions.
-
-5. Simulation Benchmarking Report
-
-5.1 Objectives
-
-Benchmark:
-
-Accuracy (realism vs. historical data)
-
-Stability (variance of outcomes)
-
-Performance (runtime, memory)
-
-Robustness (sensitivity to parameters)
-
-for each simulation method and the hybrid model.
-
-5.2 Benchmark Metrics
-
-Statistical Fit:
-
-Mean, variance, skewness, kurtosis vs. historical data
-
-Autocorrelation and volatility clustering
-
-Risk Metrics:
-
-Percentiles (5%, 25%, 50%, 75%, 95%)
-
-CVaR at 5% and 10%
-
-Performance:
-
-Runtime per 10,000 paths
-
-Memory usage
-
-Robustness:
-
-Sensitivity to drift/vol changes
-
-Sensitivity to regime transition changes
-
-5.3 Benchmark Scenarios
-
-Baseline (normal economic conditions)
-
-High inflation
-
-Prolonged recession
-
-Stagflation
-
-Mixed cycles over 40 years
-
-5.4 Report Structure
-
-Overview and methodology
-
-Per‑model results (GBM, OU, Heston, Jump‑Diffusion, Regime‑Switching, Bootstrap, Copulas, Hybrid)
-
-Comparative tables and charts
-
-Recommendations:
-
-Default model for production
-
-Models for stress testing
-
-Models for research/experimental use
-
-6. Integration into Future Work
-
-6.1 Future Work — Extended Simulation Section
-
-Add the following to your README.md or Future Work section:
-
-Advanced Simulation and Hybrid Modeling
-
-Implement GBM, OU/Vasicek, Heston, Jump‑Diffusion, Regime‑Switching SDE, Block Bootstrap, Copulas, Scenario‑Tree, and RL.
-
-Develop a HybridEngine combining:
-
-Regime‑Switching SDE
-
-Jump‑Diffusion
-
-Copula‑based multi‑factor simulation
-
-Block bootstrap overlays
-
-Create a Simulation Benchmarking Suite:
-
-Compare realism vs. historical data
-
-Evaluate risk metrics (CVaR, percentiles)
-
-Measure performance and robustness
-
-Use benchmark results to select:
-
-A default production model
-
-A stress‑test model
-
-An experimental research model
-
-7. Conclusion
-
-This AdvancedSimulationSuite.md defines:
-
-A full catalog of advanced simulation methods
-
-A hybrid model specification tailored to long‑term pension modeling
-
-A Rust implementation blueprint with clear module structure and traits
-
-A simulation benchmarking framework
-
-Direct integration points into the existing Future Work roadmap
-
-You can now add this file to your repo and evolve Life Optimizer toward truly institution‑grade modeling.
+In summary, this proposal establishes a clear path toward more institution-grade modeling, stronger stress testing, and more robust decision support for long-term retirement planning.
