@@ -10,6 +10,7 @@ pub struct WorkScenario {
     pub gross_income: f64,
     pub after_tax_income: f64,
     pub monthly_after_tax: f64,
+    pub tax_only_rate: f64,
     pub effective_tax_rate: f64,
     pub work_hours_per_week: f64,
     pub free_hours_per_week: f64,
@@ -80,6 +81,7 @@ impl LifeOptimizer {
         let gross_income = self.config.full_time_salary * work_percentage;
         let after_tax_income = self.config.tax_schedule.after_tax_income(gross_income);
         let monthly_after_tax = after_tax_income / 12.0;
+        let tax_only_rate = self.config.tax_schedule.tax_only_rate(gross_income);
         let effective_tax_rate = self.config.tax_schedule.effective_tax_rate(gross_income);
 
         // Calculate time allocation
@@ -107,6 +109,7 @@ impl LifeOptimizer {
             gross_income,
             after_tax_income,
             monthly_after_tax,
+            tax_only_rate,
             effective_tax_rate,
             work_hours_per_week: work_hours,
             free_hours_per_week: free_hours,
@@ -325,5 +328,40 @@ impl LifeOptimizer {
         } else {
             scenario.utility_score - 10.0
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scenario_separates_tax_only_and_total_deductions() {
+        let schedule = TaxSchedule::bern_city_default(false, 0);
+        let requirements = PersonalRequirements::bern_family_default(0);
+        let life_stage = LifeStage::YoungSingle { age: 45 };
+        let preferences = PreferenceWeights::balanced();
+        let optimizer = LifeOptimizer::new(OptimizerConfig {
+            full_time_salary: 140_000.0,
+            full_time_hours: 42.0,
+            tax_schedule: schedule.clone(),
+            requirements,
+            life_stage,
+            preferences,
+            current_age: 45,
+            retirement_age: 65,
+            discount_rate: 0.03,
+        });
+
+        let scenario = optimizer.evaluate_scenario(1.0);
+
+        assert!((scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
+                "tax-only rate should match the official Bern table");
+        assert!(scenario.effective_tax_rate > scenario.tax_only_rate,
+                "total deduction should include AHV/ALV/BVG on top of the tax-only rate");
+        assert!((scenario.effective_tax_rate - scenario.tax_only_rate - (
+                    schedule.social_security_rate + schedule.unemployment_rate + schedule.pension_rate
+                )).abs() < 1e-9,
+                "total rate should equal tax-only rate plus social security contributions");
     }
 }

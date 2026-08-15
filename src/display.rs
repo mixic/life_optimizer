@@ -34,7 +34,7 @@ pub fn print_optimal_result(scenario: &WorkScenario) {
     println!("  Gross Income:    {} CHF/year", format!("{:.0}", scenario.gross_income).cyan());
     println!("  After-Tax:       {} CHF/year", format!("{:.0}", scenario.after_tax_income).cyan());
     println!("  Monthly Net:     {} CHF/month", format!("{:.0}", scenario.monthly_after_tax).cyan().bold());
-    println!("  Tax Rate:        {:.1}% (Steuer only)", scenario.effective_tax_rate * 100.0 - 12.9);
+    println!("  Tax Rate:        {:.1}% (official Bern tax only)", scenario.tax_only_rate * 100.0);
     println!("  Social Security: 12.9% (AHV/IV/EO/ALV/BVG)");
     println!("  Total Deduction: {}", format!("{:.1}%", scenario.effective_tax_rate * 100.0).yellow());
 
@@ -106,7 +106,7 @@ pub fn print_comparison_table(scenarios: &[WorkScenario]) {
     println!("The 'Tax Rate' column shows TOTAL deductions including:");
     println!("  • Kantons-, Gemeinde- und Kirchensteuer (official Stadt Bern rates)");
     println!("  • Social Security: AHV/IV/EO (5.3%) + ALV (1.1%) + BVG (~6.5%) = ~12.9%");
-    println!("\nExample: 27% total = ~14% Steuer + ~13% Sozialversicherung");
+    println!("\nExample: 33% total = ~20% Steuer + ~13% Sozialversicherung");
 
 }
 
