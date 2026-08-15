@@ -434,8 +434,8 @@ This is mathematically valid, but the model must still be constrained by economi
 A richer formulation is a Bellman equation of the form:
 
 $$
- V(t, x_t) = \max_{\theta_t \in [0,1]} \left\{ u_t + \beta \mathbb{E}[V(t+1, x_{t+1})] \right\}
- $$
+V(t, x_t) = \max_{\theta_t \in [0,1]} \left\{ u_t + \beta \mathbb{E}\left[V(t+1, x_{t+1})\right] \right\}
+$$
 
 where $x_t$ is the state vector containing relevant household and financial conditions.
 
