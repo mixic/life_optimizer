@@ -1,440 +1,589 @@
 # Mathematical Appendix
 
-## Complete Mathematical Formulation
-
-### 1. Optimization Problem
-
-**Maximize:**
-```
-U = Σ(t=0 to T) β^t × u(c_t, l_t, f_t, h_t, s_t)
-```
-
-**Subject to:**
-```
-1. c_t ≤ w_t × θ_t × (1 - τ(w_t × θ_t))              [Budget constraint]
-2. h_work_t = θ_t × H_full                            [Work hours]
-3. l_t + f_t + h_work_t + h_sleep = 168              [Time constraint]
-4. c_t ≥ R_t                                          [Requirements]
-5. Σ P_t ≥ P_min                                      [Pension adequacy]
-6. 0 ≤ θ_t ≤ 1                                       [Work percentage bounds]
-```
-
-**Where:**
-- `U` = Lifetime utility
-- `β` = Discount factor (1/(1+r), typically r=0.03)
-- `t` = Time period (year)
-- `T` = Years until retirement
-- `c_t` = Consumption at time t
-- `l_t` = Leisure time at time t
-- `f_t` = Family time at time t
-- `h_t` = Health status at time t
-- `s_t` = Security (savings/pension) at time t
-- `w_t` = Annual salary at time t
-- `θ_t` = Work percentage at time t (decision variable)
-- `τ(·)` = Tax function
-- `R_t` = Personal requirements at time t
-- `P_t` = Pension contributions at time t
-- `H_full` = Full-time work hours (42/week)
-
-### 2. Tax Function τ(I)
-
-Swiss tax system (simplified):
-
-```
-τ(I) = [T_federal(I) + T_cantonal(I) + T_communal(I) + T_social(I)] / I
-```
-
-**Federal Tax (Progressive):**
-```
-T_federal(I) = Σ max(0, min(I, B_i) - B_{i-1}) × r_i
-```
-
-Where brackets B and rates r for single person:
-```
-B_0 = 0,      r_0 = 0.00
-B_1 = 25,000, r_1 = 0.01
-B_2 = 50,000, r_2 = 0.05
-B_3 = 75,000, r_3 = 0.08
-B_4 = 100,000,r_4 = 0.11
-B_5 = 150,000,r_5 = 0.13
-```
-
-**Cantonal Tax (Zürich):**
-```
-T_cantonal(I) = I × (0.08 - 0.005 × n_children)
-```
-
-**Communal Tax:**
-```
-T_communal(I) = T_cantonal(I) × m_communal
-```
-Where `m_communal = 1.19` for Zürich city
-
-**Social Security:**
-```
-T_social(I) = I × (r_AHV + r_ALV + r_BVG)
-            = I × (0.0525 + 0.011 + 0.083)
-            = I × 0.1465
-```
-
-**Total Effective Tax Rate:**
-```
-τ(I) = [Federal + Cantonal + Communal + Social] / I
-```
-
-### 3. Utility Function u(c, l, f, h, s)
-
-**Weighted sum of component utilities:**
-```
-u = w_c × u_c(c) + w_l × u_l(l) + w_f × u_f(f) + w_h × u_h(h) + w_s × u_s(s)
-```
-
-Where `Σ w_i = 1` (preference weights)
-
-**Component Utilities:**
-
-**3.1 Consumption Utility (Log utility):**
-```
-u_c(c) = ln(c / R)  if c ≥ R
-       = ln(c / R) - 5  if c < R  [penalty for not meeting needs]
-```
-
-Exhibits diminishing marginal utility: each additional CHF provides less satisfaction.
-
-**3.2 Leisure Utility (Concave power function):**
-```
-u_l(l) = (l / l_max)^α × K_l
-
-Where:
-- l_max = 80 hours/week (reference)
-- α = 0.7 (concavity parameter)
-- K_l = 10 (scaling constant)
-```
-
-Diminishing returns: 10th hour of leisure worth more than 80th.
-
-**3.3 Family Utility (Life stage dependent):**
-```
-u_f(f, stage) = (f / f_max)^β × η(stage) × K_f
-
-Where:
-- f_max = 80 hours/week
-- β = 0.8 (slightly less concave than leisure)
-- η(stage) = time value multiplier for life stage
-- K_f = 10 (scaling constant)
-```
-
-**Time Value Multiplier η(stage):**
-```
-η = 0.8  for YoungSingle
-η = 0.9  for YoungCouple
-η = 1.5  for NewParent (young children)
-η = 1.3  for SchoolAge
-η = 1.0  for Teenagers
-η = 1.1  for EmptyNest
-η = 1.2  for PreRetirement
-```
-
-**3.4 Health Utility (Stress penalty):**
-```
-u_h(h_work, stage) = K_h - σ(h_work) / ρ(stage)
-
-Where:
-σ(h_work) = (h_work / H_full)^2 × 5  [stress factor, convex]
-ρ(stage) = stress tolerance for life stage
-K_h = 10
-```
-
-**Stress Tolerance ρ(stage):**
-```
-ρ = 1.2  for YoungSingle (can handle more)
-ρ = 0.6  for NewParent (already stressed)
-ρ = 0.7  for PreRetirement (health concerns)
-```
-
-**3.5 Security Utility (Pension adequacy):**
-```
-u_s(P_total) = min(10, 10 × R_replace / R_target)
-
-Where:
-R_replace = P_total / I_current  [replacement rate]
-R_target = 0.60                   [target 60% replacement]
-```
-
-### 4. Pension Calculation
-
-**Swiss 3-Pillar System:**
-
-**Pillar 1 (AHV - State pension):**
-```
-P_AHV = min(max_AHV, 0.30 × I_avg)
-
-Where:
-max_AHV = 2,450 CHF/month (single, 2024)
-I_avg = average indexed income over career
-```
-
-**Pillar 2 (BVG - Occupational pension):**
-```
-P_BVG_total = Σ C_t × (1 + r)^(T-t)
-
-Where:
-C_t = I_t × θ_t × r_BVG  [annual contribution]
-r_BVG = 0.083             [contribution rate]
-r = 0.02                  [assumed return]
-
-P_BVG_annual = P_BVG_total × γ
+## 1. Scope and objective
 
-Where:
-γ = 0.068  [conversion rate at age 65]
-```
+This appendix formalizes the optimization framework used by Life Optimizer to determine an optimal work percentage over the life cycle. The goal is not to claim a universal truth about household decision-making, but to specify a transparent and auditable model that can be challenged, calibrated, and extended.
 
-**Total Pension:**
-```
-P_total = P_AHV + P_BVG_annual
-```
-
-### 5. Requirements Function R_t
+The framework combines:
 
-**Base Requirements:**
-```
-R_t = R_housing + R_food + R_transport + R_insurance + 
-      R_childcare + R_healthcare + R_education + 
-      R_vacation + R_savings + R_discretionary
-```
+- disposable-income optimization under progressive taxation
+- household utility over consumption, leisure, family time, health, and security
+- pension dynamics under Swiss BVG / AHV logic
+- stochastic macroeconomic scenarios and sequence-of-returns stress tests
+- a decision rule that selects a work percentage maximizing expected life utility
 
-**Life Stage Adjustments:**
-```
-R_t(stage) = R_base × Φ(stage)
+The model is designed for explainability and robustness, not for opaque optimization or black-box prediction.
 
-Where Φ(stage) is adjustment matrix:
-```
+---
 
-| Category   | Single | Couple | NewParent | Teenagers | EmptyNest |
-|------------|--------|--------|-----------|-----------|-----------|
-| Housing    | 0.7    | 1.0    | 1.0       | 1.0       | 0.8       |
-| Food       | 0.7    | 1.0    | 1.2       | 1.3       | 0.7       |
-| Childcare  | 0.0    | 0.0    | 1.5       | 0.5       | 0.0       |
-| Education  | 0.0    | 0.0    | 1.0       | 1.5       | 0.0       |
+## 2. Decision variable and planning horizon
 
-### 6. Solution Methods
+Let:
 
-**6.1 Grid Search (Current Implementation):**
-```
-θ* = argmax{θ ∈ Θ} U(θ)
+- $t \in \{0, 1, \dots, T\}$ denote time in annual periods
+- $T$ be the number of years until retirement
+- $\theta_t \in [0, 1]$ be the work percentage in year $t$
+- $w_t$ be gross annual salary in year $t$
+- $I_t = w_t \theta_t$ be annual labor income in year $t$
+- $\tau(I_t)$ be the effective tax function on labor income
 
-Where:
-Θ = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0}  [candidate set]
-```
+The central decision variable is the annual work percentage $\theta_t$.
 
-**Complexity:** O(|Θ| × T)
+The optimization problem is therefore a dynamic multi-objective policy problem over the life cycle, rather than a static one-period choice.
 
-**Advantages:**
-- Simple, guaranteed to find solution in discrete set
-- Easy to visualize and compare
+---
 
-**Disadvantages:**
-- May miss optimal between grid points
-- Not scalable to many dimensions
+## 3. Optimization problem
 
-**6.2 Gradient-Based Optimization:**
+The objective is to maximize expected lifetime utility:
 
-For continuous θ ∈ [0, 1]:
+$$
+\max_{\{\theta_t\}_{t=0}^{T}} \; \mathbb{E}\left[\sum_{t=0}^{T} \beta^t \, u(c_t, l_t, f_t, h_t, s_t; z_t)\right]
+$$
 
-```
-∇U(θ) = ∂U/∂θ = Σ β^t × ∂u/∂θ_t
+subject to:
 
-∂u/∂θ_t = (∂u/∂c_t × ∂c_t/∂θ_t) + 
-          (∂u/∂l_t × ∂l_t/∂θ_t) + 
-          (∂u/∂h_t × ∂h_t/∂θ_t) + 
-          (∂u/∂s_t × ∂s_t/∂θ_t)
-```
+1. Budget constraint:
+   $$
+   c_t = (1 - \tau(I_t)) I_t + y_t - r_t - p_t
+   $$
+   where:
+   - $c_t$ is consumption
+   - $y_t$ is non-labor income
+   - $r_t$ are required recurring expenses
+   - $p_t$ are period-specific financial outflows
 
-Could use gradient descent, Newton's method, or L-BFGS.
+2. Time resource constraint:
+   $$
+   l_t + f_t + h_t^{work} + h_t^{sleep} + h_t^{other} = 168
+   $$
+   where:
+   - $l_t$ is leisure time
+   - $f_t$ is family time
+   - $h_t^{work}$ is work time
+   - $h_t^{sleep}$ and $h_t^{other}$ are fixed allocations
 
-**6.3 Dynamic Programming:**
+3. Work-hours identity:
+   $$
+   h_t^{work} = \theta_t H_{full}
+   $$
+   where $H_{full}$ is full-time working hours per week.
 
-Bellman equation:
-```
-V(t, W) = max{θ_t} {u(c_t, l_t, ...) + β × V(t+1, W')}
+4. Requirement floor:
+   $$
+   c_t \geq R_t
+   $$
+   where $R_t$ is the minimum required consumption level for the household at time $t$.
 
-Where:
-W = wealth state
-W' = W + (c_t - R_t)  [updated wealth]
-```
+5. Pension adequacy constraint:
+   $$
+   P_{T+1} \geq P_{min}
+   $$
+   where $P_{T+1}$ is the retirement income stream at retirement and $P_{min}$ is a minimum adequacy target.
 
-**State space:** (age, wealth)
-**Action:** work percentage θ
-**Transition:** deterministic given θ
+6. Feasibility bounds:
+   $$
+   0 \leq \theta_t \leq 1
+   $$
 
-### 7. Comparative Statics
+### Interpretation
 
-**Effect of income increase:**
-```
-∂θ*/∂w > 0  or  < 0 ?
+This formulation emphasizes that the decision is not purely about income maximization. The household solves a trade-off between:
 
-Competing effects:
-(+) Income effect: Can afford to work less
-(-) Substitution effect: Opportunity cost of leisure increases
-```
+- income and consumption
+- leisure and family time
+- health stress and productivity
+- short-term material comfort and long-term pension safety
 
-Empirically: Often ∂θ*/∂w < 0 for high earners (income effect dominates)
+---
 
-**Effect of tax increase:**
-```
-∂θ*/∂τ < 0  [unambiguous]
+## 4. Utility function
 
-Higher taxes reduce after-tax income, making work less attractive.
-```
+The period utility function is defined as:
 
-**Effect of children:**
-```
-∂θ*/∂n_children < 0  [typically]
+$$
+ u(c_t, l_t, f_t, h_t, s_t; z_t) =
+ w_c u_c(c_t) + w_l u_l(l_t) + w_f u_f(f_t, z_t) + w_h u_h(h_t) + w_s u_s(s_t)
+ $$
 
-Children increase:
-1. Requirements R ↑
-2. Time value η ↑
+with weights satisfying:
 
-First effect pushes toward more work, second toward less.
-Empirically, time value dominates → work less.
-```
+$$
+ w_c + w_l + w_f + w_h + w_s = 1,
+ \quad w_i \geq 0
+ $$
 
-### 8. Sensitivity Analysis
+where:
 
-**Taylor expansion around optimal:**
-```
-U(θ* + ε) ≈ U(θ*) + ∇U(θ*) × ε + (1/2) × ε^T × H × ε
+- $u_c$ is consumption utility
+- $u_l$ is leisure utility
+- $u_f$ is family-time utility
+- $u_h$ is health / stress penalty utility
+- $u_s$ is security utility
+- $z_t$ represents context variables such as life stage, children, and household composition
 
-Where:
-H = Hessian matrix (second derivatives)
-```
+This structure intentionally makes the trade-offs explicit rather than latent.
 
-If H is negative definite, θ* is local maximum.
+### 4.1 Consumption utility
 
-**Elasticity of utility w.r.t. work percentage:**
-```
-E_θ = (∂U/∂θ) × (θ/U)
-```
+A standard concave specification is used:
 
-### 9. Extensions
-
-**9.1 Uncertainty:**
+$$
+ u_c(c_t) = \ln\left(\frac{c_t}{R_t}\right) \quad \text{if } c_t \geq R_t
+ $$
 
-Stochastic income:
-```
-w_t = w̄ × exp(σ × ε_t)
-
-Where ε_t ~ N(0,1)
-```
-
-Requires dynamic programming with expectation:
-```
-V(t, W) = max{θ_t} E[u(...) + β × V(t+1, W')]
-```
-
-**9.2 Career Effects:**
-
-Promotion probability:
-```
-P(promote | θ_t) = p_0 × θ_t^γ
-
-Where γ > 1 [superlinear: part-time hurts career]
-```
-
-**9.3 Health Dynamics:**
-
-Health stock evolution:
-```
-H_{t+1} = (1 - δ) × H_t + φ(l_t) - ψ(h_work_t)
-
-Where:
-δ = depreciation rate
-φ = health investment function (leisure)
-ψ = health cost function (work stress)
-```
-
-### 10. Calibration
-
-**Preference weights estimated from:**
-- Revealed preference (observed choices)
-- Stated preference (surveys)
-- Life satisfaction studies
-
-**Typical values (literature):**
-```
-w_consumption ≈ 0.25-0.35
-w_leisure ≈ 0.15-0.25
-w_family ≈ 0.20-0.30
-w_health ≈ 0.10-0.20
-w_security ≈ 0.10-0.20
-```
-
-**Discount rate β:**
-```
-β = 1/(1+ρ)
-
-Where ρ ≈ 0.03 (3% annual time preference)
-```
-
-From studies: ρ ranges 0.01-0.05
-
-**Utility function parameters:**
-```
-α (leisure concavity) ≈ 0.6-0.8
-β (family concavity) ≈ 0.7-0.9
-stress_exponent ≈ 1.5-2.5
-```
-
-### 11. Validation
-
-**Cross-validation approaches:**
-
-1. **Out-of-sample prediction:**
-   - Estimate on subset of population
-   - Predict choices for holdout set
-   - Compare predicted vs actual
-
-2. **Life satisfaction regression:**
-   ```
-   LS_i = α + β_1 × U_i + β_2 × X_i + ε_i
-   
-   Where:
-   LS_i = reported life satisfaction
-   U_i = model-predicted utility
-   X_i = controls
-   ```
-   
-   Expect β_1 > 0 and significant.
-
-3. **Behavioral consistency:**
-   - Do people who follow recommendations report higher satisfaction?
-   - Longitudinal studies
-
-### 12. Computational Complexity
-
-**Current implementation:**
-- Grid points: |Θ| = 6
-- Time periods: T = 35 (age 30-65)
-- Evaluations: O(|Θ| × T) = O(210)
-- Very fast: < 1ms
-
-**Full dynamic programming:**
-- State space: age × wealth × health
-- Dimensions: 35 × 100 × 10 = 35,000 states
-- Complexity: O(|Θ| × |S|^2) with value iteration
-- Still tractable
-
-**Continuous optimization:**
-- Variables: θ_t for t=1..T = 35 variables
-- Nonlinear, non-convex problem
-- Gradient descent: O(iterations × T)
-- Typically converges in 10-50 iterations
-
-### References
-
-1. Layard, R. (2005). Happiness: Lessons from a New Science.
-2. Blanchflower, D., & Oswald, A. (2004). Well-being over time in Britain and the USA.
-3. Swiss Federal Tax Administration (ESTV). Federal Tax Rates.
-4. Swiss Federal Social Insurance Office. AHV/IV contribution rates.
-5. Mas-Colell, A., Whinston, M., & Green, J. (1995). Microeconomic Theory.
-6. Ljungqvist, L., & Sargent, T. (2018). Recursive Macroeconomic Theory.
+and a penalty is applied if household consumption falls below required needs:
+
+$$
+ u_c(c_t) = \ln\left(\frac{c_t}{R_t}\right) - \lambda_c \quad \text{if } c_t < R_t
+ $$
+
+with $\lambda_c > 0$ capturing severe hardship.
+
+This specification reflects diminishing marginal utility and the fact that a household's marginal value of income falls as consumption rises.
+
+### 4.2 Leisure utility
+
+Leisure utility is modeled as a concave function:
+
+$$
+ u_l(l_t) = K_l \left(\frac{l_t}{L_{ref}}\right)^\alpha
+ $$
+
+with:
+
+- $L_{ref}$ as a reference leisure level
+- $0 < \alpha < 1$ as a concavity parameter
+
+This implies diminishing marginal utility of additional leisure time.
+
+### 4.3 Family utility
+
+Family utility depends on the household life stage and the time available for family care and emotional presence:
+
+$$
+ u_f(f_t, z_t) = K_f \eta(z_t) \left(\frac{f_t}{F_{ref}}\right)^\beta
+ $$
+
+where:
+
+- $\eta(z_t)$ is a life-stage multiplier
+- $0 < \beta < 1$ is the family-time concavity parameter
+
+A reasonable calibration uses higher values of $\eta(z_t)$ during early parenthood and lower values in later life stages with different time demands.
+
+### 4.4 Health utility
+
+Health stress is introduced as a convex penalty on work intensity:
+
+$$
+ u_h(h_t) = -\kappa \left(\frac{h_t^{work}}{H_{full}}\right)^\gamma
+ $$
+
+with:
+
+- $\gamma > 1$ so that work stress is convex and increasingly costly at higher levels of overwork
+- $\kappa > 0$ scaling the health penalty
+
+This allows the model to encode the fact that work stress is not linear: very high work percentages can disproportionately damage health and reduce long-term welfare.
+
+### 4.5 Security utility
+
+Security utility captures pension adequacy and financial resilience:
+
+$$
+ u_s(s_t) = \min\left\{1, \frac{P_t}{P_{target}}\right\} \cdot K_s
+ $$
+
+where:
+
+- $P_t$ is projected pension income at time $t$
+- $P_{target}$ is a target replacement rate or adequacy threshold
+- $K_s$ is a normalization constant
+
+This term prevents the optimizer from selecting a high-leisure option that would create unacceptable pension risk.
+
+---
+
+## 5. Tax function
+
+The tax function is designed to approximate effective tax burden on labor income under Swiss rules.
+
+Let gross taxable income be $I$. Then effective tax burden is:
+
+$$
+ \tau(I) = \frac{T_{federal}(I) + T_{cantonal}(I) + T_{communal}(I) + T_{social}(I)}{I}
+ $$
+
+where each component is defined separately.
+
+### 5.1 Federal progressive tax
+
+For a progressive tax schedule with brackets $[b_0, b_1, \dots, b_n]$ and marginal rates $r_1, \dots, r_n$,
+
+$$
+ T_{federal}(I) = \sum_{i=1}^{n} r_i \cdot \max\{0, \min(I, b_i) - b_{i-1}\}
+ $$
+
+This is explicit and economically interpretable.
+
+### 5.2 Cantonal and communal tax
+
+Cantonal and local taxes are approximated as proportional or semi-progressive components:
+
+$$
+ T_{cantonal}(I) = \alpha_c(I, z) \cdot I
+ $$
+
+$$
+ T_{communal}(I) = \alpha_m \cdot T_{cantonal}(I)
+ $$
+
+with $z$ capturing local household and tax context such as marital status, canton, and children.
+
+### 5.3 Social security contributions
+
+Mandatory social contributions are modeled as:
+
+$$
+ T_{social}(I) = I \cdot (r_{AHV} + r_{ALV} + r_{EO})
+ $$
+
+This component is important because it is not merely a tax, but a mandatory social insurance deduction that materially affects labor supply and pension accumulation.
+
+### 5.4 Assumptions and limitations
+
+The tax function is intentionally simplified for transparency. In practice, Swiss taxes vary by canton, municipality, deductions, and household structure. Therefore, the model should allow:
+
+- municipality-specific calibration
+- canton-specific tax approximations
+- override parameters for empirical income statements
+- explicit reporting of assumptions used in each computation
+
+This is preferable to pretending a single formula accurately represents all Swiss tax contexts.
+
+---
+
+## 6. Pension model
+
+The model combines state and occupational pension elements.
+
+### 6.1 AHV / Pillar 1
+
+The state pension is approximated as:
+
+$$
+ P_{AHV} = \min\{P_{AHV}^{max}, \lambda_{AHV} \cdot \bar{I}_{career}\}
+ $$
+
+where:
+
+- $P_{AHV}^{max}$ is a capped pension level
+- $\bar{I}_{career}$ is average indexed annual income over the working life
+- $\lambda_{AHV}$ is a pension replacement factor
+
+### 6.2 BVG / Pillar 2
+
+Occupational pension contributions are modeled as:
+
+$$
+ C_t = I_t \cdot \theta_t \cdot r_{BVG}
+ $$
+
+with annual capital accumulation:
+
+$$
+ K_{t+1} = K_t (1 + r_t) + C_t
+ $$
+
+where:
+
+- $r_t$ is the annual return on pension assets
+- $r_{BVG}$ is the contribution rate
+
+At retirement, capital is converted into an annual pension using a conversion coefficient $\gamma$:
+
+$$
+ P_{BVG} = \gamma K_{retirement}
+ $$
+
+The actual value of $r_t$ is stochastic and should be modeled under a regime-aware or Monte Carlo framework.
+
+### 6.3 Total retirement income
+
+Total pension income is:
+
+$$
+ P_{total} = P_{AHV} + P_{BVG}
+ $$
+
+The adequacy constraint is then checked against a target replacement ratio or minimum required retirement needs.
+
+---
+
+## 7. Requirements and living-cost function
+
+The household requirement function is defined as:
+
+$$
+ R_t = R_{housing} + R_{food} + R_{transport} + R_{insurance} + R_{health} + R_{childcare} + R_{education} + R_{discretionary}
+ $$
+
+This requirement is life-stage dependent:
+
+$$
+ R_t = R_{base} \cdot \phi(z_t)
+ $$
+
+where $\phi(z_t)$ is a multiplier depending on family composition and life stage.
+
+This is essential because the same income level does not imply the same standard of living across different life phases.
+
+---
+
+## 8. Stochastic macroeconomic environment
+
+The projection framework includes regime-dependent returns and macroeconomic states. Let the state variable be:
+
+$$
+ X_t \in \{Boom, Normal, Recession, Stagflation\}
+ $$
+
+with transition matrix:
+
+$$
+ P(X_{t+1} = j \mid X_t = i) = p_{ij}
+ $$
+
+The annual return process is then modeled as:
+
+$$
+ r_{t+1} = \mu_{X_t} + \sigma_{X_t} \epsilon_t,
+ \quad \epsilon_t \sim \mathcal{N}(0,1)
+ $$
+
+This approach allows shocks to cluster and regimes to persist, which is more realistic than a single constant-volatility process.
+
+The important point is not just that volatility exists, but that economic states are persistent and regime-dependent.
+
+---
+
+## 9. Sequence-of-returns risk
+
+A key retirement risk is sequence-of-returns risk. Let retirement begin at year $T_R$.
+
+The model should evaluate outcomes under a stress scenario in which a negative macroeconomic regime occurs in the years directly before and after retirement:
+
+$$
+ r_{T_R-2}, r_{T_R-1}, r_{T_R}, r_{T_R+1} \text{ are negative or unusually weak}
+ $$
+
+This timing matters because withdrawal risk is highest precisely when the portfolio has not yet had time to recover.
+
+This is one of the clearest examples of why a simple expected-return model is insufficient.
+
+---
+
+## 10. Solution methods
+
+### 10.1 Grid search
+
+The current implementation uses a discrete search over candidate work percentages:
+
+$$
+ \Theta = \{0.5, 0.6, 0.7, 0.8, 0.9, 1.0\}
+ $$
+
+and selects:
+
+$$
+ \theta^* = \arg\max_{\theta \in \Theta} \mathbb{E}[U(\theta)]
+ $$
+
+This method is transparent and simple, but it has limitations:
+
+- it only identifies the optimum within a grid
+- it may miss local optima in a richer utility surface
+- it scales poorly when decision variables become multidimensional
+
+### 10.2 Continuous optimization
+
+For a continuous formulation, one may use:
+
+$$
+ \nabla U(\theta) = \frac{\partial U}{\partial \theta}
+ $$
+
+and apply methods such as:
+
+- gradient descent
+- quasi-Newton methods
+- L-BFGS
+- dynamic programming for richer state spaces
+
+This is mathematically valid, but the model must still be constrained by economic realism and interpretability.
+
+### 10.3 Dynamic programming
+
+A richer formulation is a Bellman equation of the form:
+
+$$
+ V(t, x_t) = \max_{\theta_t \in [0,1]} \left\{ u_t + \beta \mathbb{E}[V(t+1, x_{t+1})] \right\}
+ $$
+
+where $x_t$ is the state vector containing relevant household and financial conditions.
+
+This is more general and can handle dynamic decision making, but it is also more computationally demanding and requires stronger calibration discipline.
+
+---
+
+## 11. Calibration logic
+
+The model is only useful if its parameters are interpretable and defensible. Calibration should be conducted in a transparent manner.
+
+### 11.1 Utility weights
+
+Preference weights should be informed by:
+
+- revealed preference data
+- life-satisfaction studies
+- behavioral studies on work-life trade-offs
+- region-specific household data
+
+A plausible structure is:
+
+$$
+ w_c, w_l, w_f, w_h, w_s \in [0,1]
+ $$
+
+with the constraint that their sum is one.
+
+### 11.2 Discount factor
+
+The discount factor is usually specified as:
+
+$$
+ \beta = \frac{1}{1+\rho}
+ $$
+
+with $\rho$ between 1% and 5% depending on the decision context.
+
+### 11.3 Health and family parameters
+
+Parameters for health stress and family multipliers should be estimated or at least justified using empirical household evidence, not chosen arbitrarily.
+
+### 11.4 Tax parameters
+
+Tax schedules should be calibrated to official cantonal and municipal rules, and with explicit ability to override using observed personal tax filings.
+
+### 11.5 Macro parameters
+
+Regime transition matrices and return distributions should be estimated from historical Swiss or developed-market data, with robustness checks across different windows.
+
+This is essential: a regime model without calibration is merely a stylized narrative, not a model with decision relevance.
+
+---
+
+## 12. Validation strategy
+
+Validation is critical. A model can be elegant and still be wrong.
+
+### 12.1 Internal model checks
+
+The model should be checked for:
+
+- monotonicity of utility functions
+- feasibility of budget and time constraints
+- feasibility of pension adequacy thresholds
+- numerical stability of optimization across parameter values
+
+### 12.2 Historical backtesting
+
+The macro model should be compared against historical data for:
+
+- inflation paths
+- salary growth
+- return distributions
+- crisis episodes
+- growth and recession clusters
+
+### 12.3 Stress testing
+
+A credible model must evaluate adverse scenarios such as:
+
+- prolonged recession
+- high inflation
+- sudden rate shifts
+- early retirement under poor sequence-of-returns conditions
+
+### 12.4 Sensitivity analysis
+
+The project should quantify how output changes when key parameters are perturbed.
+
+For example:
+
+- small changes in discount rate
+- moderate changes in tax rates
+- alternative family utility weights
+- different pension adequacy targets
+
+This reveals whether the recommendation is robust or fragile.
+
+### 12.5 Model comparison
+
+Different model families should be compared under the same conditions:
+
+- GBM baseline
+- OU/Vasicek dynamics
+- regime-switching model
+- jump-diffusion model
+- hybrid model
+
+The objective is not simply to select the most complex model, but the one that provides the best balance of realism, calibration quality, and computational tractability.
+
+---
+
+## 13. Strategic framing
+
+This project should be interpreted as an explicit decision-support system rather than a purely predictive model. Its central value is that it makes assumptions visible and contestable.
+
+This matters because modern AI and black-box optimization tools can generate attractive outputs quickly, but they often do so without revealing:
+
+- which assumptions matter most
+- how sensitive the recommendation is to those assumptions
+- whether the model remains robust under stress
+- whether the result is economically plausible
+
+A transparent model, even if simpler, can still be more valuable than a complex but opaque one.
+
+The core strategic objective is therefore not to maximize complexity, but to maximize credibility, interpretability, and decision quality.
+
+---
+
+## 14. Current limitations and project risks
+
+The project currently has several risks that should be acknowledged explicitly:
+
+1. Parameter choices may be too heuristic.
+2. Tax modeling may be insufficiently local or institution-specific.
+3. Utility assumptions may not be empirically grounded.
+4. Stochastic processes may underrepresent tail risk and dependence.
+5. Validation may be weaker than a serious quantitative framework requires.
+6. The model may appear more precise than it actually is.
+
+These limitations are not fatal, but they do mean that the project should be framed as a transparent research and planning framework, not as a definitive financial adviser.
+
+---
+
+## 15. Summary
+
+The formal structure of Life Optimizer can be read as a constrained intertemporal utility optimization problem with a stochastic pension environment and explicit household preferences. This is a coherent and defensible framework for decision support.
+
+However, the model must be strengthened in four areas to become genuinely credible:
+
+1. stronger calibration logic
+2. more realistic macroeconomic dynamics
+3. explicit validation and sensitivity analysis
+4. disciplined model selection and benchmarking
+
+The project is strongest when it is framed as transparent and explainable quantitative planning, rather than as a black-box optimization engine. That is the right strategic position for a tool intended to support major life decisions.
