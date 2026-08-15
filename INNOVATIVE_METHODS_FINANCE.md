@@ -78,7 +78,7 @@ Second term shows: early withdrawals ($S_s$ large when $t$ near $T$) suffer most
 
 ## Part II: Newest Trends in Finance Mathematics (2023–2026)
 
-### 1. Reinforcement Learning for Dynamic Portfolio Allocation ⭐⭐⭐
+### 1. Reinforcement Learning for Dynamic Portfolio Allocation
 
 **Status:** Hot, rapidly productionizing
 
@@ -110,7 +110,7 @@ Policy π learns: "At age 60 with K=500k and recession risk rising, shift to 50%
 
 **Rust implementation note:** Use `ndarray` for matrix ops + `tch-rs` (PyTorch bindings) or `burn` (pure Rust DL).
 
-### 2. Distributionally Robust Optimization (DRO) ⭐⭐
+### 2. Distributionally Robust Optimization (DRO)
 
 **Status:** Emerging, gaining adoption in institutional asset management
 
@@ -139,7 +139,7 @@ where $W$ = Wasserstein distance, $\rho$ = confidence radius.
 
 **Computational cost:** Higher (min-max problem), but tractable for medium-scale problems via dual reformulation.
 
-### 3. Causal Inference for Financial Calibration ⭐⭐
+### 3. Causal Inference for Financial Calibration
 
 **Status:** Growing in academic finance; bleeding into industry (JP Morgan, BlackRock using causal DAGs)
 
@@ -178,7 +178,7 @@ Oil shock occurs (exogenous)
 
 **Rust implementation:** Use structural VAR estimation (linear algebra via `nalgebra`).
 
-### 4. Optimal Transport for Risk Metrics ⭐
+### 4. Optimal Transport for Risk Metrics
 
 **Status:** Academic; slow adoption in industry
 
@@ -201,7 +201,7 @@ Wasserstein distance: large (because 10% tail risk is severe)
 
 **Computational complexity:** Sinkhorn algorithm (iterative, ~$O(n^3 \log n)$ for $n$ scenarios), but parallelizable.
 
-### 5. Multi-Objective Optimization with Pareto Frontiers ⭐⭐⭐
+### 5. Multi-Objective Optimization with Pareto Frontiers
 
 **Status:** Practical, widely used in engineering and increasingly in finance
 
@@ -238,7 +238,7 @@ Users pick which trade-off they prefer, rather than being locked into one optimu
 
 **Benefit:** Transparent, aligns with real decision-making (humans do multi-objective reasoning naturally).
 
-### 6. Explainable AI (XAI) for Regulatory Compliance ⭐⭐
+### 6. Explainable AI (XAI) for Regulatory Compliance
 
 **Status:** Mandatory in EU (AI Act), UK (FCA guidance), increasingly adopted globally
 
@@ -271,7 +271,7 @@ Sensitivity:
 
 **Regulatory advantage:** Auditable, transparent, compliant with regulations.
 
-### 7. Agent-Based Modeling (ABM) ⭐
+### 7. Agent-Based Modeling (ABM)
 
 **Status:** Academic/research; gaining interest in macroeconomics and pension systems
 
@@ -484,9 +484,9 @@ let pension_mean = aggregate(counts);
 ## Part IV: Recommended Integration into Life_Optimizer
 
 ### **Immediate (2024–2025): Foundation**
-1. ✅ Document current innovation (time-life-money integration, regime-switching, Swiss specificity)
-2. ✅ Create Pareto frontier visualization (multi-objective optimization)
-3. ✅ Add XAI layer (SHAP-style feature importance)
+1. Document current innovation (time-life-money integration, regime-switching, Swiss specificity)
+2. Create Pareto frontier visualization (multi-objective optimization)
+3. Add XAI layer (SHAP-style feature importance)
 
 ### **Short-term (2025–2026): Advanced Methods**
 1. **Causal calibration** of regime transitions (SVAR analysis of macro drivers)
