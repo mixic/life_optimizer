@@ -192,7 +192,7 @@ This allows the model to encode the fact that work stress is not linear: very hi
 Security utility captures pension adequacy and financial resilience:
 
 $$
- u_s(s_t) = \min\left\{1, \frac{P_t}{P_{target}}\right\} \cdot K_s
+ u_s(s_t) = \min\left(1, \frac{P_t}{P_{target}}\right) \cdot K_s
  $$
 
 where:
