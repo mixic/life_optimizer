@@ -135,6 +135,430 @@ The system combines deterministic models (taxes, BVG rules) with stochastic simu
 
 ---
 
+# 4.4 Family Support Obligations & Social Safety Nets
+
+This section addresses a critical real-world constraint: **What if your pension is insufficient both to live on and to support your children's education?** The answer depends on Swiss family law, state support programs, and sustainable withdrawal strategies.
+
+### 4.4.1 Family Support Obligations in Switzerland
+
+**Legal Framework:**
+- Parents are legally obligated to support children during their education (Unterhaltspflicht).
+- Obligation typically extends until age 25 (end of apprenticeship, bachelor's degree, or first professional qualification).
+- Obligation continues if child is still in full-time education or seeking first employment.
+- Amount is determined by parental income and wealth at time of support (not retrospectively).
+
+**Key Point:** If you retire at 65 and your 18-year-old is in university, you may still have a legal obligation to contribute to their education expenses, even if your own pension is modest.
+
+**Implication for Life Optimizer:**
+- Model should account for "education horizon" — years where you may need to support children.
+- Scenarios should report whether projected pension is sufficient for both self-sustaining retirement AND educational support for dependents.
+- Users should understand the trade-off: working longer at 45 → higher pension at 65 → ability to support children's education without state intervention.
+
+### 4.4.2 Sustainable Withdrawal Rates from Pension Savings
+
+**Classic Rule of Thumb (4% Rule):**
+- If you have CHF 1M in Pillar 3a + BVG savings at 65, you can safely withdraw 4% per year = CHF 40,000/year for 30 years.
+- Adjusted for inflation, this provides purchasing power security into your 90s.
+- Conservative because it accounts for sequence-of-returns risk (bad market years early in retirement).
+
+**Swiss-Specific Adjustments:**
+- BVG provides mandatory annuity or lump-sum at retirement (age 65 or deferred to 70).
+- If you take annuity: pension is fixed income (insurance) + AHV (state pension) covers much of base expenses.
+- If you take lump-sum: you have full control but must manage longevity risk yourself.
+- Pillar 3a: typically withdrawn as lump-sum; taxed favorably.
+
+**Three Scenarios for a 45-Year-Old with Children:**
+
+| Scenario | Pension at 65 | Monthly Income | Can Support Children? | Age 95 Safety? |
+|----------|---------------|----------------|-----------------------|----------------|
+| Work 100% until 65 | CHF 1.2M | CHF 4,000 + AHV | Marginal (ages 18–23) | Good |
+| Work 80% until 65 | CHF 900k | CHF 3,000 + AHV | Insufficient | Tight |
+| Work 100% → 90% at 55 | CHF 1.0M | CHF 3,300 + AHV | Modest | Good |
+
+**Life Optimizer Enhancement:** 
+Model should compute:
+- Sustainable monthly withdrawal from lump-sum (using 4% rule).
+- Years of education support required (youngest child age at your 65).
+- Surplus/deficit in each year of retirement.
+- Probability of running out of money (sequence-of-returns risk from Monte Carlo).
+
+### 4.4.3 State Support Programs for Low-Income Retirees
+
+If you can't support yourself or your children through pension + work savings, Switzerland offers several safety nets:
+
+#### A. Supplementary Benefits (Ergänzungsleistungen, EL)
+
+**Who qualifies:**
+- AHV/IV recipients whose retirement income falls below canton-specific minimum (roughly CHF 1,800–2,200/month for single, CHF 2,700–3,200 for couples, depending on canton and housing costs).
+- Asset test: up to ~CHF 100,000 liquid savings allowed for single; CHF 150,000 for couples.
+
+**What it covers:**
+- Rent/housing (up to cantonal maximum, typically CHF 1,200–1,800/month).
+- Health insurance premiums.
+- Modest living expenses.
+- Brings income up to minimum threshold.
+
+**Important caveat:** EL is means-tested and asset-tested. If you have CHF 200,000 in Pillar 3a savings, you will be expected to use it before qualifying for EL.
+
+**Implications:**
+- Children reaching age 25 lose parental support obligation → reduces your required spending.
+- EL provides a floor, but it's modest and requires giving up savings above threshold.
+- If you want dignity and independence in retirement, you need private savings; EL is a last resort.
+
+#### B. Social Assistance (Sozialhilfe)
+
+**Last resort for those without sufficient AHV/pension or EL:**
+- Cantonal and municipal means-tested assistance.
+- Provides minimal income support (roughly CHF 1,200–1,400/month for single).
+- Stigmatized; used only when all other options exhausted.
+- Requires proving asset depletion.
+
+**When relevant:** Only if your pension + AHV + EL is still insufficient. Rare for middle-class workers with decent BVG savings.
+
+#### C. Student Support for Children (Ages 18–25)
+
+If your child is in post-secondary education and you can't fully support them:
+
+**Student Loans (Studiendarlehen):**
+- Offered by cantons; typically CHF 500–1,500/month.
+- Low interest rates (1–2%); repayment begins after graduation.
+- Requires proof of financial need.
+- Student responsible for repayment, not parent.
+
+**Student Stipends (Stipendien):**
+- Means-tested grants from cantons; vary wildly (CHF 200–2,000/month).
+- Application-based; must demonstrate parental income/assets.
+- Do not need to be repaid.
+- Eligibility depends on canton and family income.
+
+**Implication:** Even if you can't personally fund children's education, they have access to loans and grants. This reduces the pressure on your retirement savings.
+
+---
+
+### 4.4.4 Impact on Life Optimizer Model
+
+**New Modeling Dimension:**
+
+The tool should account for:
+1. **Education support years** (age 65 to age 25 + youngest child).
+2. **Sustainable withdrawal rate** (4% rule or custom adjustment).
+3. **State safety nets** (EL and social assistance as backstops).
+
+**Enhanced Utility Function:**
+
+$$U_{security} = f(\text{retirement income}, \text{required expenses}, \text{education obligation}, \text{SOR risk}, \text{state support})$$
+
+Where:
+- High probability (>80%) of meeting both self + child education needs → $U_s$ high.
+- Moderate probability (50–80%) → moderate $U_s$ (requires trade-off with other utilities).
+- Low probability (<50%) → low $U_s$ (requires working longer or accepting state dependency).
+
+**New Output Metrics:**
+
+```
+Retirement Adequacy Report
+├─ Monthly retirement income (after-tax, after annuity/lump-sum)
+├─ Required monthly expenses (self + education support until child age 25)
+├─ Surplus/deficit per month
+├─ Years until savings depleted (if deficit; adjusted for 4% rule safety)
+├─ Probability of financial security to age 95 (Monte Carlo %)
+├─ Probability that child needs to take loans/stipends (% of scenarios)
+└─ State support trigger (if EL or Sozialhilfe required; % of scenarios)
+```
+
+**Example Output:**
+```
+WORK 80% UNTIL 65
+─────────────────
+Pension at 65: CHF 900,000 (lump-sum) + AHV CHF 2,400/mo
+Monthly withdrawal: CHF 3,000 (4% rule) + AHV = CHF 5,400 total
+Required: CHF 4,200 (self) + CHF 800 (child education until 23) = CHF 5,000
+Annual surplus: CHF 4,800
+Probability of financial security to 95: 87%
+Probability child needs external support (loans/stipends): 15%
+State support trigger: 8% (EL in worst-case scenarios)
+```
+
+---
+
+### 4.4.5 Code Implementation: Family & Education Support Feature
+
+**New CLI Arguments (to be added to `main.rs`):**
+
+```bash
+# Optional: specify children's ages for education support analysis
+cargo run --release -- optimize \
+    --salary 150000 \
+    --age 45 \
+    --canton BE \
+    --children-ages 1.5,9 \          # ages of dependent children
+    --education-support-per-child 500 # CHF/month during higher education
+```
+
+**New Data Structure (add to `requirements.rs`):**
+
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DependentChild {
+    pub age: f64,                           // Current age in years (e.g., 9.5)
+    pub name: Option<String>,               // Optional identifier (not stored)
+    pub education_support_monthly: f64,     // Monthly cost during education (CHF)
+    pub education_start_age: f64,           // Age when higher education begins (default: 18)
+    pub education_end_age: f64,             // Age when support obligation ends (default: 25)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilySupport {
+    pub children: Vec<DependentChild>,
+    pub education_assumption: EducationAssumption, // e.g., all attend university, mixed
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum EducationAssumption {
+    AllUniversity,        // All children pursue 3-year bachelor + 2-year master
+    Apprenticeship,       // Mix of vocational training (shorter, lower cost)
+    CustomPerChild,       // Specify individually per child
+}
+```
+
+**New Functions (add to `requirements.rs`):**
+
+```rust
+impl DependentChild {
+    pub fn years_until_education_start(&self, current_age: u32) -> f64 {
+        (self.education_start_age - self.age).max(0.0)
+    }
+    
+    pub fn years_in_education(&self) -> f64 {
+        (self.education_end_age - self.education_start_age).max(0.0)
+    }
+    
+    pub fn is_dependent_at_retirement(&self, current_age: u32, retirement_age: u32) -> bool {
+        let age_at_retirement = self.age + (retirement_age - current_age) as f64;
+        age_at_retirement < self.education_end_age
+    }
+    
+    pub fn monthly_support_during_year(&self, year_from_now: f64) -> f64 {
+        let age_then = self.age + year_from_now;
+        if age_then >= self.education_start_age && age_then < self.education_end_age {
+            self.education_support_monthly
+        } else {
+            0.0
+        }
+    }
+}
+
+impl FamilySupport {
+    pub fn total_monthly_education_support_at_retirement(
+        &self, 
+        current_age: u32, 
+        retirement_age: u32
+    ) -> f64 {
+        self.children.iter()
+            .filter(|child| child.is_dependent_at_retirement(current_age, retirement_age))
+            .map(|child| child.education_support_monthly)
+            .sum()
+    }
+    
+    pub fn education_support_by_year(
+        &self,
+        current_age: u32,
+        retirement_age: u32,
+        life_expectancy: u32,
+    ) -> Vec<(u32, f64)> {
+        // Returns (year, monthly_education_cost) from retirement until life expectancy
+        let mut result = Vec::new();
+        for year in 0..(life_expectancy - retirement_age + 1) {
+            let mut monthly_support = 0.0;
+            for child in &self.children {
+                monthly_support += child.monthly_support_during_year(year as f64);
+            }
+            if monthly_support > 0.0 {
+                result.push((retirement_age + year, monthly_support));
+            }
+        }
+        result
+    }
+}
+```
+
+**Integration into `optimizer.rs`:**
+
+```rust
+pub struct WorkScenario {
+    pub work_percentage: f64,
+    pub gross_income: f64,
+    pub after_tax_income: f64,
+    pub monthly_after_tax: f64,
+    // ... existing fields ...
+    
+    // NEW FIELDS FOR FAMILY SUPPORT
+    pub education_support_monthly_at_retirement: f64,  // CHF/month
+    pub retirement_adequacy: RetirementAdequacy,       // See below
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetirementAdequacy {
+    pub retirement_income_monthly: f64,         // After-tax, annuity + lump-sum withdrawal
+    pub self_sustaining_monthly: f64,           // Personal expenses only (no education support)
+    pub total_required_monthly: f64,            // Personal + education support
+    pub monthly_surplus_deficit: f64,           // Positive = surplus
+    pub sustainable_years: f64,                 // Years until savings depleted (4% rule)
+    pub education_support_years: f64,           // Years with active education obligations
+    pub probability_success_to_95: f64,         // Monte Carlo: % of paths with positive balance at 95
+    pub probability_el_required: f64,           // Monte Carlo: % of paths where EL supplement needed
+    pub summary: String,                        // Human-readable adequacy assessment
+}
+
+impl LifeOptimizer {
+    pub fn calculate_retirement_adequacy(
+        &self,
+        work_percentage: f64,
+        pension_balance_at_65: f64,  // From Monte Carlo
+        family_support: &FamilySupport,
+        retirement_age: u32,
+        life_expectancy: u32,
+    ) -> RetirementAdequacy {
+        // 1. Compute monthly withdrawal using 4% rule
+        let monthly_withdrawal = (pension_balance_at_65 * 0.04) / 12.0;
+        
+        // 2. Add estimated AHV (state pension, age-dependent)
+        let monthly_ahv = self.estimate_ahv_monthly(retirement_age);
+        let retirement_income_monthly = monthly_withdrawal + monthly_ahv;
+        
+        // 3. Compute required expenses
+        let req_adjusted = self.config.requirements
+            .adjusted_for_life_stage(&self.config.life_stage);
+        let self_sustaining = req_adjusted.total_monthly();
+        
+        // 4. Add education support obligations
+        let education_support = family_support
+            .total_monthly_education_support_at_retirement(
+                self.config.current_age,
+                retirement_age
+            );
+        let total_required = self_sustaining + education_support;
+        
+        // 5. Compute sustainability
+        let monthly_surplus = retirement_income_monthly - total_required;
+        let sustainable_years = if monthly_surplus < 0.0 {
+            // Burning down capital; estimate years until depletion
+            (pension_balance_at_65 / (monthly_surplus.abs() * 12.0)).max(0.0)
+        } else {
+            // Surplus; sustainable indefinitely with 4% rule
+            (life_expectancy - retirement_age) as f64
+        };
+        
+        let education_years = family_support.education_support_by_year(
+            self.config.current_age,
+            retirement_age,
+            life_expectancy,
+        ).len() as f64;
+        
+        // 6. Generate summary
+        let summary = if monthly_surplus > 0.0 {
+            format!(
+                "Strong: CHF {}/month surplus. Education support (CHF {}/mo) secured for {} years.",
+                (monthly_surplus * 100.0).round() / 100.0,
+                (education_support * 100.0).round() / 100.0,
+                (education_years * 100.0).round() / 100.0
+            )
+        } else if sustainable_years > (life_expectancy - retirement_age) as f64 * 0.8 {
+            format!(
+                "Adequate: Modest deficit managed by capital drawdown. Sustainable to age ~{}.",
+                (retirement_age as f64 + sustainable_years) as u32
+            )
+        } else {
+            format!(
+                "Constrained: Capital depleted by age ~{}. EL/support likely needed.",
+                (retirement_age as f64 + sustainable_years) as u32
+            )
+        };
+        
+        RetirementAdequacy {
+            retirement_income_monthly,
+            self_sustaining_monthly: self_sustaining,
+            total_required_monthly: total_required,
+            monthly_surplus_deficit: monthly_surplus,
+            sustainable_years,
+            education_support_years: education_years,
+            probability_success_to_95: 0.0,  // Set by Monte Carlo
+            probability_el_required: 0.0,    // Set by Monte Carlo
+            summary,
+        }
+    }
+    
+    fn estimate_ahv_monthly(&self, retirement_age: u32) -> f64 {
+        // Simplified AHV estimate (2024: CHF 1,225–2,450/month for single)
+        // Real implementation would use insurance office data
+        match retirement_age {
+            65 => 1850.0,  // Standard retirement, full pension
+            66..=70 => 1850.0 * 1.05,  // Deferred retirement bonus (~5.2% per year)
+            _ => 1850.0,
+        }
+    }
+}
+```
+
+**Updated `display.rs` — New Output Section:**
+
+```rust
+pub fn display_retirement_adequacy(scenario: &WorkScenario) {
+    println!("\n📊 RETIREMENT ADEQUACY ANALYSIS");
+    println!("─────────────────────────────────────────────────────────");
+    
+    let adeq = &scenario.retirement_adequacy;
+    println!("Monthly Retirement Income:        CHF {:>8.0}", adeq.retirement_income_monthly);
+    println!("  ├─ Pension withdrawal (4% rule): CHF {:>8.0}", 
+        adeq.retirement_income_monthly - estimate_ahv(65));  // rough
+    println!("  └─ AHV (state pension):          CHF {:>8.0}", estimate_ahv(65));
+    
+    println!("\nMonthly Expenses:");
+    println!("  ├─ Personal needs:               CHF {:>8.0}", adeq.self_sustaining_monthly);
+    println!("  ├─ Child education support:      CHF {:>8.0}", 
+        adeq.total_required_monthly - adeq.self_sustaining_monthly);
+    println!("  └─ TOTAL:                        CHF {:>8.0}", adeq.total_required_monthly);
+    
+    let status = if adeq.monthly_surplus_deficit > 0.0 { "✓" } else { "⚠" };
+    println!("\nSurplus/Deficit:  {} CHF {:>+8.0} per month", 
+        status, adeq.monthly_surplus_deficit);
+    
+    println!("\nEducation Support Obligations:");
+    println!("  Duration:   {:.1} years", adeq.education_support_years);
+    println!("  Status:     {}", adeq.summary);
+    
+    println!("\nLongevity Security (Monte Carlo):");
+    println!("  Prob. success to age 95:        {:>6.1}%", adeq.probability_success_to_95);
+    println!("  Prob. EL supplementary needed:  {:>6.1}%", adeq.probability_el_required);
+}
+```
+
+**New CLI Command (extend `main.rs`):**
+
+```bash
+# Add to Optimize command
+cargo run --release -- optimize \
+    --salary 150000 \
+    --age 45 \
+    --canton BE \
+    --children-ages 1.5,9 \
+    --education-cost-per-child 500
+
+# Output will include:
+# - Standard optimization results
+# - PLUS retirement adequacy analysis
+# - PLUS education support projections
+```
+
+**Data Privacy Note:**
+- Children's ages are used only for calculations; never logged or stored.
+- Personal identifiers (names) are optional and discarded.
+- All results are printed to stdout; not persisted unless user explicitly redirects to file.
+
+---
+
+
+
 # 5. Data Flow
 
 ## 5.1 Input Flow
