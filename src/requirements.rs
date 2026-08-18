@@ -259,3 +259,115 @@ impl PreferenceWeights {
         (sum - 1.0).abs() < 0.01
     }
 }
+
+/// Represents a dependent child for education support planning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DependentChild {
+    pub age: f64,                           // Current age in years (e.g., 9.5)
+    pub education_support_monthly: f64,     // Monthly cost during education (CHF)
+    pub education_start_age: f64,           // Age when higher education begins (default: 18)
+    pub education_end_age: f64,             // Age when support obligation ends (default: 25)
+}
+
+impl DependentChild {
+    pub fn new(age: f64, education_support_monthly: f64) -> Self {
+        Self {
+            age,
+            education_support_monthly,
+            education_start_age: 18.0,
+            education_end_age: 25.0,
+        }
+    }
+
+    /// Years until this child enters higher education
+    pub fn years_until_education_start(&self) -> f64 {
+        (self.education_start_age - self.age).max(0.0)
+    }
+
+    /// Years this child will require education support
+    pub fn years_in_education(&self) -> f64 {
+        (self.education_end_age - self.education_start_age).max(0.0)
+    }
+
+    /// Is this child still dependent at a given retirement age?
+    pub fn is_dependent_at_retirement(&self, current_age: u32, retirement_age: u32) -> bool {
+        let age_at_retirement = self.age + (retirement_age - current_age) as f64;
+        age_at_retirement < self.education_end_age
+    }
+
+    /// Monthly support needed during a specific year (from now)
+    pub fn monthly_support_during_year(&self, years_from_now: f64) -> f64 {
+        let age_then = self.age + years_from_now;
+        if age_then >= self.education_start_age && age_then < self.education_end_age {
+            self.education_support_monthly
+        } else {
+            0.0
+        }
+    }
+}
+
+/// Family support configuration for retirement planning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilySupport {
+    pub children: Vec<DependentChild>,
+}
+
+impl FamilySupport {
+    pub fn new(children: Vec<DependentChild>) -> Self {
+        Self { children }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            children: Vec::new(),
+        }
+    }
+
+    /// Total monthly education support needed at retirement
+    pub fn total_monthly_education_support_at_retirement(
+        &self,
+        current_age: u32,
+        retirement_age: u32,
+    ) -> f64 {
+        self.children
+            .iter()
+            .filter(|child| child.is_dependent_at_retirement(current_age, retirement_age))
+            .map(|child| child.education_support_monthly)
+            .sum()
+    }
+
+    /// Year-by-year breakdown of education support obligations
+    pub fn education_support_by_year(
+        &self,
+        _current_age: u32,
+        retirement_age: u32,
+        life_expectancy: u32,
+    ) -> Vec<(u32, f64)> {
+        let mut result = Vec::new();
+        for year in 0..=(life_expectancy - retirement_age + 1) {
+            let mut monthly_support = 0.0;
+            for child in &self.children {
+                monthly_support += child.monthly_support_during_year(year as f64);
+            }
+            if monthly_support > 0.0 {
+                result.push((retirement_age + year, monthly_support));
+            }
+        }
+        result
+    }
+
+    /// Parse children ages from comma-separated string (e.g., "1.5,9")
+    pub fn from_ages_string(ages_str: &str, education_cost_per_child: f64) -> Self {
+        let children = ages_str
+            .split(',')
+            .filter_map(|s| {
+                s.trim()
+                    .parse::<f64>()
+                    .ok()
+                    .map(|age| DependentChild::new(age, education_cost_per_child))
+            })
+            .collect();
+
+        Self { children }
+    }
+}

@@ -1,8 +1,21 @@
 // Core optimization module
 #![allow(dead_code)]
-use crate::requirements::{LifeStage, PersonalRequirements, PreferenceWeights};
+use crate::requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
 use crate::tax::TaxSchedule;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetirementAdequacy {
+    pub retirement_income_monthly: f64,         // After-tax, annuity + lump-sum withdrawal
+    pub self_sustaining_monthly: f64,           // Personal expenses only (no education support)
+    pub total_required_monthly: f64,            // Personal + education support
+    pub monthly_surplus_deficit: f64,           // Positive = surplus
+    pub sustainable_years: f64,                 // Years until savings depleted (4% rule)
+    pub education_support_years: f64,           // Years with active education obligations
+    pub probability_success_to_95: f64,         // Monte Carlo: % of paths with positive balance at 95
+    pub probability_el_required: f64,           // Monte Carlo: % of paths where EL supplement needed
+    pub summary: String,                        // Human-readable adequacy assessment
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkScenario {
@@ -18,6 +31,7 @@ pub struct WorkScenario {
     pub surplus_deficit: f64,
     pub utility_score: f64,
     pub utility_breakdown: UtilityBreakdown,
+    pub retirement_adequacy: Option<RetirementAdequacy>,  // NEW: family support analysis
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,6 +131,7 @@ impl LifeOptimizer {
             surplus_deficit,
             utility_score: utility_breakdown.total,
             utility_breakdown,
+            retirement_adequacy: None,
         }
     }
 
@@ -327,6 +342,94 @@ impl LifeOptimizer {
             scenario.utility_score
         } else {
             scenario.utility_score - 10.0
+        }
+    }
+
+    /// Calculate retirement adequacy for a work scenario with family support obligations
+    pub fn calculate_retirement_adequacy(
+        &self,
+        _work_percentage: f64,
+        pension_balance_at_65: f64,
+        family_support: &FamilySupport,
+        life_expectancy: u32,
+    ) -> RetirementAdequacy {
+        // 1. Compute monthly withdrawal using 4% rule
+        let monthly_withdrawal = (pension_balance_at_65 * 0.04) / 12.0;
+
+        // 2. Add estimated AHV (state pension, age-dependent)
+        let monthly_ahv = self.estimate_ahv_monthly(self.config.retirement_age);
+        let retirement_income_monthly = monthly_withdrawal + monthly_ahv;
+
+        // 3. Compute required personal expenses
+        let req_adjusted = self
+            .config
+            .requirements
+            .adjusted_for_life_stage(&self.config.life_stage);
+        let self_sustaining = req_adjusted.total_monthly();
+
+        // 4. Add education support obligations
+        let education_support = family_support.total_monthly_education_support_at_retirement(
+            self.config.current_age,
+            self.config.retirement_age,
+        );
+        let total_required = self_sustaining + education_support;
+
+        // 5. Compute sustainability
+        let monthly_surplus = retirement_income_monthly - total_required;
+        let sustainable_years = if monthly_surplus < 0.0 {
+            // Burning down capital; estimate years until depletion
+            (pension_balance_at_65 / (monthly_surplus.abs() * 12.0)).max(0.0)
+        } else {
+            // Surplus; sustainable indefinitely with 4% rule
+            (life_expectancy - self.config.retirement_age) as f64
+        };
+
+        let education_years = family_support
+            .education_support_by_year(
+                self.config.current_age,
+                self.config.retirement_age,
+                life_expectancy,
+            )
+            .len() as f64;
+
+        // 6. Generate summary
+        let summary = if monthly_surplus > 0.0 {
+            format!(
+                "Strong: CHF {}/month surplus. Education support secured.",
+                (monthly_surplus * 100.0).round() / 100.0
+            )
+        } else if sustainable_years > (life_expectancy - self.config.retirement_age) as f64 * 0.8 {
+            format!(
+                "Adequate: Capital drawdown sustainable to age ~{}.",
+                (self.config.retirement_age as f64 + sustainable_years) as u32
+            )
+        } else {
+            format!(
+                "Constrained: Capital depleted by age ~{}. EL support likely needed.",
+                (self.config.retirement_age as f64 + sustainable_years) as u32
+            )
+        };
+
+        RetirementAdequacy {
+            retirement_income_monthly,
+            self_sustaining_monthly: self_sustaining,
+            total_required_monthly: total_required,
+            monthly_surplus_deficit: monthly_surplus,
+            sustainable_years,
+            education_support_years: education_years,
+            probability_success_to_95: 0.0,  // Set by Monte Carlo if available
+            probability_el_required: 0.0,    // Set by Monte Carlo if available
+            summary,
+        }
+    }
+
+    /// Estimate AHV monthly pension based on retirement age
+    fn estimate_ahv_monthly(&self, retirement_age: u32) -> f64 {
+        // Simplified AHV estimate (2024: CHF 1,225–2,450/month for single)
+        match retirement_age {
+            65 => 1850.0,                          // Standard retirement, full pension
+            66..=70 => 1850.0 * (1.0 + (retirement_age - 65) as f64 * 0.052), // Deferred retirement bonus
+            _ => 1850.0,
         }
     }
 }

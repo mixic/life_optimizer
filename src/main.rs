@@ -7,7 +7,7 @@ mod mc_display;
 mod economic_regimes;
 
 use clap::{Parser, Subcommand, ArgAction};
-use requirements::{LifeStage, PersonalRequirements, PreferenceWeights};
+use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
 use tax::TaxSchedule;
 use optimizer::{OptimizerConfig, LifeOptimizer};
 use colored::*;
@@ -71,6 +71,14 @@ enum Commands {
         /// Annual Pillar 3a contribution in CHF (default: 0, max 7056)
         #[arg(long, default_value = "0")]
         pillar3a: f64,
+
+        /// Children's ages (comma-separated, e.g. "1.5,9" for 1.5 and 9 years old)
+        #[arg(long)]
+        children_ages: Option<String>,
+
+        /// Monthly education support cost per child during higher education (CHF)
+        #[arg(long, default_value = "500")]
+        education_cost_per_child: f64,
     },
 
     /// Compare specific work percentage scenarios
@@ -183,8 +191,10 @@ fn main() {
             retirement_age,
             life_expectancy,
             pillar3a,
+            children_ages,
+            education_cost_per_child,
         } => {
-            run_optimization(salary, age, married, children, youngest_child_age, &canton, &profile, custom_tax_rate, family_tax_mode, retirement_age, life_expectancy, pillar3a);
+            run_optimization(salary, age, married, children, youngest_child_age, &canton, &profile, custom_tax_rate, family_tax_mode, retirement_age, life_expectancy, pillar3a, children_ages.as_deref(), education_cost_per_child);
         }
         Commands::Compare {
             salary,
@@ -237,6 +247,8 @@ fn run_optimization(
     retirement_age: u32,
     life_expectancy: u32,
     pillar3a: f64,
+    children_ages: Option<&str>,
+    education_cost_per_child: f64,
 ) {
     println!("\n{}", "=== LIFE OPTIMIZER ===".bold().cyan());
     println!("Finding optimal work percentage for your situation...\n");
@@ -251,13 +263,13 @@ fn run_optimization(
 
     let requirements = PersonalRequirements::bern_family_default(children);
 
-    let children_ages = if let Some(youngest) = youngest_child_age {
+    let child_ages_vec = if let Some(youngest) = youngest_child_age {
         vec![youngest]
     } else {
         vec![]
     };
 
-    let life_stage = LifeStage::determine_from_age(age, children > 0, &children_ages);
+    let life_stage = LifeStage::determine_from_age(age, children > 0, &child_ages_vec);
 
     let preferences = match profile {
         "family" => PreferenceWeights::family_focused(),
@@ -335,6 +347,49 @@ fn run_optimization(
 
     display::print_comparison_table(&all_scenarios);
     display::print_recommendations(&optimal, age);
+
+    // ── Family Support & Education Planning ─────────────────────────────────
+    if let Some(ages_str) = children_ages {
+        println!("\n{}", "=== RETIREMENT ADEQUACY WITH FAMILY SUPPORT ===".bold().cyan());
+        
+        let family_support = FamilySupport::from_ages_string(ages_str, education_cost_per_child);
+        
+        // Estimate pension balance at retirement using simplified projection
+        let years_to_retirement = (retirement_age - age) as f64;
+        let bvg_contribution_annual = salary * optimal.work_percentage * 0.083;  // ~8.3% BVG rate
+        let pension_at_65 = bvg_contribution_annual 
+            * ((1.02_f64.powf(years_to_retirement) - 1.0) / (1.02 - 1.0))  // 2% annual return
+            + (pillar3a * years_to_retirement);  // Pillar 3a linear accumulation
+        
+        let adequacy = optimizer.calculate_retirement_adequacy(
+            optimal.work_percentage,
+            pension_at_65,
+            &family_support,
+            life_expectancy,
+        );
+        
+        println!("\n📊 Monthly Retirement Income:");
+        println!("  Pension withdrawal (4% rule): CHF {:>8.0}", 
+            (pension_at_65 * 0.04 / 12.0).round());
+        println!("  AHV (state pension):          CHF {:>8.0}", 
+            (adequacy.retirement_income_monthly - pension_at_65 * 0.04 / 12.0).round());
+        println!("  TOTAL:                        CHF {:>8.0}", 
+            adequacy.retirement_income_monthly.round());
+        
+        println!("\n💰 Monthly Expenses:");
+        println!("  Personal needs:               CHF {:>8.0}", adequacy.self_sustaining_monthly.round());
+        let education_cost = adequacy.total_required_monthly - adequacy.self_sustaining_monthly;
+        println!("  Child education support:      CHF {:>8.0}", education_cost.round());
+        println!("  TOTAL:                        CHF {:>8.0}", adequacy.total_required_monthly.round());
+        
+        println!("\n✓ Financial Security:");
+        println!("  Monthly surplus/deficit:      CHF {:>+8.0}", adequacy.monthly_surplus_deficit.round());
+        println!("  Sustainable until age ~{}:   {} years", 
+            (retirement_age as f64 + adequacy.sustainable_years) as u32,
+            adequacy.sustainable_years.round());
+        println!("  Education support years:      {:.1} years", adequacy.education_support_years);
+        println!("\n  Status: {}", adequacy.summary);
+    }
 }
 
 fn run_comparison(
@@ -468,7 +523,7 @@ fn run_interactive() {
 
     println!("\n{}", "Analyzing your situation...".yellow());
     
-    run_optimization(salary, age, married, children, youngest_age, "ZH", profile, None, married && children > 0, 65, 90, 0.0);
+    run_optimization(salary, age, married, children, youngest_age, "ZH", profile, None, married && children > 0, 65, 90, 0.0, None, 500.0);
 }
 
 fn run_pension_simulation(
