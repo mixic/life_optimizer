@@ -4,7 +4,9 @@ This document records external criticism and questions raised about the Life Opt
 
 ## 1. Critique from Mr. Gradimir Nikolic
 
-Mr. Gradimir Nikolic is a highly knowledgeable expert in economics and statistical risk modeling in the insurance sector. After completing his diploma studies at ETH Zurich, he earned a Magister degree in Risk and Insurance Mathematics and developed extensive leadership experience in the insurance industry. His comments therefore provide both a philosophical perspective on work allocation and a professional perspective on economic uncertainty and risk.
+A short Resume: 
+
+Mr. Gradimir Nikolic is a highly knowledgeable expert in economics and statistical risk modeling in the insurance sector. After completing his diploma studies in Agrarian Sciences and Food Technology at the University of Belgrade, he earned a Magister degree from ETH Zurich through a special scientific collaboration program for post-diploma education, led by Prof. Hans Bühlmann (ETH Zurich) and Erwin Straub, two world-renowned experts in insurance mathematics, in cooperation with the Yugoslav insurance company Dunav, which subsidized post-diploma studies in Actuarial Sciences. He went on to develop extensive leadership experience in the insurance industry. His comments therefore provide both a philosophical perspective on work allocation and a professional perspective on economic uncertainty and risk.
 
 Mr. Gradimir Nikolic considers the basic idea of the project valuable: a worker should be able to evaluate the trade-off between income, time, health, leisure, and long-term pension security. However, he raised an important philosophical and practical question about the assumption that a worker can freely choose a work level between 100% and 80%.
 
@@ -77,6 +79,8 @@ The project could test this issue by adding outcome-based scenarios:
 This would make the model more realistic for modern project-based employment. It would also clarify that the recommendation is not simply “work less,” but rather “work less when tools and working methods preserve the outcomes that the employer requires.”
 
 ## 2. Critique from Mr. Bojan Nedic
+
+A short Resume: 
 
 Mr. Bojan Nedic holds a Master's degree in Electrical Engineering from the University of Belgrade. He is an expert in microelectronics and electrical engineering, as well as software engineering, firmware development, and hardware-near development. He identified a missing dimension in the current model: consumption.
 
