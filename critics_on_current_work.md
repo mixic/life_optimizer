@@ -221,4 +221,4 @@ The following publications provide useful evidence and frameworks for extending 
 
 	Useful for current employer expectations about changing skills, job creation, job displacement, and reskilling needs. It should be treated as a survey-based scenario source, not as a precise forecast.
 
-These sources support a research position rather than a predetermined conclusion. They justify modeling several AI adoption, employment, productivity, and distribution scenarios and reporting the uncertainty around each one.
+These sources support a research position rather than a predetermined conclusion. They justify modeling several AI adoption, employment, productivity, and distribution scenarios and reporting the uncertainty around each one. 
