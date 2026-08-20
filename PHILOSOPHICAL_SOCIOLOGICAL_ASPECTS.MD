@@ -92,7 +92,7 @@ the actual risk.
 
 ## 3. Two critiques that sharpen this problem
 
-The point above — that work percentage is not simply a free individual choice —
+The point above, that work percentage is not simply a free individual choice, 
 is not just a theoretical concern. It was raised directly, and independently, by
 two outside readers of this project (documented in full in
 [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md)). Both critiques deserve to
@@ -101,7 +101,7 @@ approached from two different directions: **the model treats "80%" as if it were
 a self-contained number, when in reality it is embedded in an employment contract
 on one side and a lifestyle on the other.**
 
-### 3a. Work is often judged by output, not hours — so what does "80%" even mean?
+### 3a. Work is often judged by output, not hours, so what does "80%" even mean?
 
 Mr. Gradimir Nikolic's critique is, at bottom, a critique of the model's unit of
 analysis. Many employment relationships — especially project-based, knowledge, or
@@ -139,7 +139,7 @@ A_t = H_t \cdot P_t \cdot (1 + \alpha_t) \qquad \text{subject to} \qquad A_t \ge
 $$
 
 (effective achievement capacity must meet required project goals, where `α_t` is
-an AI-driven productivity gain) — is worth sitting with philosophically as well as
+an AI-driven productivity gain), is worth sitting with philosophically as well as
 mathematically. It implies that **AI does not, by itself, buy back anyone's
 time.** It only creates the *possibility* of buying back time, and whether that
 possibility is realized depends on a second, entirely social question: does the
