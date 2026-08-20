@@ -92,6 +92,62 @@ subject to:
 
    $$0 \leq \theta_t \leq 1, \quad c_t \geq 0, \quad l_t \geq 0, \quad f_t \geq 0, \quad p_t \geq 0$$
 
+### 3.1 Consumption and lifestyle extension
+
+The minimum requirement $R_t$ should be decomposed into unavoidable costs and lifestyle-dependent spending. Let:
+
+- $q_t \in \{E, M, N, L\}$ be the consumption profile: extreme saving, moderate, normal, or luxury;
+- $H_t$ be essential household costs, including rent or mortgage, utilities, insurance, food, and debt obligations;
+- $D_t$ be a reference level of discretionary spending; and
+- $m(q_t)$ be the lifestyle multiplier applied to discretionary spending.
+
+Define total consumption expenditure as:
+
+$$
+C_t = H_t + m(q_t)D_t,
+$$
+
+with an illustrative ordering:
+
+$$
+m(E) < m(M) < m(N) < m(L).
+$$
+
+The multiplier should be calibrated from the user's actual budget rather than treated as a universal judgment about lifestyle. Rent is included in $H_t$ because it is usually a recurring cost that does not automatically fall when the work percentage falls.
+
+The household's annual savings capacity is then:
+
+$$
+S_t = (1 - \tau(I_t))I_t + y_t - C_t - p_t,
+$$
+
+where $p_t$ represents additional planned outflows such as voluntary pension contributions, investments, or reserve funding. The financial feasibility condition becomes:
+
+$$
+S_t \geq S_{\min,t},
+$$
+
+where $S_{\min,t}$ may be zero for a survival scenario or positive when the household must maintain an emergency reserve and pension contributions.
+
+For a proposed work percentage $\theta_t$, the model should therefore test:
+
+$$
+(1 - \tau(I_t))I_t + y_t \geq H_t + m(q_t)D_t + p_t + S_{\min,t}.
+$$
+
+This equation makes the effect of consumption explicit. The same 80% work schedule can be feasible under an extreme-saving profile and infeasible under a luxury profile, even when salary, taxes, and market returns are identical.
+
+An example of a simple initial calibration is:
+
+| Profile | Interpretation | Illustrative discretionary multiplier |
+|---|---|---:|
+| Extreme saving ($E$) | Minimal discretionary spending and strict cost control | 0.50 |
+| Moderate ($M$) | Controlled spending with some flexibility | 0.80 |
+| Normal ($N$) | Ordinary expected standard of living | 1.00 |
+| Luxury ($L$) | Premium services, travel, and high discretionary spending | 1.75 |
+
+These values are starting parameters for scenario analysis, not claims about objectively correct spending levels.
+
 ### Interpretation
 
 This formulation emphasizes that the decision is not purely about income maximization. The household solves a trade-off between:
@@ -566,7 +622,91 @@ The core strategic objective is therefore not to maximize complexity, but to max
 
 ---
 
-## 14. Current limitations and project risks
+## 14. AI-driven productivity and the future of work
+
+The critique from Mr. Gradimir Nikolic can be extended into a forward-looking AI scenario. AI should not be modeled only as a reason to reduce work hours. It may increase output expectations, change employment risk, alter the value of human skills, and create new psychological and social constraints.
+
+### 14.1 AI-adjusted achievement capacity
+
+Let $a_t \geq 0$ represent the productivity contribution of AI, and let $\rho_t$ represent the worker's baseline productivity. Effective project achievement capacity is:
+
+$$
+A_t = \theta_t H_{full} \rho_t (1 + a_t).
+$$
+
+The worker can satisfy the employer's required project output $G_t$ only when:
+
+$$
+A_t \geq G_t.
+$$
+
+This captures the main philosophical point: a reduction in scheduled work is justified only when AI-assisted capacity still meets the required outcomes. However, employers may respond to higher productivity by increasing $G_t$. Therefore, AI does not automatically translate into shorter work.
+
+### 14.2 A possible 10-year, 40% work scenario
+
+In a scenario where AI allows a worker to operate at 40% of the current scheduled time, the model should compare at least three cases:
+
+1. **Shared productivity gain:** project goals remain approximately constant and the worker receives more leisure or family time.
+2. **Employer capture:** productivity rises, but project goals increase so that the worker remains under similar performance pressure.
+3. **Labor substitution:** some tasks disappear, increasing replacement or unemployment risk for workers whose skills are no longer demanded.
+
+The model should not assume that one case will apply to the entire economy. Results should be reported as scenario distributions rather than as a single prediction.
+
+### 14.3 Cognitive engagement and meaningful activity
+
+Reduced paid work can improve health and leisure, but complete disengagement from demanding activity may reduce skill maintenance, identity, social connection, or perceived purpose for some people. A simple cognitive-engagement index can be defined as:
+
+$$
+Q_t = q_0 + q_w \theta_t + q_l E_t^{learning} + q_s E_t^{social} - q_d D_t^{disengagement},
+$$
+
+where $E_t^{learning}$ and $E_t^{social}$ measure purposeful learning and social activity outside paid work. This avoids assuming that paid employment is the only source of cognitive sharpness or happiness.
+
+The utility function can then include a separate purpose and engagement term:
+
+$$
+u_{purpose}(Q_t) = K_q \ln(1 + Q_t).
+$$
+
+This allows the model to compare a 40% work strategy with a balanced strategy combining part-time work, education, care, volunteering, entrepreneurship, or other meaningful activity.
+
+### 14.4 Income, taxation, and social distribution
+
+If AI reduces the labor income of a large share of the population, individual income may no longer be sufficient to support a stable tax base. A macro-level extension could define total tax revenue as:
+
+$$
+\mathcal{T}_t = \mathcal{T}^{labor}_t + \mathcal{T}^{capital}_t + \mathcal{T}^{consumption}_t,
+$$
+
+and test how revenue changes when labor income falls but capital income and AI-generated output rise. The model should also track the distribution of gains between workers, firms, and capital owners, because unequal access to AI can produce different outcomes for otherwise identical workers.
+
+### 14.5 Advanced model families
+
+Several established approaches could represent this future more realistically:
+
+- **Dynamic stochastic general equilibrium models:** represent households, firms, wages, capital, taxation, and technology shocks at the macroeconomic level.
+- **Overlapping-generations models:** compare how AI-driven changes affect young workers, mid-career workers, and retirees differently.
+- **Agent-based models:** represent heterogeneous workers, employers, skills, firms, and job transitions rather than assuming one average worker.
+- **Real-options models:** value the option to reduce work, retrain, defer retirement, or return to employment when AI adoption changes.
+- **System-dynamics models:** study feedback loops between productivity, wages, consumption, tax revenue, public services, and social stability.
+- **Markov decision processes or partially observable decision models:** represent changing employment states, uncertain AI capability, retraining, and replacement risk over time.
+
+The most practical research path is a hybrid: retain the current household optimizer, add AI-adjusted achievement and cognitive-engagement variables, and connect it later to an agent-based or overlapping-generations macro model.
+
+### 14.6 Social and psychological research questions
+
+The model cannot resolve these questions from economics alone. It should expose them for interdisciplinary research:
+
+- How much paid work is necessary for social participation and personal identity?
+- Does reduced work increase happiness when people have meaningful alternatives?
+- How should education, volunteering, caregiving, and creative work be valued?
+- Who owns and receives the benefits of AI productivity?
+- How can society preserve cognitive development without forcing unnecessary employment?
+- How should taxes and public services be financed if labor becomes a smaller part of total production?
+
+The central conclusion is conditional: AI may make 40% work economically possible, but its social effect depends on distribution, purpose, education, health, and whether productivity gains are converted into shared time or merely into higher output expectations.
+
+## 15. Current limitations and project risks
 
 The project currently has several risks that should be acknowledged explicitly:
 
@@ -581,7 +721,7 @@ These limitations are not fatal, but they do mean that the project should be fra
 
 ---
 
-## 15. Summary
+## 16. Summary
 
 The formal structure of Life Optimizer can be read as a constrained intertemporal utility optimization problem with a stochastic pension environment and explicit household preferences. This is a coherent and defensible framework for decision support.
 
