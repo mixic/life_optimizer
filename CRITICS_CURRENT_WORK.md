@@ -4,7 +4,7 @@ This document records external criticism and questions raised about the Life Opt
 
 ## 1. Critique from Mr. Gradimir Nikolic
 
-Mr. Gradimir Nikolic is a highly knowledgeable expert in economics and statistical risk modeling in the insurance sector. His comments therefore provide both a philosophical perspective on work allocation and a professional perspective on economic uncertainty and risk.
+Mr. Gradimir Nikolic is a highly knowledgeable expert in economics and statistical risk modeling in the insurance sector. After completing his diploma studies at ETH Zurich, he earned a Magister degree in Risk and Insurance Mathematics and developed extensive leadership experience in the insurance industry. His comments therefore provide both a philosophical perspective on work allocation and a professional perspective on economic uncertainty and risk.
 
 Mr. Gradimir Nikolic considers the basic idea of the project valuable: a worker should be able to evaluate the trade-off between income, time, health, leisure, and long-term pension security. However, he raised an important philosophical and practical question about the assumption that a worker can freely choose a work level between 100% and 80%.
 
@@ -78,7 +78,7 @@ This would make the model more realistic for modern project-based employment. It
 
 ## 2. Critique from Mr. Bojan Nedic
 
-Mr. Bojan Nedic identified a missing dimension in the current model: consumption.
+Mr. Bojan Nedic holds a Master's degree in Electrical Engineering from the University of Belgrade. He is an expert in microelectronics and electrical engineering, as well as software engineering, firmware development, and hardware-near development. He identified a missing dimension in the current model: consumption.
 
 The optimizer considers income, work, leisure, health, and pension security, but it does not yet adequately represent how much money a person actually consumes during the working period. Without a consumption dimension, the model cannot distinguish between a person who lives extremely frugally and a person who maintains a normal or luxury lifestyle. It also cannot properly represent rent as a major recurring expense.
 
