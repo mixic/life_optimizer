@@ -82,7 +82,7 @@ This would make the model more realistic for modern project-based employment. It
 
 A short Resume: 
 
-Mr. Bojan Nedic holds a Master's degree in Electrical Engineering from the University of Belgrade. He is an expert in microelectronics and electrical engineering, signal processing as well as software engineering, firmware development, and hardware-near development. He identified a missing dimension in the current model: consumption.
+Mr. Bojan Nedic holds a Master's degree in Electrical Engineering from the University of Belgrade. He is an expert in electrical engineering, microelectronics and signal processing as well as software engineering, firmware development, and hardware-near development. He identified a missing dimension in the current model: consumption.
 
 The optimizer considers income, work, leisure, health, and pension security, but it does not yet adequately represent how much money a person actually consumes during the working period. Without a consumption dimension, the model cannot distinguish between a person who lives extremely frugally and a person who maintains a normal or luxury lifestyle. It also cannot properly represent rent as a major recurring expense.
 
