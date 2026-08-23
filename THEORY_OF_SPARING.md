@@ -1,6 +1,6 @@
 # The Theory of Sparing: Prioritized Consumption, the Niche Economy, and What It Means to Optimize a Life
 
-*A companion to [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](Fear_Happyness_Work_Life_Balance.md)
+*A companion to [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
 and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §2, which already argued
 that consumption — not just income and tax — has to be an explicit input to this
 model. This chapter proposes a specific alternative consumption theory ("sparing"),
