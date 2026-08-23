@@ -1,6 +1,6 @@
 # Happiness, Fear and Work-Life Balance: Performance Under Pressure, and What Comes After It
 
-*An extension of [`Philosophical_Sociological_Aspects.md`](Philosophical_Sociological_Aspects.md)
+*An extension of [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
 and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md), asking a narrower and
 more uncomfortable question: when does a worker actually perform best — and is
 the answer the same thing an employer, or an economic system, has an incentive
@@ -69,7 +69,7 @@ actually ends, has no such release valve.
 
 ### 2b. Happiness and intrinsic motivation: the slower but durable engine
 
-As already discussed in `Philosophical_Sociological_Aspects.md` §3c, Judge et
+As already discussed in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c, Judge et
 al.'s 2001 meta-analysis found a real, moderate, positive correlation between
 job satisfaction and job performance, and Deci & Ryan's self-determination
 theory identifies autonomy, competence, and relatedness — not fear — as the
@@ -272,7 +272,7 @@ mathematics:
    or Section 5's algorithmic management, the "100%" option may not really be
    optional in the way the model's utility function treats it — a return to
    the employer-side framing already raised in
-   `Philosophical_Sociological_Aspects.md` §3a and §3c.
+   `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3a and §3c.
 
 2. **The pension and tax modeling in this project assumes formal, waged
    employment.** Cloud proles and cloud serfs, in Varoufakis's typology,
@@ -340,5 +340,5 @@ rather than hide.
   [Melville House](https://www.amazon.de/Technofeudalism-Killed-Capitalism-Yanis-Varoufakis/dp/1847927270))
 - Evgeny Morozov, "Critique of Techno-Feudal Reason" (*New Left Review*, 2022) —
   a critical counter-view worth reading alongside Varoufakis
-- Cross-reference: [`Philosophical_Sociological_Aspects.md`](Philosophical_Sociological_Aspects.md)
+- Cross-reference: [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
   §3a–3c, and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §1 and §5
