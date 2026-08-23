@@ -1,14 +1,68 @@
 # Future Work
 
-## 1. Strategic Assessment of the Current Project State
+*A revision of this document's previous version. The earlier version treated
+regime-switching, jump risk, dependence modeling, and calibration as entirely
+missing. Since then, [`economic_regimes.rs`](src/economic_regimes.rs) shipped a
+4-state Markov regime-switching model (Boom/Normal/Recession/Stagflation) with
+a calibrated transition matrix, plus a dedicated sequence-of-returns stress
+test at retirement (see [`ECONOMIC_SCENARIOS.md`](ECONOMIC_SCENARIOS.md)). This
+revision starts from an honest accounting of what actually exists today, rather
+than repeating a critique the codebase has partly already addressed, and adds
+a second track of work — consumption-side and labor-side realism — that grew
+out of [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) and
+[`Theory_of_Sparing.md`](Theory_of_Sparing.md) but has not yet been implemented
+in code.*
 
-Life Optimizer already has a solid foundation: it combines deterministic rules, pension logic, and stochastic projection methods into a usable framework. However, in its current form, the project remains comparatively average from a quantitative and decision-support perspective. The main reason is not lack of ambition, but the absence of sufficiently rich modeling depth, calibration discipline, and robust validation structures.
+---
 
-In practical terms, the project currently risks producing outputs that look plausible but are not sufficiently informative for real retirement decision-making under uncertainty. This is particularly relevant for long-horizon financial decisions, where model misspecification, regime shifts, and tail risk can materially distort conclusions.
+## 1. Honest Assessment of the Current State
 
-The strategic objective is therefore not only to add more models, but to improve the accuracy, transparency, and credibility of the decision-making framework.
+Life Optimizer combines four things into one framework: deterministic
+Swiss tax/social-security lookup, a multi-objective work-life utility
+optimizer, a Monte Carlo pension simulator (log-normal returns under three
+fixed scenarios), and a Markov regime-switching model with a forced
+sequence-of-returns stress test. That combination is already more structurally
+complete than most public retirement calculators, which typically stop at a
+single deterministic projection.
+
+What it is not yet is **calibrated**. Every stochastic parameter in the
+project — regime transition probabilities, regime-specific return and
+volatility, the log-normal scenario parameters — is a reasoned, literature-
+informed *assumption*, not a value fitted to historical data with a
+documented estimation procedure. This is the single most important gap, and
+it is more important than adding further model sophistication: an
+uncalibrated four-state regime model is not obviously more trustworthy than a
+calibrated single-state one, and right now the project cannot demonstrate
+which it has.
+
+A second gap, distinct from calibration, is that the project models markets
+and pensions in considerable depth but still models **consumption and labor
+supply** in a comparatively primitive way: the tax and pension engines are
+detailed, but `PersonalRequirements` still uses flat monthly budget fields
+rather than the elasticity-tiered, utilization-weighted consumption model
+proposed in `Theory_of_Sparing.md` §8, and the work-percentage decision is
+still treated as fully discretionary rather than constrained by an employer-
+side achievement requirement, as `CRITICS_CURRENT_WORK.md` §1 argues it often
+is in practice. Both of these are fully specified in the existing documents —
+they are a translation gap from markdown to Rust, not an open research
+question.
+
+The strategic objective for this phase of work is therefore not "add more
+models." It is: **calibrate what exists, add the dependence structure and
+tail risk that a regime model alone does not capture, and close the gap
+between the consumption/labor theory already written down in this repository
+and the code that currently ignores it.**
+
+---
 
 ## 2. Current Weaknesses and Structural Limitations
+
+*This section is preserved verbatim from the original version of this
+document. It is kept in full because it is the founding critique the rest of
+this revision responds to — some of it has since been partially addressed
+(see the status table in §3 and the inline notes below each subsection), and
+some of it remains fully open. Removing or paraphrasing it would obscure how
+much of the project's direction still traces back to this exact list.*
 
 ### 2.1 Limited realism of the underlying stochastic assumptions
 
@@ -23,6 +77,11 @@ Examples of limitations:
 
 This matters because the retirement decision is highly sensitive to scenarios such as stagflation, prolonged recession, or sudden real-rate shocks.
 
+> **Status note:** regime-dependent dynamics for returns and volatility now
+> exist (`economic_regimes.rs`), which addresses the second bullet in part.
+> Volatility clustering *within* a regime, and dependence between macro
+> variables (fourth bullet), are still open — see §4.2 and §4.3.
+
 ### 2.2 Insufficient treatment of dependence structures
 
 A major weakness in many retirement and pension models is the tendency to simulate variables independently or with simplistic correlation assumptions. In practice, macro variables are strongly dependent.
@@ -36,6 +95,11 @@ Examples:
 
 Without a proper dependency structure, the model can underestimate the frequency and severity of adverse outcomes.
 
+> **Status note:** still fully open. The regime-switching model ties returns
+> and inflation together *through the shared regime state* (see §4, Track A
+> above), but salary growth is not yet part of that coupling, and there is no
+> continuous dependence structure within a regime. See §4.2.
+
 ### 2.3 Missing regime-aware dynamics
 
 A one-state or static-parameter model is usually insufficient for long-term planning. The project should explicitly model macroeconomic regimes such as expansion, contraction, inflationary shocks, or stagflation.
@@ -46,6 +110,15 @@ Without regime switching:
 - volatile periods may be underweighted
 - long-term retirement outcomes may display unrealistic stability
 - scenario analysis may fail to capture regime transitions that materially affect pension security
+
+> **Status note:** this is the one item substantially addressed since this
+> critique was first written. `economic_regimes.rs` implements a 4-state
+> Markov regime-switching model (Boom/Normal/Recession/Stagflation) with a
+> transition matrix, and `monte_carlo.rs` uses it for both a full-career
+> simulation and a dedicated sequence-of-returns stress test at retirement.
+> What remains open is *calibration* of that model's parameters against
+> historical data (§4.1) and validation of its implied regime frequencies
+> against real business-cycle dating (§4.4).
 
 ### 2.4 Weak validation and calibration culture
 
@@ -60,6 +133,11 @@ Examples of missing validation:
 
 This is one of the most important gaps: a model that is computationally efficient but not calibrated to empirical data can be worse than a simpler but more realistic model.
 
+> **Status note:** still fully open, and — per §4 below — this is judged the
+> single highest-priority remaining gap. A stress-test *mechanism* now exists
+> (§2.3's status note), but that is not the same as validating it, or the
+> rest of the model, against empirical data. See §4.1.
+
 ### 2.5 Inadequate benchmark architecture
 
 The project currently appears to lack a systematic benchmark suite that compares model families under identical conditions. This is essential if the objective is to move from a prototype into a credible quantitative framework.
@@ -71,162 +149,311 @@ Without a benchmark layer:
 - there is no evidence-based basis for selecting the production model
 - stress testing and decision support remain ad hoc
 
+> **Status note:** still fully open. See §4.5 and §4.6.
+
 ### 2.6 Limited strategic differentiation
 
 The project is at risk of becoming a generic Monte Carlo pension tool without a distinctive academic or quantitative edge. Many retirement tools can simulate scenarios, but fewer offer a robust hybrid framework with scenario-aware modeling, calibration logic, and benchmark-based selection of methods.
 
 A project becomes strategically relevant only when it can justify why a specific model family is chosen for a given task, and when that choice is supported by empirical evidence.
 
-## 3. Examples of What Could Be Improved
+> **Status note:** the regime-switching addition (§2.3) is a step toward
+> differentiation on the modeling side. The Track B work in §5 — an
+> elasticity-tiered consumption model and an employer-side achievement
+> constraint, neither of which is common in retirement calculators — is
+> arguably now a second, independent axis of differentiation this project has
+> that most Monte Carlo pension tools do not, once implemented in code rather
+> than left as documentation.
 
-### Example 1: Salary and inflation modeling
+---
 
-A common weakness is to model salary growth and inflation as smooth deterministic paths or simple random walk assumptions. This is insufficient for real pension planning.
+## 3. What Already Exists (do not re-build this)
 
-Potential improvement:
+For clarity, since §2 above does not by itself distinguish shipped work from
+still-open work:
 
-- use OU/Vasicek processes for mean-reverting inflation and salary dynamics
-- allow regime-dependent drift and volatility
-- calibrate parameters with historical Swiss or European inflation and wage data
+| Capability | Status | Location |
+|---|---|---|
+| Progressive Swiss tax (Stadt Bern, lookup + interpolation) | Shipped | `tax.rs` |
+| Custom observed tax rate override | Shipped | `tax.rs`, CLI `--custom-tax-rate` |
+| Multi-objective work-life utility optimizer | Shipped | `optimizer.rs` |
+| Monte Carlo pension simulation (log-normal, 3 scenarios) | Shipped | `monte_carlo.rs` |
+| 4-state Markov regime-switching (Boom/Normal/Recession/Stagflation) | Shipped | `economic_regimes.rs` |
+| Sequence-of-returns stress test at retirement | Shipped | `monte_carlo.rs::run_retirement_shock_stress_test` |
+| Deferred retirement to age 70, age-scaled BVG contribution/conversion | Shipped | `monte_carlo.rs` |
+| Regime transition matrix / return parameters calibrated to data | Not done | — |
+| Correlation/dependence between inflation, returns, salary growth | Not done | — |
+| Jump-diffusion or discrete tail-shock component | Not done | — |
+| Historical backtesting / calibration pipeline | Not done | — |
+| Benchmark suite comparing model families | Not done | — |
+| Elasticity-tiered, utilization-weighted consumption model | Documented only | `Theory_of_Sparing.md` §8 |
+| Employer-side achievement-capacity constraint on work % | Documented only | `CRITICS_CURRENT_WORK.md` §1.3 |
+| Production / stress-test / research model separation | Not done | — |
 
-This would create more realistic long-run scenarios and better reflect the interaction between labor income, inflation, and retirement adequacy.
+---
 
-### Example 2: Market stress and tail risk
+## 4. Track A — Quantitative Realism
 
-If the project only relies on GBM-like assumptions, it will likely underestimate crises and fat tails.
+### 4.1 Calibration is the priority, not additional model families
 
-Potential improvement:
+An uncalibrated model with more free parameters is not an improvement; it is
+a larger surface for unverified assumptions. Before any new stochastic
+component is added, the existing regime-switching parameters need a
+documented calibration procedure:
 
-- add jump-diffusion components for market crashes and inflation shocks
-- include regime-dependent jump intensity
-- benchmark tail-risk metrics such as CVaR and stress-loss percentiles
+- Fit regime-specific return and volatility parameters to historical Swiss
+  BVG fund performance data and/or a broader developed-market equity/bond
+  blend, rather than the current literature-informed point estimates in
+  `MarketAssumptions`.
+- Estimate the regime transition matrix from an actual business-cycle dating
+  method (e.g., a Hamilton-style Markov-switching model fit to historical
+  GDP growth or a recession-indicator series) rather than the currently
+  hand-specified `TransitionMatrix::calibrated()` probabilities, which are
+  reasoned but not fitted.
+- Publish the calibration inputs, method, and resulting parameter table in a
+  new `CALIBRATION.md`, so every number in `economic_regimes.rs` is traceable
+  to a data source and an estimation method rather than to a design choice.
 
-This better reflects the real risk environment in which pension plans face downturns and liquidity stress.
+### 4.2 Dependence structure between macro variables
 
-### Example 3: Cross-factor dependence
+Currently, returns, inflation, and (implicitly) salary growth move together
+only through the shared regime state — within a regime, they are otherwise
+independent draws. Real macro variables have residual dependence beyond what
+a shared discrete regime captures (e.g., inflation and interest rates move in
+a related but non-linear way even within a single business-cycle phase).
 
-If market returns, inflation, and salary growth are modeled independently, retirement outcomes are systematically misestimated.
+Proposed addition:
 
-Potential improvement:
+$$
+(R_t, I_t, W_t) \sim C\big(F_R(R_t), F_I(I_t), F_W(W_t)\big)
+$$
 
-- fit marginals to each variable separately
-- use a Gaussian or t-copula to model joint dependence
-- evaluate whether dependence changes across macro regimes
+where $R_t$, $I_t$, $W_t$ are returns, inflation, and salary growth in period
+$t$, $F_{(\cdot)}$ are their regime-conditional marginal distributions
+(already implicitly defined by `MarketAssumptions`), and $C$ is a copula (a
+Gaussian or Student-$t$ copula is a reasonable starting point) capturing
+residual dependence *within* a regime that the discrete state alone misses.
+This should be layered on top of the existing regime model, not replace it —
+regime-switching captures large discrete shifts; a copula captures the
+smaller, continuous co-movement within a regime.
 
-This allows more realistic joint simulation of the state variables that actually drive pension outcomes.
+### 4.3 Jump-diffusion for tail events sharper than a regime transition
 
-### Example 4: Decision quality under uncertainty
+A regime transition captures a *sustained* change in market conditions (a
+multi-year recession, for example). It does not capture a genuine one-day/
+one-week shock — a market crash or a sudden inflation surprise — that is
+sharper and shorter than a regime shift. A Merton-style jump-diffusion
+component, layered on top of the existing regime-switching returns, would
+capture this:
 
-The project should not only simulate outcomes, but also evaluate whether the resulting decisions remain robust across multiple scenarios.
+$$
+dS_t = \mu(regime_t)\,S_t\,dt + \sigma(regime_t)\,S_t\,dW_t + S_t\,dJ_t
+$$
 
-Potential improvement:
+where $J_t$ is a compound Poisson jump process with regime-dependent jump
+intensity — jumps should be more frequent and more severe during Recession
+and Stagflation regimes than during Normal or Boom, which the current model
+does not distinguish (a recession-regime year and a Boom-regime year currently
+differ only in mean and volatility, not in tail shape).
 
-- use scenario-tree optimization or robust optimization for strategic choices
-- compare results across baseline, adverse, and crisis regimes
-- evaluate the sensitivity of retirement decisions to model assumptions
+### 4.4 Historical backtesting and validation
 
-This helps move the project from descriptive simulation to actionable decision support.
+None of the above is credible without a validation step. Proposed minimum
+validation suite:
 
-## 4. What Is Missing Today
+- Compare simulated return/inflation distributions against the empirical
+  historical distribution (Swiss and/or broader developed-market data) for
+  moments beyond the mean and variance — skewness and kurtosis in particular,
+  since the current log-normal-per-regime approach understates fat tails
+  relative to what jump-diffusion (§4.3) would add.
+- Backtest the regime-switching model's implied recession frequency and
+  duration against actual post-WWII business-cycle dating.
+- Report CVaR (conditional value-at-risk) and downside-percentile pension
+  outcomes explicitly, not only the median/P10/P90 currently reported in
+  `mc_display.rs`.
 
-The current project would benefit from the following core capabilities:
+### 4.5 Benchmark suite
 
-- model calibration against historical data, not only theoretical assumptions
-- regime-switching macroeconomic states
-- jump processes and tail-risk modeling
-- multi-factor dependency modeling across important variables
-- a benchmark suite to compare methods quantitatively
-- explicit selection criteria for choosing a production model versus a stress-test model
-- layered validation with statistical and economic checks
-- clearer separation between research models and production models
+A comparison harness that runs the same scenario (same salary, age, work
+percentage, retirement age) through each available model configuration —
+static log-normal, regime-switching, regime-switching + copula, regime-
+switching + copula + jump-diffusion — and reports the resulting pension
+distributions side by side. This is what makes the added complexity in
+§4.2–4.4 justifiable rather than decorative: if a more complex model does not
+materially change the decision-relevant output (the recommended work
+percentage, or the P10 pension outcome) for realistic parameter ranges, that
+is itself a useful, reportable finding, not a wasted effort.
 
-Without these elements, the project may remain a useful prototype, but not a strong quantitative platform.
+### 4.6 Production / stress-test / research model separation
 
-## 5. Strategic Priorities for Future Development
+Once §4.1–4.5 exist, the CLI should expose three explicit modes rather than
+one fixed pipeline:
 
-### Priority 1: Improve realism before adding more complexity
+- **Production mode** — the calibrated regime-switching model, fast enough
+  for interactive CLI use, used by `optimize` and `pension` by default.
+- **Stress-test mode** — the existing sequence-of-returns shock test, extended
+  to also run the jump-diffusion tail scenarios from §4.3, used explicitly
+  when the person asks "how bad could this get."
+- **Research mode** — the full copula + jump-diffusion + regime-switching
+  stack, computationally heavier, used for calibration validation and for
+  anyone who wants the most complete (if slower) simulation.
 
-The project should not add models merely to increase sophistication. It should add the models that most materially improve realism and decision relevance.
+---
 
-The minimum strategic priority should be:
+## 5. Track B — Closing the Theory-to-Code Gap
 
-- regime-switching dynamics
-- jump processes
-- dependence modeling via copulas
-- historical validation
+This track has no open research question attached to it — every formula below
+already exists in a markdown document in this repository. The work is
+translating it into `PersonalRequirements` and `OptimizerConfig`.
 
-### Priority 2: Build a benchmark-driven methodology
+### 5.1 Elasticity-tiered consumption model
 
-The project should define a benchmark process that compares methods under the same conditions and asks which model is best for a specific task.
+`Theory_of_Sparing.md` §7c and §8 propose splitting the flat `discretionary`
+field into elasticity tiers:
 
-This requires:
+$$
+C_t = \underbrace{R_t + E_t}_{\text{inelastic}} + \underbrace{Q_t}_{\text{quasi-inelastic}} + \underbrace{L_t}_{\text{elastic, sparing-eligible}} + D_t
+$$
 
-- standardized metrics
-- scenario libraries
-- reproducible seeds and deterministic evaluation
-- reporting of model trade-offs
+with $L_t$ further decomposed by a sparing ratio $\sigma$, second-hand price
+ratio $\phi$, and a utilization-rate penalty $\rho_{\text{use}}^{-1}$ (full
+formula in `Theory_of_Sparing.md` §8). Concrete implementation:
 
-### Priority 3: Separate production, stress-testing, and research modes
+- Add `rent`, `essential_inelastic`, `quasi_inelastic`, and
+  `sparing_eligible` fields to `PersonalRequirements`, replacing the current
+  flat `discretionary` field.
+- Add CLI flags `--sparing-ratio`, `--utilization-discipline`, and
+  `--quasi-inelastic-share` as specified in `Theory_of_Sparing.md` §8.
+- Report the elasticity-tier breakdown in `display.rs` rather than a single
+  aggregate discretionary number, so the person can see where budget pressure
+  is actually landing (as argued in `Theory_of_Sparing.md` §7c).
 
-A mature project should not rely on one model for all tasks. It needs at least three categories:
+### 5.2 Employer-side achievement-capacity constraint
 
-- production model: best balance of realism and performance
-- stress-test model: best for crisis analysis and tail-risk stress testing
-- research model: exploratory, richer but more computationally intensive
+`CRITICS_CURRENT_WORK.md` §1.3 proposes that a reduction in work percentage is
+only credible when effective achievement capacity still meets the
+organization's required output:
 
-This separation clarifies where the project is credible and where it remains experimental.
+$$
+A_t = H_t \cdot P_t \cdot (1 + \alpha_t) \qquad \text{subject to} \qquad A_t \geq G_t
+$$
 
-### Priority 4: Strengthen the decision narrative
+Concrete implementation:
 
-The model must not only generate output; it must explain whether a decision is robust, sensitive, or fragile under uncertainty.
+- Add an optional `--required-output-index` and `--ai-productivity-gain`
+  (`α_t`) pair of CLI flags.
+- When both are supplied, `optimizer.rs` should mark a candidate work
+  percentage as infeasible if it fails $A_t \geq G_t$, in addition to the
+  existing budget-feasibility check — the model already has a "feasible: ✓/✗"
+  concept for budget adequacy (see `WorkScenario`); this extends the same
+  mechanism to job-security adequacy.
+- This directly operationalizes the reframed question from
+  `Philosophical_Sociological_Aspects.md` §3a: not "what work percentage
+  maximizes my utility," but "what is the lowest work percentage at which I
+  can still reliably deliver what's expected of me."
 
-This includes:
+### 5.3 Satisfaction–performance feedback (exploratory)
 
-- comparing policy choices under multiple macro paths
-- showing which assumptions dominate the result
-- identifying model sensitivity and uncertainty ranges
-- translating simulation outputs into actionable recommendations
+`Philosophical_Sociological_Aspects.md` §3c and `Fear_Happyness_Work_Life_Balance.md`
+§2–4 argue that $P_t$ (baseline productivity) is not actually independent of
+work percentage and job satisfaction — chronic overwork degrades the
+productivity term itself (Hobfoll's Conservation of Resources, Yerkes-Dodson).
+This is a genuinely open modeling question rather than a ready-to-implement
+formula, and belongs in Track A's research mode once §4.6 exists: a
+feedback term $P_t = P_0 \cdot f(\text{sustained work \%}, \text{time})$ where
+$f$ declines under prolonged high work percentage, calibrated against the
+burnout and engagement literature cited in `Fear_Happyness_Work_Life_Balance.md`,
+would let the optimizer discover — rather than assume — cases where 100% work
+is self-defeating even under the pure achievement-capacity constraint of §5.2.
 
-## 6. The Central Strategic Question
+---
 
-The key question is not whether the project can simulate pension outcomes in a generic way, but whether it can produce results that are credible enough to support financial decision-making under uncertainty.
+## 6. Strategic Priorities, Ranked
 
-At present, the project risks being perceived as average because it has neither the depth of a serious quantitative research platform nor the clarity of a strong product strategy. A stronger roadmap would therefore focus less on adding complexity for its own sake and more on building a credible, benchmarked, regime-aware simulation framework.
+1. **Calibration discipline for the model that already exists** (§4.1) — before
+   any new stochastic machinery, make the current regime-switching model's
+   parameters traceable to data.
+2. **Dependence and tail risk layered on the existing regime model** (§4.2–4.3)
+   — copula dependence and jump-diffusion, not a replacement architecture.
+3. **Consumption-model code integration** (§5.1) — the highest-value, lowest-
+   research-risk item on this list, since the formula is already fully
+   specified; it is also the piece most directly usable by anyone running the
+   tool today.
+4. **Employer-side achievement constraint** (§5.2) — second-highest value for
+   the same reason: fully specified, addresses a critique already validated
+   by an outside domain expert (`CRITICS_CURRENT_WORK.md` §1).
+5. **Benchmark suite and production/stress/research separation** (§4.5–4.6) —
+   necessary for credibility once §1–4 exist, but depends on them being done
+   first.
+6. **Satisfaction–productivity feedback** (§5.3) — genuinely exploratory;
+   correctly belongs last, in research mode, once the rest of the pipeline is
+   trustworthy enough to layer a speculative mechanism on top of.
 
-## 7. Recommended Future Work Agenda
+---
 
-### Phase 1: Structural improvements
+## 7. The Central Strategic Question
 
-- refine the modeling layer to include regime-switching and mean reversion
-- build a formal calibration pipeline for inflation, salary growth, and investment assumptions
-- define a consistent approach to dependence modeling
+The question this project has to keep answering honestly is not whether it
+can simulate a plausible-looking pension outcome — it already can, and did
+before the regime-switching model existed. The question is whether the
+numbers it produces are **traceable**: to a data source, to a named
+assumption, to a documented estimation method — versus being a plausible
+narrative wrapped around unfitted parameters.
 
-### Phase 2: Risk realism
+The same discipline applies to Track B: it is not enough that the sparing
+ratio and achievement-capacity constraint are *mathematically* well-specified
+in the accompanying markdown documents. Until they exist in `optimizer.rs` and
+`monte_carlo.rs`, they are philosophy the tool does not yet act on — and a
+project that writes rigorous critiques of its own assumptions but does not
+close the gap between the critique and the code is not meaningfully more
+credible than one that never wrote the critique at all.
 
-- add jump-diffusion and crisis events
-- incorporate stress scenarios and historical backtests
-- evaluate CVaR and downside tail outcomes explicitly
+---
 
-### Phase 3: Benchmarking and governance
+## 8. Roadmap
 
-- create a benchmark suite with standardized metrics and scenarios
-- compare model families under identical conditions
-- maintain a model selection framework for production and stress testing
+### Phase 1 — Calibration (Track A foundation)
+- Fit regime-specific return/volatility parameters to historical data
+- Estimate the transition matrix from a business-cycle dating method
+- Publish `CALIBRATION.md` with sources, method, and resulting parameters
 
-### Phase 4: Research-grade optimization
+### Phase 2 — Theory-to-code closure (Track B, can run in parallel with Phase 1)
+- Implement the elasticity-tiered consumption model (§5.1) in
+  `requirements.rs` and `display.rs`
+- Implement the achievement-capacity constraint (§5.2) in `optimizer.rs`
 
-- integrate scenario trees or robust optimization for policy decisions
-- explore reinforcement learning for adaptive work-percentage strategies
-- compare these methods against simpler, more transparent baselines
+### Phase 3 — Dependence and tail risk (Track A, depends on Phase 1)
+- Add copula-based dependence between returns, inflation, salary growth (§4.2)
+- Add regime-dependent jump-diffusion (§4.3)
+- Extend the historical validation suite (§4.4) to cover both additions
 
-## 8. Expected Impact
+### Phase 4 — Benchmarking and model governance
+- Build the benchmark harness comparing model configurations (§4.5)
+- Implement production/stress-test/research mode separation (§4.6)
 
-If implemented strategically, these improvements would materially elevate Life Optimizer beyond a conventional simulation tool. The project would gain:
+### Phase 5 — Research extensions
+- Satisfaction–productivity feedback term (§5.3)
+- Scenario-tree or robust optimization for the work-percentage decision itself,
+  evaluated against the existing grid-search optimizer as a baseline
+- Exploratory reinforcement-learning approach to adaptive work-percentage
+  strategy over a career, benchmarked against Phase 1–4 methods rather than
+  presented as a replacement for them
 
-- more realistic economic and market dynamics
-- stronger calibration and validation discipline
-- better support for tail-risk and crisis planning
-- improved decision robustness under uncertainty
-- a clearer pathway toward institution-grade quantitative modeling
+---
 
-The core idea is straightforward: the project should not merely generate scenarios. It should provide a defensible, benchmarked, and strategically useful framework for long-term retirement decision-making.
+## 9. Expected Impact
+
+Phases 1–2 alone would close the largest credibility gap the project
+currently has: a regime-switching model whose parameters cannot yet be traced
+to data, and a consumption/labor theory that exists only in prose. Phases 3–4
+would bring the quantitative core closer to the standard a serious retirement-
+planning framework should be held to — dependence structure, tail risk,
+benchmarked model selection — rather than a Monte Carlo tool that merely looks
+sophisticated. Phase 5 is explicitly speculative and should be evaluated
+against, not substituted for, the more transparent baseline methods built in
+the earlier phases.
+
+The throughline across both tracks is the same: **this project should not
+claim more rigor than it can currently show its work for** — whether that
+work is a fitted transition matrix or an implemented consumption formula
+sitting, right now, only in a markdown file.
