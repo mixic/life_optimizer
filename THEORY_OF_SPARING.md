@@ -1,6 +1,6 @@
 # The Theory of Sparing: Prioritized Consumption, the Niche Economy, and What It Means to Optimize a Life
 
-*A companion to [`Fear_Happyness_Work_Life_Balance.md`](Fear_Happyness_Work_Life_Balance.md)
+*A companion to [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
 and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §2, which already argued
 that consumption — not just income and tax — has to be an explicit input to this
 model. This chapter proposes a specific alternative consumption theory ("sparing"),
@@ -586,7 +586,7 @@ the individual-vs-collective tension in Swiss pension contributions.
   sparing as a practical household algorithm.
 - Sparing functions as the consumption-side counter-strategy to the
   extraction dynamics already described for labor in
-  `Fear_Happyness_Work_Life_Balance.md`: it increases savings and therefore
+  `HAPPYNESS_OR_FEAR_WORK_LIFE.md`: it increases savings and therefore
   the household's exit option and bargaining power, independent of wages or
   employer behavior.
 - The 2024–present global memory/storage price shock is real and well
@@ -647,6 +647,6 @@ the individual-vs-collective tension in Swiss pension contributions.
 - TrendForce, Counterpoint Research, and IDC industry analyses of the
   2024–present global DRAM/NAND memory shortage — for the current component-cost
   context referenced in Section 6
-- Cross-reference: [`Fear_Happyness_Work_Life_Balance.md`](Fear_Happyness_Work_Life_Balance.md)
+- Cross-reference: [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
   §5 on technofeudal rent and platform subsidization; [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md)
   §2 on the missing consumption dimension
