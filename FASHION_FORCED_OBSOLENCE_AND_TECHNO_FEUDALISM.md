@@ -1,8 +1,8 @@
 # Fashion, Forced Obsolescence, and the Datacenter Behind the Screen
 
-*A third companion to [`Theory_of_Sparing.md`](Theory_of_Sparing.md) and
-[`Fear_Happyness_Work_Life_Balance.md`](Fear_Happyness_Work_Life_Balance.md).
-Where `Theory_of_Sparing.md` asked whether a purchase is needed at all, this
+*A third companion to [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) and
+[`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md).
+Where `THEORY_OF_SPARING.md` asked whether a purchase is needed at all, this
 chapter asks a narrower and more concrete question: when the product in
 question is a smartphone, a PC, or a car, and "fashion" pressures you to
 replace it every few years — is that replacement actually optional, or has it
@@ -14,7 +14,7 @@ need the new device at all?*
 
 ## 1. Two different kinds of obsolescence
 
-`Theory_of_Sparing.md` §3 already distinguished manufactured *desire* (new
+`THEORY_OF_SPARING.md` §3 already distinguished manufactured *desire* (new
 niches, new interfaces) from manufactured *necessity* (planned obsolescence).
 Extending a product's ownership from five years to ten forces those two
 mechanisms apart, because they respond completely differently to the decision
@@ -23,7 +23,7 @@ to hold out:
 - **Fashion-driven obsolescence** is aesthetic and status-based: new clothes,
   a car redesign, a phone in a new color and shape. Nothing stops the product
   from functioning after the fashion cycle moves on. Holding out simply costs
-  social signaling value (Veblen, already discussed in `Theory_of_Sparing.md`
+  social signaling value (Veblen, already discussed in `THEORY_OF_SPARING.md`
   §3), not function.
 - **Support-driven obsolescence** is infrastructural: a defined date after
   which security patches, OS updates, or app compatibility stop, regardless of
@@ -154,7 +154,7 @@ not because it was compared against the alternative.
 ## 5. The techno-feudal asymmetry: whose refresh cycle is this, really?
 
 Here the argument connects directly to
-`Fear_Happyness_Work_Life_Balance.md` §5's account of Varoufakis's
+`HAPPYNESS_OR_FEAR_WORK_LIFE.md` §5's account of Varoufakis's
 technofeudalism thesis, and it is worth being precise about scale, because the
 asymmetry is large and current.
 
@@ -183,7 +183,7 @@ The asymmetry with the household case in Sections 1–4 is stark:
   whose price reflects, among other things, the amortized cost of a capital
   cycle happening on a schedule set entirely by the platform owner.
 
-This is precisely the **cloud rent** relationship `Fear_Happyness_Work_Life_Balance.md`
+This is precisely the **cloud rent** relationship `HAPPYNESS_OR_FEAR_WORK_LIFE.md`
 §5 already described: the consumer's household capex decision (keep the old
 PC or not) is now increasingly decoupled from — and largely irrelevant to —
 the far larger, faster-cycling capex decision (rebuild the datacenter or not)
@@ -450,7 +450,7 @@ banked as reduced total footprint.
 
 This has a direct and somewhat counterintuitive implication for Varoufakis's
 technofeudalism framing, discussed in Section 5 and in
-`Fear_Happyness_Work_Life_Balance.md` §5. A cloudalist's revenue depends on
+`HAPPYNESS_OR_FEAR_WORK_LIFE.md` §5. A cloudalist's revenue depends on
 *usage* of the platform, not on the efficiency of any individual query. A more
 efficient model does not threaten the cloud-rent business model at all — if
 anything, it strengthens it, by lowering the marginal cost of serving each
@@ -599,6 +599,6 @@ proposed in `FutureWork.md` §5.1.
 - Reporting on photonic AI accelerators (Lightmatter, Lightelligence, Q.ANT,
   Celestial AI, Ayar Labs) and *Nature* publications on photonic processors
   (April 2025) — cited in Section 8b
-- Cross-reference: [`Theory_of_Sparing.md`](THEORY_OF_SPARING.md) §2–3, §6a, §7–8;
-  [`Fear_Happyness_Work_Life_Balance.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+- Cross-reference: [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §2–3, §6a, §7–8;
+  [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
   §5; [`FutureWork.md`](FutureWork.md) §5.1
