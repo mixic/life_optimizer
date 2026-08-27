@@ -332,7 +332,7 @@ growing exponentially, and almost entirely invisible at the point of use.
 
 ## 8. Can this be done more efficiently? Small models, photonics, and the Jevons paradox
 
-This is the most important question in your framing, because it asks whether
+This is the most important question in my framing, because it asks whether
 the resource cost documented in Section 7 is an inherent property of AI
 compute, or a byproduct of a particular, currently dominant engineering
 strategy — and, crucially, whether efficiency gains would actually *reduce*
