@@ -378,10 +378,10 @@ the "what do we actually get for this" gap sits.
 
 ### 8b. Genuinely new hardware: computing with light
 
-Your instinct about a fundamentally different computer architecture is not
-speculative — it is an active, funded, commercially emerging field. Photonic
-(optical) computing performs the core operation of a neural network — large
-matrix multiplications — using light rather than electrons: passing an
+A fundamentally different computer architecture based on light, is not speculative — 
+it is an active, funded, commercially emerging field. 
+Photonic (optical) computing performs the core operation of a neural network - large
+matrix multiplications - using light rather than electrons: passing an
 optical signal through a mesh of interferometers and phase shifters can
 perform many multiply-accumulate operations essentially in parallel, in
 roughly the time light takes to cross the chip, compared to many electronic
