@@ -338,7 +338,7 @@ compute, or a byproduct of a particular, currently dominant engineering
 strategy — and, crucially, whether efficiency gains would actually *reduce*
 the footprint of the system as a whole, or simply be absorbed into more of it.
 
-### 8a. Yes — meaningfully more efficient models already exist and are improving quickly
+### 8a. Meaningfully more efficient models already exist and are improving quickly
 
 Contrary to the assumption that AI capability requires ever-larger models,
 there is an active and fast-moving research program aimed at exactly the
@@ -376,7 +376,7 @@ tiny fraction of the energy and water cost. Right-sizing the model to the
 task, not just shrinking models in general, is where a meaningful share of
 the "what do we actually get for this" gap sits.
 
-### 8b. Genuinely new hardware: computing with light
+### 8b. Genuinely new hardware, a paradigm shift: Computing with light
 
 A fundamentally different computer architecture based on light, is not speculative — 
 it is an active, funded, commercially emerging field. 
