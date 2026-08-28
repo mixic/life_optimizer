@@ -29,7 +29,7 @@ not a loud party with people who do not know or respect you, however friendly
 the surface interaction; not travel undertaken to produce photographs for a
 social feed; not abundant free time spent alone and unhappy, which you rightly
 compare to a prisoner's idleness rather than to leisure. And what it *is* and *should be*:
-**How many genuine smiles cross my day, how many hugs, how many times helping
+**How many genuine smiles cross my day, how many hugs and kisses, how many times helping
 someone produced a real and grateful smile back, how often a family was fully
 present with each other with no camera or phone mediating the moment, and
 whether you go to sleep with quiet satisfaction and something to look forward
