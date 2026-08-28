@@ -232,7 +232,7 @@ identifies as what actually predicts a good life.
 
 My description of the best family moments happening with no camera, phone,
 or screen present is not incidental to this chapter — it closes a loop that
-[`Fashion_Forced_Obsolescence_and_Techno_Feudalism.md`](Fashion_Forced_Obsolescence_and_Techno_Feudalism.md)
+[`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md)
 opened. Section 8a of that chapter distinguished tasks that only need a small,
 right-sized tool from tasks routed through enormous infrastructure for no
 real benefit; this chapter suggests the same right-sizing applies to
