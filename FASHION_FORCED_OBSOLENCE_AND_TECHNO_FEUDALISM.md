@@ -332,13 +332,13 @@ growing exponentially, and almost entirely invisible at the point of use.
 
 ## 8. Can this be done more efficiently? Small models, photonics, and the Jevons paradox
 
-This is the most important question in your framing, because it asks whether
+This is the most important question in my framing, because it asks whether
 the resource cost documented in Section 7 is an inherent property of AI
 compute, or a byproduct of a particular, currently dominant engineering
 strategy — and, crucially, whether efficiency gains would actually *reduce*
 the footprint of the system as a whole, or simply be absorbed into more of it.
 
-### 8a. Yes — meaningfully more efficient models already exist and are improving quickly
+### 8a. Meaningfully more efficient models already exist and are improving quickly
 
 Contrary to the assumption that AI capability requires ever-larger models,
 there is an active and fast-moving research program aimed at exactly the
@@ -376,12 +376,12 @@ tiny fraction of the energy and water cost. Right-sizing the model to the
 task, not just shrinking models in general, is where a meaningful share of
 the "what do we actually get for this" gap sits.
 
-### 8b. Genuinely new hardware: computing with light
+### 8b. Genuinely new hardware, a paradigm shift: Computing with light
 
-Your instinct about a fundamentally different computer architecture is not
-speculative — it is an active, funded, commercially emerging field. Photonic
-(optical) computing performs the core operation of a neural network — large
-matrix multiplications — using light rather than electrons: passing an
+A fundamentally different computer architecture based on light, is not speculative — 
+it is an active, funded, commercially emerging field. 
+Photonic (optical) computing performs the core operation of a neural network - large
+matrix multiplications - using light rather than electrons: passing an
 optical signal through a mesh of interferometers and phase shifters can
 perform many multiply-accumulate operations essentially in parallel, in
 roughly the time light takes to cross the chip, compared to many electronic
