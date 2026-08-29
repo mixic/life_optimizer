@@ -98,7 +98,7 @@ reason's governance, enslaved to whichever desire is loudest in the moment.
 Plato argues, and this document series has independently argued from
 different evidence, that the tyrannical soul is the *least* happy of all,
 despite appearing the most free to indulge every desire — which is close to a
-philosophical anticipation of your own opening description in
+philosophical anticipation of my own opening description in
 `TRUE_HAPPINESS_MISSING_SCALE.md` of loud parties and heavy drinking as
 something other than true happiness, precisely because the appetite there has
 displaced, rather than remained subordinate to, everything else.
@@ -266,7 +266,7 @@ overriding a person's self-chosen weights:
 - The producer/appetite class maps closely onto $M_t$, and Plato's virtue
   for that class — temperance, not indulgence — is close to an ancient
   anticipation of Kasser's empirical finding that materialism as a *central*
-  goal reduces wellbeing, and to your own opening critique of excess as
+  goal reduces wellbeing, and to my own opening critique of excess as
   something other than true happiness.
 - The guardian/spirit class exposes a genuine gap in the existing Happiness
   Quotient: none of the seven components captures courage, honor earned
