@@ -77,7 +77,7 @@ not just a rhetorical addition:
 | Producers | Appetite | Make or grow real goods | Manufacturing, agriculture, craft, engineering |
 | Guardians | Spirit | Defend and enforce order | Military, security services, policing |
 | Rulers | Reason | Govern through wisdom | Philosopher-kings (largely displaced today, per Section 1) |
-| **Consumers** *(proposed)* | — | Circulate, intermediate, and extract from value already produced | Financial trading, logistics/distribution middlemen, rentier platforms |
+| **Consumers** *(proposed)* | Hedonism | Circulate, intermediate, and extract from value already produced | Financial trading, logistics/distribution middlemen, rentier platforms |
 
 ---
 
