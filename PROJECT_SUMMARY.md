@@ -260,7 +260,7 @@ Utility Score Breakdown:
 3. **Happiness economics** - Life satisfaction correlations
 4. **Labor economics** - Part-time work decisions
 
-## 💡 Key Takeaways
+## Key Takeaways
 
 ### For Users
 - More work ≠ better life (diminishing returns!)
@@ -280,7 +280,7 @@ Utility Score Breakdown:
 - Empirically testable predictions
 - Extensible to many contexts
 
-## 📝 How to Build & Run
+## How to Build & Run
 
 ### Requirements
 - Rust 1.70+ (install from rustup.rs)
