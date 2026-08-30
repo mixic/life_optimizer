@@ -35,7 +35,7 @@ what has changed is its scale and its instrument.
 
 ## 2. The Fourth Class: Consumers
 
-Plato's tripartite soul does not have a category for what you are pointing
+Plato's tripartite soul does not have a missing category for what I am pointing
 at, and it is worth being precise about why it needs one. Plato's producers —
 farmers, craftsmen, merchants — are still, in his account, *producers*: they
 make or grow something real. The class you are describing is different in
