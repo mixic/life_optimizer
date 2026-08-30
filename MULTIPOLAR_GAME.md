@@ -15,7 +15,7 @@ reaches for to compete is the same one, AI?*
 
 Plato's ideal city requires reason to govern spirit and appetite — the
 philosopher-king, trained in wisdom, ruling the guardians and producers for
-the good of the whole. Your diagnosis is that the present order has inverted
+the good of the whole. The diagnosis is that the present order has inverted
 this: scientists and philosophers are not absent from power, they are
 *present but subordinated* — conscripted into the guardian function
 (technical experts serving defense, security, and surveillance
