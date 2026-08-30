@@ -38,7 +38,7 @@ what has changed is its scale and its instrument.
 Plato's tripartite soul does not have a missing category for what I am pointing
 at, and it is worth being precise about why it needs one. Plato's producers —
 farmers, craftsmen, merchants — are still, in his account, *producers*: they
-make or grow something real. The class you are describing is different in
+make or grow something real. This new class is different in
 kind: people and institutions positioned in the circulation of value —
 between production and final use — who consume media, goods, and wealth in
 large volume while contributing comparatively little direct production to
