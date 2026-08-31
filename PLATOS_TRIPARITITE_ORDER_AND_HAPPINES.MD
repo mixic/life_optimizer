@@ -167,7 +167,7 @@ series).
 There is also a self-referential point worth naming plainly: the entire
 document series this chapter belongs to — the mathematical modeling, the
 Monte Carlo simulation, the philosophical self-critique in
-`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`, `CRITICS_CURRENT_WORK.md`'s outside
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`, `CRITICS_CURRENT_WORK.md`'s outside
 review, and this chapter's own act of mapping ancient philosophy onto a
 modern formula — is itself an exercise of exactly the reason-class virtue
 Plato describes. The project critiquing its own assumptions, rather than
@@ -307,5 +307,5 @@ overriding a person's self-chosen weights:
   `TRUE_HAPPINESS_MISSING_SCALE.md` §2) — the Accomplishment pillar of PERMA
 - Cross-reference: [`TRUE_HAPPINESS_MISSING_SCALE.md`](TRUE_HAPPINESS_MISSING_SCALE.md)
   §2, §6, §9; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
-  §2a; [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md)
+  §2a; [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
   §3c

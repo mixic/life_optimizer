@@ -421,7 +421,7 @@ mandatory replaceable batteries — several jurisdictions have moved in exactly
 this direction since roughly 2023), or a sufficiently large, coordinated shift
 in consumer behavior (which is itself a collective-action problem of the same
 shape already discussed for pension contributions in
-`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §2).
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2).
 
 It is also worth flagging, without asserting it as established fact, a
 plausible feedback loop between Section 6 and this section: if component input
@@ -566,7 +566,7 @@ what it does and does not solve:
 The honest summary: **sparing is a dominant strategy for an individual
 household under the current system, and simultaneously a policy-relevant
 question for the economy as a whole if adopted at scale** — exactly the same
-structure already identified in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §2 for
+structure already identified in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2 for
 the individual-vs-collective tension in Swiss pension contributions.
 
 ---

@@ -348,13 +348,13 @@ Concrete implementation:
   concept for budget adequacy (see `WorkScenario`); this extends the same
   mechanism to job-security adequacy.
 - This directly operationalizes the reframed question from
-  `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §3a: not "what work percentage
+  `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3a: not "what work percentage
   maximizes my utility," but "what is the lowest work percentage at which I
   can still reliably deliver what's expected of me."
 
 ### 5.3 Satisfaction–performance feedback (exploratory)
 
-`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §3c and `HAPPINESS_OR_FEAR_WORK_LIFE.md`
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c and `HAPPINESS_OR_FEAR_WORK_LIFE.md`
 §2–4 argue that $P_t$ (baseline productivity) is not actually independent of
 work percentage and job satisfaction — chronic overwork degrades the
 productivity term itself (Hobfoll's Conservation of Resources, Yerkes-Dodson).
