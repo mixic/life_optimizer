@@ -28,7 +28,7 @@ at, or near, their limit:
 3. **Happiness / intrinsic engagement** — performing because the work itself is
    experienced as meaningful, autonomous, and matched to one's skill — the
    *flow* and *self-determination* states already discussed in
-   `Philosophical_Sociological_Aspects.md`, Section 3c.
+   `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`, Section 3c.
 
 These three are often treated interchangeably in management language — "the
 team really stepped up under pressure" — but they are physiologically and

@@ -10,7 +10,7 @@ revision starts from an honest accounting of what actually exists today, rather
 than repeating a critique the codebase has partly already addressed, and adds
 a second track of work — consumption-side and labor-side realism — that grew
 out of [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) and
-[`Theory_of_Sparing.md`](Theory_of_Sparing.md) but has not yet been implemented
+[`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) but has not yet been implemented
 in code.*
 
 ---
@@ -40,7 +40,7 @@ and pensions in considerable depth but still models **consumption and labor
 supply** in a comparatively primitive way: the tax and pension engines are
 detailed, but `PersonalRequirements` still uses flat monthly budget fields
 rather than the elasticity-tiered, utilization-weighted consumption model
-proposed in `Theory_of_Sparing.md` §8, and the work-percentage decision is
+proposed in `THEORY_OF_SPARING.md` §8, and the work-percentage decision is
 still treated as fully discretionary rather than constrained by an employer-
 side achievement requirement, as `CRITICS_CURRENT_WORK.md` §1 argues it often
 is in practice. Both of these are fully specified in the existing documents —
@@ -186,7 +186,7 @@ still-open work:
 | Jump-diffusion or discrete tail-shock component | Not done | — |
 | Historical backtesting / calibration pipeline | Not done | — |
 | Benchmark suite comparing model families | Not done | — |
-| Elasticity-tiered, utilization-weighted consumption model | Documented only | `Theory_of_Sparing.md` §8 |
+| Elasticity-tiered, utilization-weighted consumption model | Documented only | `THEORY_OF_SPARING.md` §8 |
 | Employer-side achievement-capacity constraint on work % | Documented only | `CRITICS_CURRENT_WORK.md` §1.3 |
 | Production / stress-test / research model separation | Not done | — |
 
@@ -308,7 +308,7 @@ translating it into `PersonalRequirements` and `OptimizerConfig`.
 
 ### 5.1 Elasticity-tiered consumption model
 
-`Theory_of_Sparing.md` §7c and §8 propose splitting the flat `discretionary`
+`THEORY_OF_SPARING.md` §7c and §8 propose splitting the flat `discretionary`
 field into elasticity tiers:
 
 $$
@@ -317,16 +317,16 @@ $$
 
 with $L_t$ further decomposed by a sparing ratio $\sigma$, second-hand price
 ratio $\phi$, and a utilization-rate penalty $\rho_{\text{use}}^{-1}$ (full
-formula in `Theory_of_Sparing.md` §8). Concrete implementation:
+formula in `THEORY_OF_SPARING.md` §8). Concrete implementation:
 
 - Add `rent`, `essential_inelastic`, `quasi_inelastic`, and
   `sparing_eligible` fields to `PersonalRequirements`, replacing the current
   flat `discretionary` field.
 - Add CLI flags `--sparing-ratio`, `--utilization-discipline`, and
-  `--quasi-inelastic-share` as specified in `Theory_of_Sparing.md` §8.
+  `--quasi-inelastic-share` as specified in `THEORY_OF_SPARING.md` §8.
 - Report the elasticity-tier breakdown in `display.rs` rather than a single
   aggregate discretionary number, so the person can see where budget pressure
-  is actually landing (as argued in `Theory_of_Sparing.md` §7c).
+  is actually landing (as argued in `THEORY_OF_SPARING.md` §7c).
 
 ### 5.2 Employer-side achievement-capacity constraint
 
@@ -348,13 +348,13 @@ Concrete implementation:
   concept for budget adequacy (see `WorkScenario`); this extends the same
   mechanism to job-security adequacy.
 - This directly operationalizes the reframed question from
-  `Philosophical_Sociological_Aspects.md` §3a: not "what work percentage
+  `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §3a: not "what work percentage
   maximizes my utility," but "what is the lowest work percentage at which I
   can still reliably deliver what's expected of me."
 
 ### 5.3 Satisfaction–performance feedback (exploratory)
 
-`Philosophical_Sociological_Aspects.md` §3c and `Fear_HAPPINESS_Work_Life_Balance.md`
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §3c and `HAPPINESS_OR_FEAR_WORK_LIFE.md`
 §2–4 argue that $P_t$ (baseline productivity) is not actually independent of
 work percentage and job satisfaction — chronic overwork degrades the
 productivity term itself (Hobfoll's Conservation of Resources, Yerkes-Dodson).
@@ -362,7 +362,7 @@ This is a genuinely open modeling question rather than a ready-to-implement
 formula, and belongs in Track A's research mode once §4.6 exists: a
 feedback term $P_t = P_0 \cdot f(\text{sustained work \%}, \text{time})$ where
 $f$ declines under prolonged high work percentage, calibrated against the
-burnout and engagement literature cited in `Fear_HAPPINESS_Work_Life_Balance.md`,
+burnout and engagement literature cited in `HAPPINESS_OR_FEAR_WORK_LIFE.md`,
 would let the optimizer discover — rather than assume — cases where 100% work
 is self-defeating even under the pure achievement-capacity constraint of §5.2.
 

@@ -250,7 +250,7 @@ assert one:
    produces a costly, unstable equilibrium that leaves most participants
    worse off than a cooperative alternative would have**, consistent with the
    Pareto-inferior Nash equilibrium structure already used in
-   `Theory_of_Sparing.md` §7d and Section 4 above. An AI-accelerated arms race
+   `THEORY_OF_SPARING.md` §7d and Section 4 above. An AI-accelerated arms race
    between states, and a simultaneous AI-accelerated rent-extraction race
    between platforms, can both be individually rational and collectively
    self-defeating at the same time.
@@ -328,9 +328,9 @@ and more honest goal.
 - The security dilemma (Herz, 1950) is the core game-theoretic mechanism
   behind "everyone optimizing at once," structurally identical to the
   Pareto-inferior Nash equilibrium already formalized in
-  `Theory_of_Sparing.md` §7d, now operating at civilizational scale.
+  `THEORY_OF_SPARING.md` §7d, now operating at civilizational scale.
 - Algorithmic decisions over pricing (the RealPage case), employment
-  (already covered in `Fear_HAPPINESS_Work_Life_Balance.md` §5), and life
+  (already covered in `HAPPINESS_OR_FEAR_WORK_LIFE.md` §5), and life
   and death (autonomous weapons, algorithmic triage) increasingly sit outside
   all four classes — tools wielded by whichever class controls them, not an
   independent locus of reasoned judgment.

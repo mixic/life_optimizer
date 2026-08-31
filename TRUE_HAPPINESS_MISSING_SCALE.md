@@ -287,7 +287,7 @@ undermine itself.
   (a substantial literature following Kahneman's work on experienced versus
   remembered utility).
 - **Goodhart's Law applies here with unusual force.** This exact risk was
-  already raised in `Philosophical_Sociological_Aspects.md` §4: "the moment
+  already raised in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §4: "the moment
   [a] number becomes the thing you optimize for... it risks distorting the
   very thing it was meant to describe." Applied to hugs and gratitude
   specifically, the risk is sharper than for a pension score: if a person
@@ -329,7 +329,7 @@ threads already in this document series and is largely right, with one
 important caveat worth being honest about.
 
 **What supports my point.** The Easterlin paradox and the positional-goods
-literature (`Theory_of_Sparing.md` §2, `Philosophical_Sociological_Aspects.md`
+literature (`THEORY_OF_SPARING.md` §2, `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`
 §5) already show that measuring happiness *relative to a reference group* — a
 richer neighbor, an idealized life not actually available to you — is a
 documented source of reduced wellbeing independent of one's absolute
@@ -338,7 +338,7 @@ makes essentially my point directly: the *dichotomy of control* — distress
 comes from measuring my life against outcomes outside my control, and
 equanimity comes from directing effort only at what is within it. Amartya
 Sen's capability approach (already used in `CRITICS_CURRENT_WORK.md` §2 and
-`Theory_of_Sparing.md` §2) likewise evaluates wellbeing relative to the
+`THEORY_OF_SPARING.md` §2) likewise evaluates wellbeing relative to the
 capabilities a person actually has access to, not to an unconditioned ideal.
 
 **The caveat worth naming.** Sen himself raised a serious concern about this
@@ -558,5 +558,5 @@ Concrete, bounded proposal for `FutureWork.md`'s roadmap:
   adaptive-preferences critique
 - Cross-reference: [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md)
   §1, §3c, §4; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
-  §2–4; [`Theory_of_Sparing.md`](Theory_of_Sparing.md) §2;
+  §2–4; [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §2;
   [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md) §8a

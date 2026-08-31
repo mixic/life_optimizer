@@ -71,7 +71,7 @@ in this specific case is **reversible with technical knowledge the average
 consumer does not have or is not expected to use**, and Microsoft has publicly
 declined to lower the requirement despite the resulting e-waste concern being
 raised repeatedly in technology press and enthusiast communities throughout
-2025. This is exactly the Section 7 dynamic from `Theory_of_Sparing.md` —
+2025. This is exactly the Section 7 dynamic from `THEORY_OF_SPARING.md` —
 producers setting the support-window parameters that determine whether
 "holding out" is a viable consumer strategy — applied to an operating system
 rather than a device.
@@ -96,7 +96,7 @@ just *supported*, life:
   user-replaced converts a purely software-supported device into one with a
   hard physical failure point after a few hundred charge cycles — independent
   of whether the OS is still updated. This is the clearest example in this
-  whole chapter of `Theory_of_Sparing.md` §3's planned-obsolescence critique
+  whole chapter of `THEORY_OF_SPARING.md` §3's planned-obsolescence critique
   (Bulow, 1986) applied to a specific, physical design choice.
 - **App-ecosystem minimum requirements.** Even a phone still receiving
   security patches can be pushed into replacement by individual apps (banking,
@@ -109,7 +109,7 @@ just *supported*, life:
 
 ## 4. Is ten years actually rational? A cost-benefit reframing
 
-`Theory_of_Sparing.md` §2 proposed a decision rule: effective value is utility
+`THEORY_OF_SPARING.md` §2 proposed a decision rule: effective value is utility
 delivered per franc spent, weighted by realistic utilization. Applied here:
 
 - **Realistic threat model for a typical consumer.** The security features
@@ -121,14 +121,14 @@ delivered per franc spent, weighted by realistic utilization. Applied here:
   though not zero, for casual personal use.
 - **The ESU bridge changes the arithmetic.** At roughly $30/year, several
   years of extended support cost a small fraction of a new device, which is a
-  textbook case of the `Theory_of_Sparing.md` §2 "effective value" comparison:
+  textbook case of the `THEORY_OF_SPARING.md` §2 "effective value" comparison:
   a low-cost bridge against a device with years of remaining physical life
   can easily out-perform a full replacement in utility-per-franc, particularly
   for a household already resource-constrained by the essential-cost pressure
-  discussed in `Theory_of_Sparing.md` §7.
+  discussed in `THEORY_OF_SPARING.md` §7.
 - **The opportunity cost is the part usually left out.** A new laptop and
   phone every five years, for a household of several people, over a decade,
-  is a material sum — and `Theory_of_Sparing.md`'s formalization treats that
+  is a material sum — and `THEORY_OF_SPARING.md`'s formalization treats that
   sum as fungible: it can just as easily fund travel, shared experience, or
   savings as it can fund the next device cycle.
 
@@ -223,7 +223,7 @@ But this apparent relief comes with a structural trade, not a free lunch:
   A five-year-old laptop is a visible, self-contained decision the household
   can evaluate directly (Sections 1–4 above). A monthly AI subscription
   embedded across several tools and workflows is a diffuse, recurring, and
-  easily overlooked cost — closer to `Theory_of_Sparing.md` §7b's
+  easily overlooked cost — closer to `THEORY_OF_SPARING.md` §7b's
   "quasi-inelastic" category than to the elastic, sparing-eligible category,
   precisely because switching away from an AI tool that has become embedded
   in daily workflow carries its own switching cost.
@@ -259,7 +259,7 @@ extends well beyond money.
 
 ### 7a. Hyperscalers pay the same inflated component prices consumers do — at far larger scale
 
-The DRAM/NAND price shock already discussed in `Theory_of_Sparing.md` §6a does
+The DRAM/NAND price shock already discussed in `THEORY_OF_SPARING.md` §6a does
 not spare the hyperscalers; if anything it hits them harder, because a
 single AI training cluster can require memory capacity equivalent to many
 thousands of consumer devices, and much of it is high-bandwidth memory (HBM)
@@ -478,7 +478,7 @@ itself, rather than just making it cheaper to sustain.
 
 ## 9. Extending the Life Optimizer consumption model
 
-`Theory_of_Sparing.md` §8 already proposed splitting consumption into
+`THEORY_OF_SPARING.md` §8 already proposed splitting consumption into
 inelastic, quasi-inelastic, and elastic tiers. This chapter's argument fits
 directly into that structure and suggests one further refinement: separating
 **owned-durable spending** (the device itself) from **recurring platform

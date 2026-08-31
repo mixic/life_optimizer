@@ -72,7 +72,7 @@ rarely stated this starkly in mainstream household-finance tools.
   crowding out the case for buying only what will actually be used.
 - **The attention economy compounds this.** Advertising and recommendation
   systems (Section 3, and the cloud-serf/cloud-rent framing already discussed
-  in `Fear_HAPPINESS_Work_Life_Balance.md` §5) are explicitly optimized to
+  in `HAPPINESS_OR_FEAR_WORK_LIFE.md` §5) are explicitly optimized to
   generate purchase intent independent of prior need, which is precisely the
   mechanism the sparing model is designed to interrupt.
 - **A discount changes price, not utilization.** If a product would see, say,
@@ -165,7 +165,7 @@ front-loads "what's on sale" before "do you need it."
 
 ## 5. Game theory: the sparing worker against the extraction system
 
-`Fear_HAPPINESS_Work_Life_Balance.md` already framed neoliberal management and
+`HAPPINESS_OR_FEAR_WORK_LIFE.md` already framed neoliberal management and
 technofeudal platforms as systems that extract value from a worker's labor and
 attention, often faster than the worker's psychological or financial capacity
 can sustainably regenerate. Sparing is best understood as the **consumption-side
@@ -250,7 +250,7 @@ the following are documented real-world mechanisms:
    below its hardware cost if the seller expects to recover the difference
    elsewhere: subscription services, cloud storage tiers, software licensing,
    accessory attachment rates, extended warranties, or — in the technofeudal
-   framing already developed in `Fear_HAPPINESS_Work_Life_Balance.md` §5 — the
+   framing already developed in `HAPPINESS_OR_FEAR_WORK_LIFE.md` §5 — the
    ongoing data and attention value of a customer locked into a platform
    ecosystem. The hardware is the acquisition cost; the platform is the
    product.
@@ -421,7 +421,7 @@ mandatory replaceable batteries — several jurisdictions have moved in exactly
 this direction since roughly 2023), or a sufficiently large, coordinated shift
 in consumer behavior (which is itself a collective-action problem of the same
 shape already discussed for pension contributions in
-`Philosophical_Sociological_Aspects.md` §2).
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §2).
 
 It is also worth flagging, without asserting it as established fact, a
 plausible feedback loop between Section 6 and this section: if component input
@@ -566,7 +566,7 @@ what it does and does not solve:
 The honest summary: **sparing is a dominant strategy for an individual
 household under the current system, and simultaneously a policy-relevant
 question for the economy as a whole if adopted at scale** — exactly the same
-structure already identified in `Philosophical_Sociological_Aspects.md` §2 for
+structure already identified in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §2 for
 the individual-vs-collective tension in Swiss pension contributions.
 
 ---
