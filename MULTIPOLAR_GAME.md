@@ -3,7 +3,7 @@
 *A critical extension of [`Platos_Tripartite_Order_and_Happiness.md`](Platos_Tripartite_Order_and_Happiness.md).
 That chapter used Plato's three classes to map the dimensions of personal
 happiness. This chapter turns the same framework outward, toward the world
-economic and political system itself, and asks your question directly: what
+economic and political system itself, and asks a question directly: what
 happens when the classes are inverted — when reason is subordinated rather
 than ruling, when a fourth class Plato never named comes to dominate
 circulation without producing, and when the instrument every class now
@@ -54,19 +54,19 @@ distinct economic category:
   *profit-seeking* (creating value and being rewarded for it) from
   *rent-seeking* (capturing a share of value already created by others,
   through position rather than production) — precisely the distinction
-  between Plato's producer and your proposed fourth class.
+  between Plato's producer and my proposed fourth class.
 - **David Graeber's "Bullshit Jobs"** (2018) argues, from extensive survey
   data, that a large share of jobs in finance, administration, and
   middle-management are perceived as pointless even by the people holding
   them, and function primarily to circulate or extract value rather than
-  create it — a direct empirical echo of your description.
+  create it — a direct empirical echo of my description.
 - **Thomas Philippon's research on the finance industry** ("Has the U.S.
   Finance Industry Become Less Efficient?", 2015) found that the cost of
   financial intermediation in the United States has *not* meaningfully
   fallen despite decades of technological improvement that should have
   reduced it — evidence that a persistently large share of financial-sector
   revenue reflects rent extraction rather than a productive service whose
-  price should fall with efficiency, closely matching your "financial
+  price should fall with efficiency, closely matching "financial
   trader, middleman" framing.
 
 A fourth class, added to Plato's three, is therefore a defensible extension,
@@ -83,7 +83,7 @@ not just a rhetorical addition:
 
 ## 3. Rulers who have become Guardians: securing resources, not deliberating wisdom
 
-Your observation that "rulers are nowadays 'Guardians'" describes something
+My observation that "rulers are nowadays 'Guardians'" describes something
 international relations theory has a name for: **securitization** (Barry
 Buzan & Ole Wæver's Copenhagen School, developed through the 1990s), the
 process by which political issues — energy, technology, trade, even climate —
@@ -95,7 +95,7 @@ goods through argument) to the guardian-class register (defending against a
 threat), regardless of whether the underlying issue actually required that
 framing.
 
-This connects directly to your point about resource security: a ruling
+This connects directly to my point about resource security: a ruling
 system organized substantially around **securing natural resources and
 consumption capacity** rather than around wisdom-based deliberation is, on
 Plato's own terms, guardians ruling in reason's place — an inversion of his
@@ -115,8 +115,7 @@ whole city.
 
 ## 4. From unipolar to multipolar: the game theory of everyone optimizing at once
 
-Your observation about the current transition is accurate and current: the
-post-Cold War unipolar order, led by a single dominant power with no peer
+The post-Cold War unipolar order, led by a single dominant power with no peer
 competitor, has been giving way through the 2010s and 2020s to a genuinely
 multipolar system, with the United States, China, and a growing set of
 "middle powers" — the EU, India, Gulf states, and others — each pursuing
@@ -164,7 +163,7 @@ being disadvantaged relative to competitors who do not.
 
 ## 5. Everyone is optimizing — and now with the same tool
 
-You are right to note that this is no longer confined to states. Workers
+Optimization is no longer confined to states, banks or insurances. Workers
 optimizing their own labor supply (the subject of this entire project),
 hyperscalers optimizing datacenter capex (`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`
 §5–7), governments optimizing resource security (Section 3 above), and supply
@@ -196,7 +195,7 @@ about predicting its resolution.
 
 ## 6. Algorithms deciding life, work, and price: who actually captures the gain
 
-Your closing examples deserve direct, concrete treatment rather than
+Following closing examples deserve direct, concrete treatment rather than
 abstraction, because each now has a documented real-world case attached.
 
 **Cheaper products.** The clearest current case is the opposite of the
@@ -210,7 +209,7 @@ parallel class-action settlements exceeding $140 million with various
 landlord defendants were preliminarily approved around the same time; and
 New York separately amended its antitrust law in October 2025 to explicitly
 prohibit algorithmic rent-setting tools. This is a directly on-point,
-still-unfolding example of your fourth class (a software intermediary
+still-unfolding example of the fourth class (a software intermediary
 sitting between property owners and renters) using an algorithm to extract
 rather than pass through efficiency gains — the opposite of the "cheaper
 products" a consumer might expect from automated optimization.
@@ -306,7 +305,7 @@ and more honest goal.
 
 ## 9. Summary
 
-- Your diagnosis that philosophers today are conscripted into guardian or
+- My perspective is that philosophers today are conscripted into guardian or
   producer service rather than ruling maps onto a real, documented concern —
   Eisenhower's 1961 warning about the fusion of military, industrial, and
   scientific power was substantially the same observation.
