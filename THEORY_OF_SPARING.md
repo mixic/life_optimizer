@@ -445,7 +445,7 @@ $$
 C_t = R_t + L_t + D_t
 $$
 
-with a lifestyle tier $L_t \in \{\text{extreme-saving}, \text{moderate}, \text{normal}, \text{luxury}\}$. 
+with a lifestyle tier $L_t \in \lbrace \text{extreme-saving}, \text{moderate}, \text{normal}, \text{luxury}\rbrace$.
 The sparing theory refines this rather than replacing it, by decomposing $L_t$ further and introducing a 
 utilization-weighted effective cost:
 
