@@ -214,7 +214,7 @@ sitting between property owners and renters) using an algorithm to extract
 rather than pass through efficiency gains — the opposite of the "cheaper
 products" a consumer might expect from automated optimization.
 
-**Finding a job.** Already discussed in `HAPPYNESS_OR_FEAR_WORK_LIFE.md`
+**Finding a job.** Already discussed in `HAPPINESS_OR_FEAR_WORK_LIFE.md`
 §5 — algorithmic management on gig platforms substitutes continuous,
 precise, scaled disciplining pressure for the more limited, negotiable
 pressure a human manager could apply, industrializing rather than easing the
@@ -241,7 +241,7 @@ villain, and should present the genuinely live possibilities rather than
 assert one:
 
 1. **The consumer/cloudalist class captures the gains, at least in the near
-   term.** This is the throughline of `HAPPYNESS_OR_FEAR_WORK_LIFE.md`
+   term.** This is the throughline of `HAPPINESS_OR_FEAR_WORK_LIFE.md`
    §5 and `FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md` §5–8: platform
    owners positioned in circulation, not production, are best placed to
    capture the surplus from AI-driven efficiency, exactly as the RealPage case
@@ -330,7 +330,7 @@ and more honest goal.
   Pareto-inferior Nash equilibrium already formalized in
   `Theory_of_Sparing.md` §7d, now operating at civilizational scale.
 - Algorithmic decisions over pricing (the RealPage case), employment
-  (already covered in `Fear_Happyness_Work_Life_Balance.md` §5), and life
+  (already covered in `Fear_HAPPINESS_Work_Life_Balance.md` §5), and life
   and death (autonomous weapons, algorithmic triage) increasingly sit outside
   all four classes — tools wielded by whichever class controls them, not an
   independent locus of reasoned judgment.
@@ -381,6 +381,6 @@ and more honest goal.
   amendment (S.7882, effective December 15, 2025) — the algorithmic
   rent-pricing case cited in Section 6
 - Cross-reference: [`PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.md`](PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.md)
-  §1, §6, §8; [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+  §1, §6, §8; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §5; [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md)
   §5–8; [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §7d

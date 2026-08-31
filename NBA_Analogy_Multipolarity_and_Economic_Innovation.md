@@ -17,7 +17,7 @@ one star player decides to play at 80% intensity while every other team
 competes at 100%. The point is not about that player's own career arc — a
 professional athlete's career is, correctly, a different shape from an
 ordinary working life (a short, high-intensity "sprint" followed by decades
-living on accumulated returns, much like `HAPPYNESS_OR_FEAR_WORK_LIFE.md`
+living on accumulated returns, much like `HAPPINESS_OR_FEAR_WORK_LIFE.md`
 §2 already discussed for "urgency mode," and structurally similar to a
 soldier's early pension). The point of the analogy is about the **tournament
 as a whole**: in a genuinely competitive, zero-or-positive-sum multipolar

@@ -1,6 +1,6 @@
 # The Theory of Sparing: Prioritized Consumption, the Niche Economy, and What It Means to Optimize a Life
 
-*A companion to [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+*A companion to [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
 and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §2, which already argued
 that consumption — not just income and tax — has to be an explicit input to this
 model. This chapter proposes a specific alternative consumption theory ("sparing"),
@@ -72,7 +72,7 @@ rarely stated this starkly in mainstream household-finance tools.
   crowding out the case for buying only what will actually be used.
 - **The attention economy compounds this.** Advertising and recommendation
   systems (Section 3, and the cloud-serf/cloud-rent framing already discussed
-  in `Fear_Happyness_Work_Life_Balance.md` §5) are explicitly optimized to
+  in `Fear_HAPPINESS_Work_Life_Balance.md` §5) are explicitly optimized to
   generate purchase intent independent of prior need, which is precisely the
   mechanism the sparing model is designed to interrupt.
 - **A discount changes price, not utilization.** If a product would see, say,
@@ -165,7 +165,7 @@ front-loads "what's on sale" before "do you need it."
 
 ## 5. Game theory: the sparing worker against the extraction system
 
-`Fear_Happyness_Work_Life_Balance.md` already framed neoliberal management and
+`Fear_HAPPINESS_Work_Life_Balance.md` already framed neoliberal management and
 technofeudal platforms as systems that extract value from a worker's labor and
 attention, often faster than the worker's psychological or financial capacity
 can sustainably regenerate. Sparing is best understood as the **consumption-side
@@ -250,7 +250,7 @@ the following are documented real-world mechanisms:
    below its hardware cost if the seller expects to recover the difference
    elsewhere: subscription services, cloud storage tiers, software licensing,
    accessory attachment rates, extended warranties, or — in the technofeudal
-   framing already developed in `Fear_Happyness_Work_Life_Balance.md` §5 — the
+   framing already developed in `Fear_HAPPINESS_Work_Life_Balance.md` §5 — the
    ongoing data and attention value of a customer locked into a platform
    ecosystem. The hardware is the acquisition cost; the platform is the
    product.
@@ -585,7 +585,7 @@ the individual-vs-collective tension in Swiss pension contributions.
   sparing as a practical household algorithm.
 - Sparing functions as the consumption-side counter-strategy to the
   extraction dynamics already described for labor in
-  `HAPPYNESS_OR_FEAR_WORK_LIFE.md`: it increases savings and therefore
+  `HAPPINESS_OR_FEAR_WORK_LIFE.md`: it increases savings and therefore
   the household's exit option and bargaining power, independent of wages or
   employer behavior.
 - The 2024–present global memory/storage price shock is real and well
@@ -646,6 +646,6 @@ the individual-vs-collective tension in Swiss pension contributions.
 - TrendForce, Counterpoint Research, and IDC industry analyses of the
   2024–present global DRAM/NAND memory shortage — for the current component-cost
   context referenced in Section 6
-- Cross-reference: [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+- Cross-reference: [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §5 on technofeudal rent and platform subsidization; [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md)
   §2 on the missing consumption dimension

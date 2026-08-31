@@ -3,7 +3,7 @@
 *The capstone of this document series. [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
 §1 opened by admitting the utility function compresses a life into a small set
 of measurable terms and that "not everything that matters is measurable."
-[`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md) and
+[`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md) and
 [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) both argued that money and time
 are only instrumentally valuable — proxies for something else. This chapter
 finally asks directly what that something else is, whether it can be
@@ -261,7 +261,7 @@ afterthought:
 | Prosocial contribution $P_t$ | Helping others, and the genuine gratitude received in return | Dunn, Aknin & Norton (2008) |
 | Autonomy, competence, relatedness $D_t$ | Self-determination in daily life and work | Deci & Ryan (already used in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c) |
 | Purposeful engagement $F_t$ | Flow, absorption in meaningful activity | Csikszentmihalyi (already used in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c) |
-| Rest and closure $S_t$ | Going to sleep with satisfaction and anticipation, not unresolved stress | Sleep and affect research; Hobfoll's resource-depletion model (already used in `HAPPYNESS_OR_FEAR_WORK_LIFE.md` §4) |
+| Rest and closure $S_t$ | Going to sleep with satisfaction and anticipation, not unresolved stress | Sleep and affect research; Hobfoll's resource-depletion model (already used in `HAPPINESS_OR_FEAR_WORK_LIFE.md` §4) |
 | Material and status satisfaction $M_t$ | Possessions, status, consumption — real for those who weight it | Kasser (2002) on materialism; explicitly *not* assumed to be zero-weighted |
 | Undistracted presence $U_t$ | Time spent fully attentive, without device mediation | Kross et al. (2013) |
 
@@ -557,6 +557,6 @@ Concrete, bounded proposal for `FutureWork.md`'s roadmap:
   *Sour Grapes: Studies in the Subversion of Rationality* (1983) — the
   adaptive-preferences critique
 - Cross-reference: [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md)
-  §1, §3c, §4; [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+  §1, §3c, §4; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §2–4; [`Theory_of_Sparing.md`](Theory_of_Sparing.md) §2;
   [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md) §8a

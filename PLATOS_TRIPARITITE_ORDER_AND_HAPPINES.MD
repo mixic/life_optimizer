@@ -123,7 +123,7 @@ self-interest (Plato's reason) or material desire (Plato's appetite), and
 that modern political and social theory has often mistakenly assumed people
 are motivated only by the other two. Seligman's PERMA model independently
 arrives at something adjacent with its **Accomplishment** pillar, and
-`HAPPYNESS_OR_FEAR_WORK_LIFE.md` §2a's discussion of genuine, bounded
+`HAPPINESS_OR_FEAR_WORK_LIFE.md` §2a's discussion of genuine, bounded
 "urgency" performance — the satisfaction of having risen to a real
 challenge — sits closer to thymotic satisfaction than to any of the seven
 existing components. Csikszentmihalyi's flow, already used for $F_t$, also
@@ -306,6 +306,6 @@ overriding a person's self-chosen weights:
 - Martin Seligman, *Flourishing* (2011, already cited in
   `TRUE_HAPPINESS_MISSING_SCALE.md` §2) — the Accomplishment pillar of PERMA
 - Cross-reference: [`TRUE_HAPPINESS_MISSING_SCALE.md`](TRUE_HAPPINESS_MISSING_SCALE.md)
-  §2, §6, §9; [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+  §2, §6, §9; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §2a; [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md)
   §3c

@@ -354,7 +354,7 @@ Concrete implementation:
 
 ### 5.3 Satisfaction–performance feedback (exploratory)
 
-`Philosophical_Sociological_Aspects.md` §3c and `Fear_Happyness_Work_Life_Balance.md`
+`Philosophical_Sociological_Aspects.md` §3c and `Fear_HAPPINESS_Work_Life_Balance.md`
 §2–4 argue that $P_t$ (baseline productivity) is not actually independent of
 work percentage and job satisfaction — chronic overwork degrades the
 productivity term itself (Hobfoll's Conservation of Resources, Yerkes-Dodson).
@@ -362,7 +362,7 @@ This is a genuinely open modeling question rather than a ready-to-implement
 formula, and belongs in Track A's research mode once §4.6 exists: a
 feedback term $P_t = P_0 \cdot f(\text{sustained work \%}, \text{time})$ where
 $f$ declines under prolonged high work percentage, calibrated against the
-burnout and engagement literature cited in `Fear_Happyness_Work_Life_Balance.md`,
+burnout and engagement literature cited in `Fear_HAPPINESS_Work_Life_Balance.md`,
 would let the optimizer discover — rather than assume — cases where 100% work
 is self-defeating even under the pure achievement-capacity constraint of §5.2.
 

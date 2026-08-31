@@ -1,7 +1,7 @@
 # Fashion, Forced Obsolescence, and the Datacenter Behind the Screen
 
 *A third companion to [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) and
-[`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md).
+[`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md).
 Where `THEORY_OF_SPARING.md` asked whether a purchase is needed at all, this
 chapter asks a narrower and more concrete question: when the product in
 question is a smartphone, a PC, or a car, and "fashion" pressures you to
@@ -154,7 +154,7 @@ not because it was compared against the alternative.
 ## 5. The techno-feudal asymmetry: whose refresh cycle is this, really?
 
 Here the argument connects directly to
-`HAPPYNESS_OR_FEAR_WORK_LIFE.md` §5's account of Varoufakis's
+`HAPPINESS_OR_FEAR_WORK_LIFE.md` §5's account of Varoufakis's
 technofeudalism thesis, and it is worth being precise about scale, because the
 asymmetry is large and current.
 
@@ -183,7 +183,7 @@ The asymmetry with the household case in Sections 1–4 is stark:
   whose price reflects, among other things, the amortized cost of a capital
   cycle happening on a schedule set entirely by the platform owner.
 
-This is precisely the **cloud rent** relationship `HAPPYNESS_OR_FEAR_WORK_LIFE.md`
+This is precisely the **cloud rent** relationship `HAPPINESS_OR_FEAR_WORK_LIFE.md`
 §5 already described: the consumer's household capex decision (keep the old
 PC or not) is now increasingly decoupled from — and largely irrelevant to —
 the far larger, faster-cycling capex decision (rebuild the datacenter or not)
@@ -450,7 +450,7 @@ banked as reduced total footprint.
 
 This has a direct and somewhat counterintuitive implication for Varoufakis's
 technofeudalism framing, discussed in Section 5 and in
-`HAPPYNESS_OR_FEAR_WORK_LIFE.md` §5. A cloudalist's revenue depends on
+`HAPPINESS_OR_FEAR_WORK_LIFE.md` §5. A cloudalist's revenue depends on
 *usage* of the platform, not on the efficiency of any individual query. A more
 efficient model does not threaten the cloud-rent business model at all — if
 anything, it strengthens it, by lowering the marginal cost of serving each
@@ -541,7 +541,7 @@ proposed in `FutureWork.md` §5.1.
   powerful local hardware — but this substitutes owned, deferrable capex for
   non-owned, non-deferrable platform rent, deepening rather than resolving
   the technofeudal dependency already identified in
-  `HAPPYNESS_OR_FEAR_WORK_LIFE` §5.
+  `HAPPINESS_OR_FEAR_WORK_LIFE` §5.
 - The memory price shock hits hyperscalers at far greater absolute scale than
   consumers, and the resulting datacenter buildout carries real, measurable,
   and exponentially growing water and energy costs — global datacenter
@@ -600,5 +600,5 @@ proposed in `FutureWork.md` §5.1.
   Celestial AI, Ayar Labs) and *Nature* publications on photonic processors
   (April 2025) — cited in Section 8b
 - Cross-reference: [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §2–3, §6a, §7–8;
-  [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md)
+  [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §5; [`FutureWork.md`](FutureWork.md) §5.1
