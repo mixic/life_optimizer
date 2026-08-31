@@ -1,6 +1,6 @@
 # True Happiness: The Missing Scale
 
-*The capstone of this document series. [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md)
+*The capstone of this document series. [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
 §1 opened by admitting the utility function compresses a life into a small set
 of measurable terms and that "not everything that matters is measurable."
 [`HAPPYNESS_OR_FEAR_WORK_LIFE.md`](HAPPYNESS_OR_FEAR_WORK_LIFE.md) and
@@ -66,7 +66,7 @@ some time ago, in favor of explicitly multidimensional models:
   PERMA's five pillars without having named it directly until now.
 - **Ryan & Deci's review of hedonic versus eudaimonic wellbeing** ("On
   Happiness and Human Potentials," 2001) formalizes the split this whole
-  document series has used since `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.md` §3c
+  document series has used since `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c
   as two genuinely distinct research traditions with different instruments,
   different predictors, and only partial correlation with each other — further
   evidence that collapsing "happiness" into one number discards real
@@ -160,7 +160,7 @@ substantially material — status, possessions, luxury, a certain kind of social
 life — and a model that quietly assumes everyone's true happiness is
 relational would be making exactly the mistake this whole document series has
 criticized elsewhere: substituting the author's values for the user's
-(`Philosophical_Sociological_Aspects.md` §1's warning about "supplying
+(PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §1's warning about "supplying
 unstated assumptions"). Both directions need to be represented, and both have
 real research behind them, not just intuition:
 
@@ -220,7 +220,7 @@ which is close to a philosophical anticipation of my own observation that such
 company is "friendly in an artificial way" without real respect underneath.
 
 This is the same *hedonia* versus *eudaimonia* distinction already used in
-`Philosophical_Sociological_Aspects.md` §3c, applied here specifically to
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c, applied here specifically to
 relationships rather than to work: a loud, crowded, alcohol-heavy night can
 deliver real hedonic pleasure in the moment, while contributing little or
 nothing to the eudaimonic, complete-friendship layer the Harvard study
@@ -259,9 +259,9 @@ afterthought:
 |---|---|---|
 | Relational connection $R_t$ | Frequency and quality of close relationships — smiles, hugs, shared presence | Harvard Study of Adult Development (Waldinger & Schulz, 2023) |
 | Prosocial contribution $P_t$ | Helping others, and the genuine gratitude received in return | Dunn, Aknin & Norton (2008) |
-| Autonomy, competence, relatedness $D_t$ | Self-determination in daily life and work | Deci & Ryan (already used in `Philosophical_Sociological_Aspects.md` §3c) |
-| Purposeful engagement $F_t$ | Flow, absorption in meaningful activity | Csikszentmihalyi (already used in `Philosophical_Sociological_Aspects.md` §3c) |
-| Rest and closure $S_t$ | Going to sleep with satisfaction and anticipation, not unresolved stress | Sleep and affect research; Hobfoll's resource-depletion model (already used in `Fear_Happyness_Work_Life_Balance.md` §4) |
+| Autonomy, competence, relatedness $D_t$ | Self-determination in daily life and work | Deci & Ryan (already used in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c) |
+| Purposeful engagement $F_t$ | Flow, absorption in meaningful activity | Csikszentmihalyi (already used in `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3c) |
+| Rest and closure $S_t$ | Going to sleep with satisfaction and anticipation, not unresolved stress | Sleep and affect research; Hobfoll's resource-depletion model (already used in `HAPPYNESS_OR_FEAR_WORK_LIFE.md` §4) |
 | Material and status satisfaction $M_t$ | Possessions, status, consumption — real for those who weight it | Kasser (2002) on materialism; explicitly *not* assumed to be zero-weighted |
 | Undistracted presence $U_t$ | Time spent fully attentive, without device mediation | Kross et al. (2013) |
 
