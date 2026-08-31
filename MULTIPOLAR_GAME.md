@@ -1,6 +1,6 @@
 # The Fourth Class: Consumers, Guardians, and the Multipolar Game
 
-*A critical extension of [`Platos_Tripartite_Order_and_Happiness.md`](Platos_Tripartite_Order_and_Happiness.md).
+*A critical extension of [`PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD`](PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD).
 That chapter used Plato's three classes to map the dimensions of personal
 happiness. This chapter turns the same framework outward, toward the world
 economic and political system itself, and asks a question directly: what
@@ -290,7 +290,7 @@ a coincidence.
 
 This document series is not positioned to resolve world politics, and should
 not pretend to. What can be said on Plato's own terms, consistently with
-`Platos_Tripartite_Order_and_Happiness.md` §6's observation that this
+`PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD` §6's observation that this
 project's own habit of self-critique is itself a reason-class exercise: a
 system in which guardians secure resources and consumers extract rent while
 reason is conscripted into serving both, rather than governing either, is —
@@ -380,7 +380,7 @@ and more honest goal.
   settlement (filed November 24, 2025, M.D.N.C.); New York Donnelly Act
   amendment (S.7882, effective December 15, 2025) — the algorithmic
   rent-pricing case cited in Section 6
-- Cross-reference: [`PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.md`](PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.md)
+- Cross-reference: [`PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD`](PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD)
   §1, §6, §8; [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
   §5; [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md)
   §5–8; [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §7d
