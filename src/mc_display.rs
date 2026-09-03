@@ -11,7 +11,7 @@ pub fn print_monte_carlo_summary(
     life_expectancy: u32,
 ) {
     println!("\n{}", "═══════════════════════════════════════════════════════════".cyan());
-    println!("{}", "  🎲 MONTE CARLO PENSION SIMULATION  (10,000 paths)".bold().cyan());
+    println!("{}", "    MONTE CARLO PENSION SIMULATION  (10,000 paths)".bold().cyan());
     println!("{}", "═══════════════════════════════════════════════════════════".cyan());
 
     println!("\n{}", "Scenarios:".bold());
@@ -145,7 +145,7 @@ fn color_qol(s: &str, score: f64) -> String {
 /// Print comparison table: how work % affects pension quality
 pub fn print_work_pct_pension_comparison(comparisons: &[WorkPctComparison], monthly_needs: f64) {
     println!("\n{}", "═══════════════════════════════════════════════════════════".cyan());
-    println!("{}", "  📊 WORK % vs PENSION QUALITY (Base Case, Median)".bold().cyan());
+    println!("{}", "    WORK % vs PENSION QUALITY (Base Case, Median)".bold().cyan());
     println!("{}", "═══════════════════════════════════════════════════════════".cyan());
     println!("  {:<10} {:>14} {:>14} {:>12} {:>12}",
         "Work %", "Contribution/yr", "Median Capital", "Pension/mo", "QoL Score");
@@ -179,7 +179,7 @@ pub fn print_work_pct_pension_comparison(comparisons: &[WorkPctComparison], mont
 /// Display the regime-switching (recession/inflation-aware) simulation
 pub fn print_regime_switching_result(result: &RegimeSwitchingResult, monthly_needs: f64) {
     println!("\n{}", "═══════════════════════════════════════════════════════════".magenta());
-    println!("{}", "  🌪️  ECONOMIC REGIME-SWITCHING MODEL".bold().magenta());
+    println!("{}", "     ECONOMIC REGIME-SWITCHING MODEL".bold().magenta());
     println!("{}", "     (Boom / Normal / Recession / Stagflation — Markov chain)".dimmed());
     println!("{}", "═══════════════════════════════════════════════════════════".magenta());
 
@@ -230,7 +230,7 @@ pub fn print_regime_switching_result(result: &RegimeSwitchingResult, monthly_nee
 /// Display the sequence-of-returns stress test (forced recession at retirement)
 pub fn print_stress_test_result(result: &RegimeSwitchingResult, base_median_pension: f64, monthly_needs: f64) {
     println!("\n{}", "═══════════════════════════════════════════════════════════".red());
-    println!("{}", "  ⚠️  STRESS TEST: RECESSION HITS RIGHT AT RETIREMENT".bold().red());
+    println!("{}", "    STRESS TEST: RECESSION HITS RIGHT AT RETIREMENT".bold().red());
     println!("{}", "     (sequence-of-returns risk — the single biggest pension danger)".dimmed());
     println!("{}", "═══════════════════════════════════════════════════════════".red());
 
@@ -258,7 +258,7 @@ pub fn print_stress_test_result(result: &RegimeSwitchingResult, base_median_pens
         format!("{:.1}% chance capital runs out", result.prob_depletion * 100.0).red());
     println!("  {}", format!("  Target needs: CHF {:.0}/month", monthly_needs).dimmed());
 
-    println!("\n{}", "  💡 Mitigation:".yellow().bold());
+    println!("\n{}", "    Mitigation:".yellow().bold());
     println!("     • Shift to more conservative allocation 3-5 years before retirement");
     println!("     • Keep 1-2 years of expenses in cash/bonds as a buffer");
     println!("     • Consider a flexible retirement date rather than a fixed one");
