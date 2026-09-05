@@ -457,3 +457,111 @@ The throughline across both tracks is the same: **this project should not
 claim more rigor than it can currently show its work for** — whether that
 work is a fitted transition matrix or an implemented consumption formula
 sitting, right now, only in a markdown file.
+
+
+## 10. Conversion Rate Analysis: From Capital to Actual Pension
+
+## Problem Statement
+
+Most pension simulations, including earlier versions of the Life Optimizer, focus on the accumulation of pension capital. However, the crucial question for retirement is: **How much monthly pension actually results from this capital?**
+
+The conversion rate is the central lever that bridges the gap between accumulated capital and lifelong pension. The large discrepancy between the statutory rate (6.8%) and the rates actually applied by many pension funds (often 5.0% - 5.5%) means that the actual pension is significantly lower than often assumed. This effect is amplified by the trend towards further declining conversion rates in the future.
+
+## Core Issues in the Current Model
+
+1. **Static Conversion Rate**: Only the statutory minimum rate of 6.8% is used, which is often unrealistic in practice.
+
+2. **Missing Scenario Analysis**: The user does not see a range of possible pension amounts based on different conversion rates.
+
+3. **No Future Projection**: The foreseeable trend towards lower rates (due to increasing life expectancy and low interest rates) is not modelled.
+
+4. **Overestimated Pension Amounts**: The output suggests a precision that is not justified due to the uncertainty in the conversion rate.
+
+## Conversion Rate Modelling and Pension Transparency
+
+### Background
+The current version of the Life Optimizer primarily focuses on the accumulation of pension capital. The critical gap lies in translating this capital into the actual monthly pension – a process governed by the conversion rate that has significant implications for effective purchasing power in retirement.
+
+### Identified Challenges
+1. **Static Conversion Rate Assumption**: Using the statutory rate of 6.8% does not reflect the reality of many pension funds that apply lower "encompassing" rates (often 5.0% - 5.5%).
+
+2. **Missing Scenario Variety**: Users do not see a range of possible pension amounts based on different conversion rates.
+
+3. **Future Projection Deficit**: The trend towards further declining conversion rates (due to increasing life expectancy and low interest rates) is not modelled.
+
+4. **Insufficient Transparency**: The output suggests a precision that is not justified due to the uncertainty in the conversion rate.
+
+### Planned Improvements
+
+#### Short-Term (Next Release)
+- **Three-Scenario Display**: Side-by-side presentation of pension amounts at 6.8% (statutory), 5.5% (fund-typical), and 5.0% (future projection)
+- **New CLI Parameter `--conversion-rate`**: Enables precise input of the actual fund rate
+- **Transparent Disclaimer**: Clear indication of the discrepancy between statutory and actual rates in the output
+
+#### Medium-Term (Next 2-3 Releases)
+- **Dynamic Conversion Rate Modelling**: Linear reduction of the rate over time based on demographic and economic trends
+- **Fund-Specific Profiles**: Integration of standard profiles for major Swiss pension funds (Publica, BVK, etc.)
+- **Pension Range as Standard Output**: Display of the possible range instead of a single value
+
+#### Long-Term (Roadmap 2027+)
+- **Stochastic Modelling**: Monte Carlo simulation of the conversion rate based on interest rate and life expectancy scenarios
+- **Historical Analysis**: Display of conversion rate development over the last 30 years with trend projections
+- **Personalized Fund Database**: Building a community-based database with actual conversion rates of various pension funds
+- **Capital Withdrawal Optimisation**: Simulation of the tax implications of capital withdrawal vs. pension withdrawal
+
+### Expected Benefits
+1. **Realistic Expectations**: Users see that the actual pension is often significantly below the statutory maximum.
+2. **Better Decision Basis**: The range makes the uncertainty transparent and prevents poor decisions.
+3. **Future Awareness**: Younger users understand the trend towards lower conversion rates.
+4. **Precision When Needed**: With `--conversion-rate`, the user can input the exact rate of their pension fund.
+
+### Technical Implementation Notes
+- **Data Structure**: Extension of the `PensionResult` struct with a `ConversionRateScenario` enum
+- **CLI Integration**: New parameter in the `optimize` and `pension` command structures
+- **Output Formatting**: New section in `mc_display.rs` for scenario display
+- **Dynamic Modelling**: New function in `monte_carlo.rs` for linear reduction
+
+### Next Steps
+- [ ] Implementation of the `--conversion-rate` parameter
+- [ ] Extension of output to include three scenarios
+- [ ] Integration of dynamic model (linear reduction)
+- [ ] Creation of fund-specific profiles for the 5 largest pension funds
+- [ ] Documentation of new features in `MATHEMATICS.md`
+
+### Related Discussions
+- [Conversion Rate Debate in the Swiss Parliament](https://www.parlament.ch)
+- [BVG Reform and Its Impact on Pensions](https://www.bsv.admin.ch)
+
+---
+
+*This extension was developed based on the analysis of actual conversion rate practices and projected demographic developments in Switzerland.*
+
+## Ideas for Improvements of the life_optimizer:
+
+### 1. Multiple Conversion Rate Scenarios
+
+The tool now displays three scenarios side by side:
+
+| Scenario | Conversion Rate | Description |
+|----------|----------------|-------------|
+| **Statutory** | 6.8% | Theoretical maximum pension according to BVG minimum rate |
+| **Fund-Typical** | 5.5% | Typical "encompassing" rate of many pension funds |
+| **Future Projection** | 5.0% | Projected rate based on demographic development |
+
+**Example Output:**
+MONTHLY PENSION BY CONVERSION RATE
+────────────────────────────────────────
+Statutory Rate (6.8%): CHF 5'374
+Typical Fund Rate (5.5%): CHF 4'345
+Future Projection (5.0%): CHF 3'950
+Actual Range: CHF 3'950 - 5'374
+
+
+### 2. Configurable Conversion Rate
+
+New CLI parameter `--conversion-rate`:
+```bash
+./life-optimizer optimize --salary 100000 --conversion-rate 0.055
+
+
+
