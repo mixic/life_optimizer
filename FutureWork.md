@@ -524,13 +524,96 @@ The following table shows the impact of different conversion rates on the monthl
 | **Future Projection** | 5.0% | CHF 25,000 | CHF 2,083 | -CHF 750 |
 | **Conservative Estimate** | 4.5% | CHF 22,500 | CHF 1,875 | -CHF 958 |
 
+**Example Output Format:**
 
+MONTHLY PENSION BY CONVERSION RATE
+--------------------------------------
+Statutory Rate (6.8%): CHF 5'374
+Typical Fund Rate (5.5%): CHF 4'345
+Future Projection (5.0%): CHF 3'950
+Actual Range: CHF 3'950 - 5'374
 
-### 2. Configurable Conversion Rate
+Note: The actual pension depends on your pension fund's conversion rate.
+Many funds apply a lower rate. Use --conversion-rate for a precise calculation.
 
-New CLI parameter `--conversion-rate`:
+### 10.5 Planned Improvements
+
+#### Short-Term (Next Release)
+- **Three-Scenario Display**: Side-by-side presentation of pension amounts at 6.8% (statutory), 5.5% (fund-typical), and 5.0% (future projection)
+- **New CLI Parameter `--conversion-rate`**: Enables precise input of the actual fund rate
+- **Transparent Disclaimer**: Clear indication of the discrepancy between statutory and actual rates in the output
+
+#### Medium-Term (Next 2-3 Releases)
+- **Dynamic Conversion Rate Modelling**: Linear reduction of the rate over time based on demographic and economic trends
+- **Fund-Specific Profiles**: Integration of standard profiles for major Swiss pension funds (Publica, BVK, etc.)
+- **Pension Range as Standard Output**: Display of the possible range instead of a single value
+
+#### Long-Term (Roadmap 2027+)
+- **Stochastic Modelling**: Monte Carlo simulation of the conversion rate based on interest rate and life expectancy scenarios
+- **Historical Analysis**: Display of conversion rate development over the last 30 years with trend projections
+- **Personalized Fund Database**: Building a community-based database with actual conversion rates of various pension funds
+- **Capital Withdrawal Optimisation**: Simulation of the tax implications of capital withdrawal vs. pension withdrawal
+
+### 10.6 Technical Implementation
+
+#### Data Structure
+
+```rust
+pub enum ConversionRateScenario {
+    Statutory,      // 6.8%
+    FundTypical,    // 5.5%
+    FutureProjection, // Dynamic based on retirement year
+    Custom(f64),    // User-provided rate
+}
+
+pub struct PensionRange {
+    pub statutory: f64,      // Monthly pension at 6.8%
+    pub typical: f64,        // Monthly pension at 5.5%
+    pub future: f64,         // Monthly pension at projected rate
+    pub custom: Option<f64>, // Monthly pension at user rate
+    pub range: (f64, f64),   // (minimum, maximum) monthly pension
+}
+
+```
+
+####  CLI Integration
+
 ```bash
-./life-optimizer optimize --salary 100000 --conversion-rate 0.055
+# Use default scenarios
+./life-optimizer optimize --salary 100000 --age 35
 
+# Override with custom conversion rate
+./life-optimizer optimize --salary 100000 --age 35 --conversion-rate 0.055
+
+# Display all scenarios
+./life-optimizer optimize --salary 100000 --age 35 --show-conversion-scenarios
+```
+
+Implementation Location
+Component	File	Description
+Conversion rate enum	src/monte_carlo.rs	Define ConversionRateScenario
+Dynamic rate projection	src/monte_carlo.rs	project_conversion_rate(year) function
+Pension range calculation	src/monte_carlo.rs	calculate_pension_range() function
+Output formatting	src/mc_display.rs	Display scenarios in results
+CLI parameter	src/main.rs	Add --conversion-rate flag
+Documentation	MATHEMATICS.md	Update with conversion rate formulas
+10.7 Expected Benefits
+Realistic Expectations: Users see that the actual pension is often significantly below the statutory maximum.
+
+Better Decision Basis: The range makes the uncertainty transparent and prevents poor decisions based on overly optimistic assumptions.
+
+Future Awareness: Younger users understand the trend towards lower conversion rates and can plan accordingly.
+
+Precision When Needed: With --conversion-rate, the user can input the exact rate of their pension fund.
+
+Transparency: The tool shows the range of possible outcomes rather than a single, potentially misleading number.
+
+10.8 Next Steps
+□ Implementation of the --conversion-rate parameter in CLI
+□ Extension of output in mc_display.rs to include three scenarios
+□ Integration of dynamic model (linear reduction) in monte_carlo.rs
+□ Creation of fund-specific profiles for the 5 largest Swiss pension funds
+□ Documentation of new features in MATHEMATICS.md
+□ Update EXAMPLES.md with conversion rate usage examples
 
 
