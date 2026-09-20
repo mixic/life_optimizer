@@ -37,6 +37,7 @@ pub mod federal_tax;
 pub mod federal_tariff_data;
 pub mod estv_scales_data;
 pub mod estv_deductions_data;
+pub mod deductions;
 pub mod cantons;
 pub mod canton_steuerfuss_data;
 pub mod requirements;
