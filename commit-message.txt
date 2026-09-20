@@ -1,39 +1,46 @@
-Withdraw an untraceable figure from the deduction breakdown
+Record an OPEN DEFECT: tax is charged on gross income, not taxable income
 
-`TaxDeductionBreakdown::non_deductible_total` was 2% of income after the deductible
-items. It has no source, and nothing reads it -- it reached the user only through
-`display.rs`, where it was printed between "Total deductible" and "Taxable income
-after deductions" and therefore read as part of that arithmetic. It is not: taxable
-income is gross minus `deductible_total` alone, so a reader could not reconcile the
-lines and would reasonably conclude one of them was wrong.
+Found and verified this round, deliberately NOT fixed. It touches the tool's central
+calculation and needs its own pass with the golden tests re-derived, not a patch in
+passing. Recording it now so it cannot be lost.
 
-FutureWork.md section 7 sets the standard that a number be traceable "to a data
-source, to a named assumption, to a documented estimation method". This one is none
-of the three, so it is withdrawn from the output rather than shown unexplained. The
-struct field is retained for serialised compatibility, and
-`non_deductible_total_feeds_no_tax_figure` pins that it stays out of every
-calculation -- so if it ever gains a role, its removal from the display becomes a
-real omission rather than a tidying-up.
+The defect
 
-The estimate's doc comment also no longer oversells it
+`TaxSchedule` looks the burden rate up on TAXABLE income (as corrected in the
+previous round) and then multiplies it by GROSS income:
 
-It described itself as a "structured Swiss deduction model ... intended to represent
-realistic, legally relevant deductions". Every component is hand-entered, and `rent`
-at 12% of gross has no counterpart in Swiss tax law at all -- rent is not deductible
-for an employee. The comment now says so, and names `src/deductions.rs` as the
-sourced replacement.
+    let taxable = self.taxable_income_after_estimated_deductions(gross);
+    let base_tax_rate = self.lookup_tax_rate(taxable);   // rate IS a burden rate
+    ...
+    gross_income * (1.0 - (base_tax_rate + social))       // applied to GROSS
 
-One property of the estimate is now recorded because it is easy to misread from the
-output: the 35% cap BINDS for families at moderate incomes. At CHF 60,000 with two
-children both the plain and the `--family-tax-mode` figures are CHF 21,000 -- the
-cap -- so the flag has no visible effect there, while it still works (+CHF 3,000)
-wherever the cap does not bind. Measured across 20 family/income combinations before
-concluding this was the cap behaving as designed rather than a defect.
+Why the rate is a burden rate
 
-Documentation
+The Bern table's own reference points confirm it: 10.08% at CHF 40,000 means the
+burden ON CHF 40,000 TAXABLE is CHF 4,032, and the model reproduces each published
+point exactly -- which is what the published-reference test pins. A rate of
+tax/taxable is a function of taxable income, so multiplying it by gross overcharges.
 
-SWISS_TAX_DATA.md records both the withdrawn figure and the cap behaviour, with the
-reasoning for each.
+Size of the error: at CHF 100,000 gross, single, Bern, taxable is CHF 84,300 and the
+rate 15.76%, giving CHF 15,758 charged against CHF 13,284 correct -- an overcharge of
+CHF 2,474, about 19%.
 
-Verified: 202 tests pass, clippy unchanged at 9 pre-existing warnings, and no CLI
-golden asserted the removed line.
+`after_tax_income` was independently confirmed to consume exactly this quantity: at
+CHF 70,000 it returns CHF 51,655.49, and 70000 * (1 - (0.1331 + 0.129)) gives the
+same figure to the cent.
+
+Why fixing it is not a one-liner
+
+`after_tax_income` feeds `monthly_after_tax`, which decides FEASIBILITY and the
+optimum work percentage. Correcting it will change which scenario the tool
+recommends, not merely a displayed number.
+
+A correction to the previous round's report
+
+The "25.6% vs ~20%" claim compared the estimate's share of gross against the sourced
+model's DEDUCTION share of gross -- two different quantities, so the comparison was
+meaningless. Measured consistently across 20 household/income combinations, the
+reported burden rate differs by 0.3 to 2.1 percentage points, and by 0.0pp once the
+Bern table clamps at CHF 250,000. The corrected figure is also in the document.
+
+Verified: 202 tests still pass, tree clean.

@@ -883,7 +883,64 @@ The two honest paths, unchanged by the work above:
 
 ---
 
-## 8. Current status summary
+---
+
+## 8. OPEN DEFECT: tax is charged on gross income, not taxable income
+
+**Found, verified, and NOT yet fixed.** Recorded here so it is not lost, because it
+changes the tool's central calculation and needs its own deliberate pass.
+
+`TaxSchedule` looks the burden rate up on **taxable** income (corrected in section 6)
+and then multiplies it by **gross** income:
+
+```rust
+let taxable = self.taxable_income_after_estimated_deductions(gross_income);
+let base_tax_rate = self.lookup_tax_rate(taxable);      // rate IS a burden rate
+...
+gross_income * (1.0 - (base_tax_rate + social))         // applied to GROSS  (wrong)
+```
+
+### Why the rate is a burden rate
+
+The Bern table's own reference points confirm it: 10.08% at CHF 40,000 means the
+burden **on CHF 40,000 taxable** is CHF 4,032, and the model reproduces each
+published point exactly -- which is what
+`tests/published_tax_reference.rs::bern_table_is_close_to_the_published_figures`
+pins. So the rate is tax / taxable, a function of taxable income. Multiplying it by
+gross income overcharges.
+
+### The size of the error
+
+At CHF 100,000 gross, single, Bern: taxable CHF 84,300, rate 15.76%.
+
+| Quantity | Value |
+|---|---|
+| Rate looked up at taxable | 15.76% |
+| Burdened **gross** (current) | CHF 15,758 |
+| Burdened **taxable** (correct) | CHF 13,284 |
+| Overcharge | **CHF 2,474 (19%)** |
+
+`after_tax_income` was independently verified to consume exactly this quantity: at
+CHF 70,000 it returns CHF 51,655.49, and `70000 * (1 - (0.1331 + 0.129))` gives the
+same figure to the cent.
+
+### What a fix would touch, which is why it is not rushed
+
+`after_tax_income` feeds `monthly_after_tax`, which decides **feasibility** and
+the optimum work percentage -- so correcting it will change which scenario the tool
+recommends, not merely a displayed number. It should be done with the golden tests
+re-derived rather than patched in passing.
+
+### A correction to the previous round's report
+
+The claim "25.6% vs ~20%" compared the estimate's *share of gross* against the
+sourced model's *deduction share of gross* -- two different quantities. Measured
+consistently, the divergence is much smaller: over 20 household/income
+combinations, the reported burden rate differs by **0.3 to 2.1 percentage points**,
+and by 0.0pp once the Bern table clamps at CHF 250,000.
+
+---
+## 9. Current status summary
 
 | Piece | Status | Location |
 |---|---|---|
