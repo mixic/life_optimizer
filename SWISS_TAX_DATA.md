@@ -577,6 +577,35 @@ selection is explicit:
 * **mutually exclusive variants are grouped**, and at most one is applied;
 * anything unclassified is **reported, never applied**.
 
+### Classification coverage: complete
+
+**All 574 deduction rules now have a category**, and `every_deduction_rule_is_classified`
+asserts it — so a rule ESTV adds in a refreshed export fails the build with its label
+rather than being silently ignored. Six were unclassified until the invariant was
+checked, and each was a real deduction the engine had been dropping:
+
+| Rule | Why it was missed | Resolution |
+|---|---|---|
+| `Abzug Krankenkassenprämien, Verheiratete` / `… alleinstehende Personen` / `… minderj. Kind` / `… vollj. Kind in Ausbildung` | Fribourg states health premiums under their own label, not as `Versicherungsprämien` | classified as `InsurancePremiums`; ceiling-only like the rest of the family, and exactly one variant applies per household |
+| `Abzug Versicherungspärmien und Sparzinsen, Verheiratete, beide ohne Beiträge Säule 2/3a` | **An upstream typo** — `Versicherungspärmien`, missing the `s` — so no correct-spelling prefix matched it | listed explicitly, rather than loosened to a substring, which would start catching labels nobody has seen |
+| `Kinderausbildungskosten Eigenbeitrag` (St. Gallen, flat CHF 3,200) | a label the closed list did not yet name | classified as `Education`, **gated on a declared contribution** via `Household::education_contribution` |
+
+The last one is worth spelling out. St. Gallen's rule is a flat amount *conditional
+on the taxpayer making such a contribution*, so applying it to any household with a
+child would deduct CHF 3,200 unconditionally — in a canton the default output path
+never reaches, which is how it would have gone unnoticed. `None` means "no
+contribution declared" and the rule is not applied.
+
+Deduction rules by category, as a coverage check that no family collapsed to zero:
+
+```text
+insurance-premiums 138   professional-expenses 126   property-maintenance 56
+pillar-3a           54   children               52   means-tested         34
+childcare           31   second-earner          26   education            19
+wealth-management   13   imputed-rental-value   10   marriage              9
+pensioner            6
+```
+
 ### Status of the objective
 
 | Piece | State |
@@ -724,6 +753,7 @@ rather than only testable:
 | `--imputed-rental-value` | the home's `Eigenmietwert` | adds it to taxable income *and* unlocks every property deduction |
 | `--pensioner` | receives an AHV/IV pension | unlocks 10 rules and 15 scales, otherwise never applied |
 | `--insurance-premiums` | declared premiums | deducted up to the canton's ceiling |
+| `--education-contribution` | what you pay towards a child's education | unlocks St. Gallen's conditional flat CHF 3,200 |
 
 A fact that is **not** supplied is skipped rather than assumed. That is why an
 unadorned run shows a small sourced total: it is reporting what it was told, and

@@ -118,6 +118,14 @@ pub struct Household {
     /// pensioner deductions to everyone, and `Abzug für AHV/IV-Rentner` is 10
     /// rules plus 15 phase-out scales — far too much to grant by omission.
     pub receives_pension: bool,
+    /// The household's **own** contribution to a child's education costs
+    /// (`Kinderausbildungskosten Eigenbeitrag`).
+    ///
+    /// St. Gallen's rule is a flat CHF 3,200 conditional on making such a
+    /// contribution, so `None` means "no contribution declared" and the rule is
+    /// not applied. Applying it to any household with a child would deduct the
+    /// amount unconditionally.
+    pub education_contribution: Option<f64>,
 }
 
 impl Household {
@@ -135,6 +143,7 @@ impl Household {
             secondary_income: None,
             imputed_rental_value: None,
             receives_pension: false,
+            education_contribution: None,
         }
     }
 
@@ -298,6 +307,14 @@ fn rule_applies(rule: &DeductionRule, category: RuleCategory, household: &Househ
         return false;
     }
 
+    // St. Gallen's education rule is a flat amount conditional on the taxpayer
+    // actually contributing, so it needs that fact rather than just a child.
+    if name.starts_with("Kinderausbildungskosten Eigenbeitrag")
+        && household.education_contribution.is_none()
+    {
+        return false;
+    }
+
     // Child-related rules require a child.
     if matches!(
         category,
@@ -371,6 +388,16 @@ pub fn classify(name: &str) -> Option<RuleCategory> {
     // Check the more specific prefixes first.
     const RULES: &[(&str, RuleCategory)] = &[
         ("Abzug Versicherungsprämien", RuleCategory::InsurancePremiums),
+        // The ESTV export contains a typo in Jura's label -- `Versicherungspärmien`
+        // for `Versicherungsprämien`, missing the `s` -- so prefix matching on the
+        // correct spelling misses it. Listed explicitly rather than loosened to a
+        // substring, because a looser rule would start catching labels nobody has
+        // seen yet. The generator prints unclassified names, which is how this was
+        // found; that report is what keeps the list honest.
+        ("Abzug Versicherungspärmien", RuleCategory::InsurancePremiums),
+        // Fribourg states health-insurance premiums separately from other insurance
+        // and only as ceilings, so they are the same shape as the premium family.
+        ("Abzug Krankenkassenprämien", RuleCategory::InsurancePremiums),
         ("Abzug private Versicherungen", RuleCategory::InsurancePremiums),
         ("Abzug Sparzinsen", RuleCategory::InsurancePremiums),
         ("Maximalabzug Säule 3a", RuleCategory::Pillar3a),
@@ -383,6 +410,14 @@ pub fn classify(name: &str) -> Option<RuleCategory> {
         ("Kinderabzug", RuleCategory::Children),
         ("Zusätzlicher Kinderabzug", RuleCategory::Children),
         ("Abzug Kinderausbildungskosten", RuleCategory::Education),
+        // St. Gallen's "Eigenbeitrag": the taxpayer's OWN contribution to a child's
+        // education costs, a flat CHF 3,200. It is gated on a declared
+        // contribution rather than applied to any household with a child, because
+        // a taxpayer who contributes nothing is not entitled to it — and applying
+        // it unconditionally would deduct CHF 3,200 too much in a canton the
+        // default output path never reaches, which is exactly the kind of silent
+        // error the `skipped` report exists to prevent.
+        ("Kinderausbildungskosten Eigenbeitrag", RuleCategory::Education),
         ("Verheiratetenabzug", RuleCategory::Marriage),
         ("Abzug für Verheiratete", RuleCategory::Marriage),
         ("Zweitverdienerabzug", RuleCategory::SecondEarner),

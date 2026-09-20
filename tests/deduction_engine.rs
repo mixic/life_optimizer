@@ -770,6 +770,129 @@ fn means_tested_scales_use_net_income_for_every_canton() {
     );
 }
 
+/// Every deduction rule in the export must be classified.
+///
+/// Six were not, and each was a real deduction the engine silently ignored:
+/// Fribourg's health-insurance premiums (four variants, ceiling-only like the rest
+/// of the premium family), Jura's `Versicherungspärmien` — an upstream typo for
+/// `Versicherungsprämien`, missing the `s`, so no correct-spelling prefix matched
+/// it — and St. Gallen's `Kinderausbildungskosten Eigenbeitrag`.
+///
+/// A generated table cannot be hand-audited every time the export is refreshed, so
+/// this asserts the invariant instead: the classifier's closed list covers the
+/// data. When ESTV adds a rule the build fails with the label, which is how the
+/// Jura typo was found.
+#[test]
+fn every_deduction_rule_is_classified() {
+    use life_optimizer::deductions::classify;
+    use life_optimizer::estv_deductions_data::{RuleKind, DEDUCTION_RULES};
+
+    let mut unclassified: Vec<&str> = DEDUCTION_RULES
+        .iter()
+        .filter(|r| r.kind == RuleKind::Deduction && classify(r.name).is_none())
+        .map(|r| r.name)
+        .collect();
+    unclassified.sort_unstable();
+    unclassified.dedup();
+
+    assert!(
+        unclassified.is_empty(),
+        "{} deduction rule(s) have no category, so the engine ignores them: {unclassified:#?}",
+        unclassified.len()
+    );
+}
+
+/// Fribourg's health-insurance premiums must be selectable and must not stack.
+///
+/// They were unclassified, so the engine ignored them entirely. They are published
+/// as four variants — `Verheiratete`, `alleinstehende Personen`, and two child
+/// forms — with only a ceiling each, exactly the shape of the premium family. A
+/// household qualifies for one adult variant, so summing them would take both the
+/// single and the married ceiling.
+#[test]
+fn fribourg_health_insurance_premiums_are_applied_and_do_not_stack() {
+    for (married, children, expected_rule) in [
+        (false, 0u32, "alleinstehende"),
+        (true, 0, "Verheiratete"),
+        (false, 1, "alleinstehende"),
+        (true, 2, "Verheiratete"),
+    ] {
+        let mut household = Household::employee(80_000.0, married, children);
+        household.insurance_premiums = Some(9_000.0);
+        let assessment = assess("FR", &household);
+
+        let health: Vec<_> = assessment
+            .applied
+            .iter()
+            .filter(|d| d.name.contains("Krankenkassen"))
+            .collect();
+        assert_eq!(
+            health.len(),
+            1,
+            "FR married={married} kids={children}: exactly one adult health variant, got {health:?}"
+        );
+        assert!(
+            health[0].name.contains(expected_rule),
+            "FR married={married}: expected the {expected_rule} variant, got {}",
+            health[0].name
+        );
+        // The ceiling is the canton's, and it binds at a declared 9,000.
+        assert!(
+            health[0].amount <= 9_620.0,
+            "FR's married ceiling is 9,620, got {}",
+            health[0].amount
+        );
+    }
+}
+
+/// Jura's premium rule carries an **upstream typo**, and must still be classified.
+///
+/// The label is `Versicherungspärmien` — missing the `s` — so a prefix match on the
+/// correct spelling misses it, and the engine ignored a real deduction. Listed
+/// explicitly rather than loosened to a substring, because a substring rule would
+/// start catching labels nobody has seen.
+#[test]
+fn juras_misspelled_premium_rule_is_classified() {
+    use life_optimizer::deductions::classify;
+
+    let name = "Abzug Versicherungspärmien und Sparzinsen, Verheiratete, beide ohne \
+                Beiträge Säule 2/3a";
+    assert_eq!(
+        classify(name),
+        Some(RuleCategory::InsurancePremiums),
+        "the typo'd label must be classified, or the deduction is silently ignored"
+    );
+}
+
+/// St. Gallen's `Kinderausbildungskosten Eigenbeitrag` is conditional on the
+/// taxpayer actually contributing, so it needs that fact.
+///
+/// Applying it to any household with a child would deduct CHF 3,200
+/// unconditionally — in a canton the default output path never reaches.
+#[test]
+fn education_contribution_rule_requires_a_declared_contribution() {
+    let without = Household::employee(100_000.0, true, 2);
+    let assessment = assess("SG", &without);
+    assert!(
+        !assessment
+            .applied
+            .iter()
+            .any(|d| d.name == "Kinderausbildungskosten Eigenbeitrag"),
+        "no contribution declared, so no Eigenbeitrag deduction: {:?}",
+        assessment.applied
+    );
+
+    let mut with = Household::employee(100_000.0, true, 2);
+    with.education_contribution = Some(3_200.0);
+    let assessment = assess("SG", &with);
+    let rule = assessment
+        .applied
+        .iter()
+        .find(|d| d.name == "Kinderausbildungskosten Eigenbeitrag")
+        .expect("a declared contribution should unlock St. Gallen's flat deduction");
+    assert_eq!(rule.amount, 3_200.0, "St. Gallen's flat amount");
+}
+
 /// A rule that applies but yields nothing must not vanish from the report.
 ///
 /// The insurance-premium family was discarded by a silent `continue` on a zero

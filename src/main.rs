@@ -35,122 +35,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Find optimal work percentage for current situation
-    Optimize {
-        /// Full-time annual salary in CHF
-        #[arg(short, long)]
-        salary: f64,
-
-        /// Your current age
-        #[arg(short, long)]
-        age: u32,
-
-        /// Are you married?
-        #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
-        married: bool,
-
-        /// Number of children
-        #[arg(short, long, default_value = "0")]
-        children: u32,
-
-        /// Youngest child age (if applicable)
-        #[arg(long)]
-        youngest_child_age: Option<u32>,
-
-        /// Canton code (e.g. ZH, BE, AG). 22 of the 26 cantons are priced; the
-        /// rest fail with exactly what is missing rather than falling back to
-        /// another canton. See SWISS_TAX_DATA.md. Omitting it uses Bern, and
-        /// the output says so.
-        #[arg(long)]
-        canton: Option<String>,
-
-        /// Preference profile (balanced, family, career)
-        #[arg(short, long, default_value = "balanced")]
-        profile: String,
-
-        /// Custom tax rate (as decimal, e.g., 0.1382 for 13.82%). Overrides official tables.
-        #[arg(long)]
-        custom_tax_rate: Option<f64>,
-
-        /// Use enhanced family/childcare deductions for married parents with children.
-        #[arg(long, default_value_t = false)]
-        family_tax_mode: bool,
-
-        /// Retirement age (default: 65, supports deferred retirement up to 70)
-        #[arg(long, default_value = "65")]
-        retirement_age: u32,
-
-        /// Life expectancy / target age (default: 90)
-        #[arg(long, default_value = "90")]
-        life_expectancy: u32,
-
-        /// Annual Pillar 3a contribution in CHF (default: 0, max 7056)
-        #[arg(long, default_value = "0")]
-        pillar3a: f64,
-
-        /// Children's ages (comma-separated, e.g. "1.5,9" for 1.5 and 9 years old)
-        #[arg(long)]
-        children_ages: Option<String>,
-
-        /// Monthly education support cost per child during higher education (CHF)
-        #[arg(long, default_value = "500")]
-        education_cost_per_child: f64,
-
-        /// Actual conversion rate (Umwandlungssatz) applied by your pension fund,
-        /// as a decimal — e.g. 0.055 for 5.5%. When supplied it drives the
-        /// headline projection; the 6.8% / 5.5% / projected range is still shown.
-        #[arg(long)]
-        conversion_rate: Option<f64>,
-
-        /// Named pension fund profile (publica, bvk, statutory, typical).
-        /// A reference rate only — verify it, or prefer --conversion-rate.
-        #[arg(long)]
-        pension_fund: Option<String>,
-
-        /// Lifestyle consumption profile (extreme-saving, moderate, normal, luxury)
-        #[arg(long, default_value = "normal")]
-        consumption_profile: String,
-
-        /// Fraction of elastic spending sourced second-hand/shared/borrowed (0.0-1.0)
-        #[arg(long, default_value = "0.0")]
-        sparing_ratio: f64,
-
-        /// How strictly you apply the purchase prioritization hierarchy (0.0-1.0)
-        #[arg(long, default_value = "0.0")]
-        utilization_discipline: f64,
-
-        /// Share of nominally discretionary spending locked in by switching costs (0.0-1.0)
-        #[arg(long, default_value = "0.0")]
-        quasi_inelastic_share: f64,
-
-        /// Imputed rental value (Eigenmietwert) of your home, in CHF/year. This is
-        /// an *income addition* as well as the base for every property deduction,
-        /// so it raises taxable income. Omit if you rent.
-        #[arg(long)]
-        imputed_rental_value: Option<f64>,
-
-        /// You receive an AHV/IV pension. Unlocks the pensioner deductions, which
-        /// are otherwise never applied.
-        #[arg(long, default_value_t = false)]
-        pensioner: bool,
-
-        /// Declared private insurance premiums and savings interest, in CHF/year.
-        /// These are capped by each canton, so the published ceiling applies where
-        /// your figure exceeds it.
-        #[arg(long)]
-        insurance_premiums: Option<f64>,
-
-        /// Required project output index for your role (G_t). Enables the
-        /// employer achievement-capacity constraint; without it, work percentage
-        /// is treated as fully discretionary.
-        #[arg(long)]
-        required_output_index: Option<f64>,
-
-        /// Productivity gain from AI and other tools, as a decimal — e.g. 0.25
-        /// for +25%. Only meaningful with --required-output-index.
-        #[arg(long, default_value = "0.0")]
-        ai_productivity_gain: f64,
-    },
-
+    ///
+    /// Boxed because this variant carries the most parameters of any command, and
+    /// the size difference between enum variants is a real cost: every `Commands`
+    /// value would otherwise be as large as this one.
+    Optimize(Box<OptimizeArgs>),
     /// Compare specific work percentage scenarios
     Compare {
         /// Full-time annual salary in CHF
@@ -258,37 +147,167 @@ enum Commands {
     },
 }
 
+/// Parameters for `optimize`, extracted from the `Commands` variant so that variant
+/// can be boxed.
+///
+/// `Commands` is a plain enum, so every value is as large as its biggest variant.
+/// `optimize` takes by far the most parameters, and adding the household-fact flags
+/// pushed the difference past the size at which that cost is worth a `Box`.
+#[derive(clap::Args, Debug, Clone)]
+struct OptimizeArgs {
+    /// Full-time annual salary in CHF
+    #[arg(short, long)]
+    salary: f64,
+
+    /// Your current age
+    #[arg(short, long)]
+    age: u32,
+
+    /// Are you married?
+    #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
+    married: bool,
+
+    /// Number of children
+    #[arg(short, long, default_value = "0")]
+    children: u32,
+
+    /// Youngest child age (if applicable)
+    #[arg(long)]
+    youngest_child_age: Option<u32>,
+
+    /// Canton code (e.g. ZH, BE, AG). 23 of the 26 cantons are priced; the
+    /// rest fail with exactly what is missing rather than falling back to
+    /// another canton. See SWISS_TAX_DATA.md. Omitting it uses Bern, and
+    /// the output says so.
+    #[arg(long)]
+    canton: Option<String>,
+
+    /// Preference profile (balanced, family, career)
+    #[arg(short, long, default_value = "balanced")]
+    profile: String,
+
+    /// Custom tax rate (as decimal, e.g., 0.1382 for 13.82%). Overrides official tables.
+    #[arg(long)]
+    custom_tax_rate: Option<f64>,
+
+    /// Use enhanced family/childcare deductions for married parents with children.
+    #[arg(long, default_value_t = false)]
+    family_tax_mode: bool,
+
+    /// Target retirement age
+    #[arg(long, default_value = "65")]
+    retirement_age: u32,
+
+    /// Life expectancy for planning
+    #[arg(long, default_value = "90")]
+    life_expectancy: u32,
+
+    /// Annual pillar 3a contribution in CHF
+    #[arg(long, default_value = "0.0")]
+    pillar3a: f64,
+
+    /// Comma-separated list of children's ages (e.g. "5,8,12")
+    #[arg(long)]
+    children_ages: Option<String>,
+
+    /// Annual education cost per child in CHF
+    #[arg(long, default_value = "500.0")]
+    education_cost_per_child: f64,
+
+    /// Actual conversion rate (Umwandlungssatz) applied by your pension fund,
+    /// as a decimal (e.g. 0.05 for 5%). Overrides the statutory reference rate.
+    #[arg(long)]
+    conversion_rate: Option<f64>,
+
+    /// Named pension fund profile (publica, bvk, statutory, typical).
+    /// A reference rate only — verify it, or prefer --conversion-rate.
+    #[arg(long)]
+    pension_fund: Option<String>,
+
+    /// Lifestyle consumption profile (extreme-saving, moderate, normal, luxury)
+    #[arg(long, default_value = "normal")]
+    consumption_profile: String,
+
+    /// Fraction of elastic spending sourced second-hand/shared/borrowed (0.0-1.0)
+    #[arg(long, default_value = "0.0")]
+    sparing_ratio: f64,
+
+    /// How strictly you apply the purchase prioritization hierarchy (0.0-1.0)
+    #[arg(long, default_value = "0.0")]
+    utilization_discipline: f64,
+
+    /// Share of nominally discretionary spending locked in by switching costs (0.0-1.0)
+    #[arg(long, default_value = "0.0")]
+    quasi_inelastic_share: f64,
+
+    /// Imputed rental value (Eigenmietwert) of your home, in CHF/year. This is
+    /// an *income addition* as well as the base for every property deduction,
+    /// so it raises taxable income. Omit if you rent.
+    #[arg(long)]
+    imputed_rental_value: Option<f64>,
+
+    /// You receive an AHV/IV pension. Unlocks the pensioner deductions, which
+    /// are otherwise never applied.
+    #[arg(long, default_value_t = false)]
+    pensioner: bool,
+
+    /// Declared private insurance premiums and savings interest, in CHF/year.
+    /// These are capped by each canton, so the published ceiling applies where
+    /// your figure exceeds it.
+    #[arg(long)]
+    insurance_premiums: Option<f64>,
+
+    /// What you pay towards a child's education costs, in CHF/year. St. Gallen
+    /// allows a flat deduction conditional on making such a contribution, so
+    /// the rule stays unapplied without this.
+    #[arg(long)]
+    education_contribution: Option<f64>,
+
+    /// Required project output index for your role (G_t). Enables the
+    /// employer achievement-capacity constraint; without it, work percentage
+    /// is treated as fully discretionary.
+    #[arg(long)]
+    required_output_index: Option<f64>,
+
+    /// Productivity gain from AI and other tools, as a decimal — e.g. 0.25
+    /// for +25%. Only meaningful with --required-output-index.
+    #[arg(long, default_value = "0.0")]
+    ai_productivity_gain: f64,
+}
+
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Optimize {
-            salary,
-            age,
-            married,
-            children,
-            youngest_child_age,
-            canton,
-            profile,
-            custom_tax_rate,
-            family_tax_mode,
-            retirement_age,
-            life_expectancy,
-            pillar3a,
-            children_ages,
-            education_cost_per_child,
-            conversion_rate,
-            pension_fund,
-            consumption_profile,
-            sparing_ratio,
-            utilization_discipline,
-            quasi_inelastic_share,
-            required_output_index,
-            ai_productivity_gain,
-            imputed_rental_value,
-            pensioner,
-            insurance_premiums,
-        } => {
+        Commands::Optimize(args) => {
+            let OptimizeArgs {
+                salary,
+                age,
+                married,
+                children,
+                youngest_child_age,
+                canton,
+                profile,
+                custom_tax_rate,
+                family_tax_mode,
+                retirement_age,
+                life_expectancy,
+                pillar3a,
+                children_ages,
+                education_cost_per_child,
+                conversion_rate,
+                pension_fund,
+                consumption_profile,
+                sparing_ratio,
+                utilization_discipline,
+                quasi_inelastic_share,
+                required_output_index,
+                ai_productivity_gain,
+                imputed_rental_value,
+                pensioner,
+                insurance_premiums,
+                education_contribution,
+            } = *args;
             let consumption = match consumption_config(consumption_profile, sparing_ratio, utilization_discipline, quasi_inelastic_share) {
                 Ok(c) => c,
                 Err(e) => {
@@ -318,6 +337,7 @@ fn main() {
                     imputed_rental_value,
                     receives_pension: pensioner,
                     insurance_premiums,
+                    education_contribution,
                 },
             });
         }
@@ -951,6 +971,8 @@ struct HouseholdFacts {
     receives_pension: bool,
     /// `--insurance-premiums`.
     insurance_premiums: Option<f64>,
+    /// `--education-contribution`. Gates St. Gallen's conditional flat deduction.
+    education_contribution: Option<f64>,
 }
 
 impl HouseholdFacts {
@@ -959,6 +981,7 @@ impl HouseholdFacts {
         household.imputed_rental_value = self.imputed_rental_value;
         household.receives_pension = self.receives_pension;
         household.insurance_premiums = self.insurance_premiums;
+        household.education_contribution = self.education_contribution;
     }
 }
 

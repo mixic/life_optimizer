@@ -1,65 +1,52 @@
-Fix the tax charge: apply the burden rate to taxable income, not gross
+Classify the last six deduction rules, and gate St. Gallen's conditional one
 
-The defect recorded last round, now fixed. This was the tool's central calculation:
-it looked a BURDEN rate up on taxable income and then multiplied it by GROSS income,
-overcharging every household.
+Pushed classification coverage to 100% and made it an invariant. Six real deductions
+were being ignored; all six are now classified, and the build fails if a refreshed
+export adds one that is not. Test count rises from 203 to 206.
 
-    tax            = rate(taxable) x taxable        (was: rate(taxable) x gross)
-    effective_rate = tax / gross + social
-    after_tax      = gross x (1 - effective_rate)   (unchanged, now a true inverse)
+The six, and why each was missed
 
-At CHF 100,000 gross, single, Bern -- taxable CHF 84,300, rate 15.76%:
+  Abzug Krankenkassenprämien, Verheiratete / alleinstehende Personen /
+    minderj. Kind / vollj. Kind in Ausbildung
+      Fribourg publishes health-insurance premiums under their own label rather
+      than as `Versicherungsprämien`, so no prefix matched. Classified as
+      InsurancePremiums -- they are ceiling-only, the same shape as the rest of
+      that family, and exactly one adult variant applies per household (4,810 for
+      a single taxpayer, 9,620 married).
 
-    tax charged              CHF 15,758  ->  CHF 13,284
-    tax share of gross          15.76%  ->     13.28%
-    effective rate (incl 12.9%) 28.66%  ->     26.18%
-    after-tax income         CHF 71,341  ->  CHF 73,816
-    overcharge removed                     CHF 2,474
+  Abzug Versicherungspärmien und Sparzinsen, Verheiratete, beide ohne Beiträge
+    Säule 2/3a
+      AN UPSTREAM TYPO: `Versicherungspärmien`, missing the `s`. No
+      correct-spelling prefix can match it. Listed explicitly rather than loosened
+      to a substring, which would start catching labels nobody has seen yet.
 
-At CHF 70,000 gross the tax falls from CHF 9,314.51 to CHF 7,852.14 and after-tax
-income rises from CHF 51,655.49 to CHF 53,117.86.
+  Kinderausbildungskosten Eigenbeitrag
+      St. Gallen, a flat CHF 3,200, and the one that needed more than a
+      classification: it is conditional on the taxpayer actually making such a
+      contribution. Applying it to any household with a child would deduct the
+      amount unconditionally, in a canton the default output path never reaches.
+      Gated on a new `Household::education_contribution`, exposed as
+      `--education-contribution`.
 
-Why the rate is a burden rate, not a marginal one
+Verified end to end: SG married with two children and a CHF 3,200 contribution
+reports CHF 16,400 of cantonal deductions against CHF 13,200 without -- the
+difference being exactly the Eigenbeitrag.
 
-The Bern table's own reference points prove it: 10.08% at CHF 40,000 means the burden
-ON CHF 40,000 TAXABLE is CHF 4,032, and the model reproduces each published point
-exactly -- pinned by `test_exact_official_rates_single` and
-`bern_table_is_close_to_the_published_figures`. A rate of tax/taxable is a function
-of taxable income, so applying it to gross is a category error.
+Coverage is now an invariant, not an audit
 
-What it changed, and why it got its own pass
+`every_deduction_rule_is_classified` asserts that no deduction-kind rule lacks a
+category. A generated table cannot be hand-audited every time the export is
+refreshed, so the test asserts the property instead, and reports the offending
+label when it fails. That is how the Jura typo surfaced.
 
-`after_tax_income` feeds `monthly_after_tax`, which decides feasibility and the
-optimal work percentage. So this moved recommendations, not just a displayed figure
--- which is why it was recorded last round rather than patched on the spot.
+Also
 
-All 202 tests were re-run. Three failed, and all three were asserting the OLD
-relation:
+  - `Commands::Optimize` is boxed into a new `OptimizeArgs` struct. The enum's
+    largest variant reached 299 bytes once the household-fact flags were added, and
+    a plain enum is as large as its biggest variant, so every `Commands` value paid
+    for it. The refactor drops a clippy warning rather than silencing it.
+  - SWISS_TAX_DATA.md records the six rules, the typo, and the per-category rule
+    counts as a check that no family collapsed to zero.
 
-  test_total_rate_includes_social
-  rate_accessors_agree_on_the_same_income
-  optimizer::test_scenario_separates_tax_only_and_total_deductions
-
-Each asserted `effective == tax_only + social`, which held only while the tax was
-charged on gross -- the compensation cancelling out. They now assert the burden
-decomposition AGAINST THE SCHEDULE rather than restated in the scenario's own terms,
-so they cannot pass by both sides moving together:
-
-    expected_effective = tax_only_rate * taxable / gross + social
-
-Two invariants are now pinned explicitly, because they are what made the bug
-invisible:
-
-  - the tax share of gross must be STRICTLY BELOW the taxable rate (they were equal)
-  - `after_tax_income == gross * (1 - effective_tax_rate)` exactly
-
-Documentation
-
-SWISS_TAX_DATA.md section 8 changes from "OPEN DEFECT" to "FIXED", with a before/after
-table, the verified hand figure, and a note on what moved. The section also retains
-the correction to my earlier "25.6% vs ~20%" claim, which compared the estimate's
-share of gross against the sourced model's deduction share -- two different
-quantities. Measured consistently the divergence is 0.3-2.1pp.
-
-Verified: 202 tests pass, clippy unchanged at 9 pre-existing warnings. The corrected
-figure reproduces an independent hand calculation at both CHF 70,000 and CHF 100,000.
+Verified: 206 tests pass, clippy back to 9 pre-existing warnings, and no CLI golden
+changed.
