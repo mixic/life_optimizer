@@ -1,76 +1,41 @@
-Price Basel-Landschaft from its legally-fixed Steuerfuss
+Show the sourced deduction model beside the estimate it will replace
 
-Coverage rises from 22 to 23 of 26 cantons. BL's formula tariff already worked;
-what was missing was its multiplier, and it turns out not to be missing at all.
-Test count is unchanged at 186 -- one test was rewritten rather than added.
+The two deduction models disagree by roughly a factor of five for a single earner,
+and they disagree in a direction that matters: the hand-entered ~35%-cap estimate
+overstates deductions, so it UNDERSTATES tax. That is worth seeing on a real
+scenario rather than only in a test fixture, so `optimize` now prints both.
 
-The workbook is blank for a structural reason, not a gap
+The sourced model is still NOT used for the reported figures -- the comparison
+line says so explicitly. Switching the tax base moves every number the tool
+produces, and that should be a deliberate change made after looking at this
+output, not a side effect of adding the engine.
 
-The ESTV Steuerfuss workbook leaves the Liestal row ENTIRELY EMPTY for all 32
-years it covers -- both the cantonal and the municipal cell -- with no footnote
-explaining why. That is what kept BL unpriced after its tariff was implemented.
+What it prints
 
-The reason is that BL does not adjust its multiplier annually. The
-Steuerfussdekret (SGS 331.2) fixes the cantonal Steuerfuss at 100% of the normal
-state tax, and when revenue has to change the canton amends the TARIFF BRACKETS
-instead. That is entirely consistent with BL being the only canton in this
-repository whose tariff is published as algebraic formulas rather than a band
-table -- the two facts are the same fact.
+  DEDUCTION MODEL COMPARISON
+    Gross income: CHF 100000   (ZH ESTV scale x Steuerfuss)
+    Estimated (in use): CHF 34300 (34.3%)
+    Sourced (federal):  CHF 12600 (12.6%)
+    Sourced (ZH):       CHF 12600 (12.6%)
+          6800.00  [Bund] Kinderabzug
+          2800.00  [Bund] Verheiratetenabzug
+          3000.00  [Bund] Pauschalabzug uebrige Berufskosten
+          9300.00  [canton] Kinderabzug
+          3000.00  [canton] Pauschalabzug uebrige Berufskosten
+           300.00  [canton] Abzug Vermoegensverwaltungskosten
+    16 further rule(s) were considered and not applied: the household supplied
+    none of the facts they depend on.
 
-The 100% figure is stated verbatim in a Landrat Vorlage restating the decree:
-"Der kantonale Einkommenssteuerfuss fuer das Steuerjahr ... betraegt 100 Prozent
-der normalen Staatsteuer vom Einkommen der natuerlichen Personen". Liestal's
-municipal multiplier is 65%. BL at CHF 100,000 taxable now prices at 13.5%
-effective (simple tax x 1.65).
+Every figure is itemised and tagged with the jurisdiction it came from, because a
+total with no breakdown cannot be checked against the rules it claims to use. The
+count of rules considered and not applied is printed for the same reason: a small
+total should read as "these facts were not supplied", not as "there is nothing to
+deduct". That distinction is the whole design of the engine.
 
-Source strength is recorded per figure, because the two are not equal
+`canton_code_from_basis` maps the display label back to a jurisdiction code. An
+unrecognised label yields no cantonal rows rather than a guessed canton, and the
+Bern default is recognised from its `official Bern table` label.
 
-  cantonal 100%   SGS 331.2, Dekret ueber den Steuerfuss, in force 01.01.2022
-  municipal 65%   a cantonal tax comparison, NOT an ESTV publication
-
-The Steuerfussdekret was supplied as a PDF. Its body text is image-only, so the
-decree's IDENTITY is machine-verifiable from the file (the extractor recovers the
-"Vademecum SGS 331.2" amendment table, the 16.12.2021 enactment date and the
-"Gesetzessammlung Kanton Basel-Landschaft" signature) but its article text cannot
-be quoted from it. The municipal figure is therefore the weakest of the four
-numbers this entry carries, and its provenance says so -- so replacing it needs no
-re-derivation of anything else.
-
-BL used to be listed as a source exception and is deliberately removed from that
-list. The list means "the source states no figure", not "this project has not
-found one", and conflating the two is what let a determinate multiplier sit
-unused. `source_exception_set_is_exactly_as_documented` now expects FR, GE, VS.
-
-A finding about BL's married tariff, recorded rather than "fixed"
-
-At CHF 100,000 the single and married cantonal figures are EQUAL. That is the
-source's own shape, not a missing table: BL's married formulas differ from the
-single ones only by an extra 0.49% band running from CHF 8,366 to the first shared
-threshold at CHF 16,731. Above CHF 16,731 the two tables are the same expression,
-so BL expresses no marital relief at this income.
-
-Worth being explicit about the trap this avoided: the same export also declares
-`Splittingfaktor 2.0`. Applying it would give 2 x simple(50,000) = 6,981.51
-instead of 11,218.97 -- a materially different figure, and a marriage BONUS the
-canton does not grant. Splitting is not applied because the export publishes
-separate per-subject tables, and the test asserts that, so the two axes cannot
-silently be combined.
-
-Test rewritten
-
-  basel_landschaft_tariff_is_formulas_and_only_the_multiplier_is_missing
-    -> basel_landschaft_prices_from_a_formula_tariff
-
-which now pins the whole chain end to end: imported formula tariff, legally-fixed
-multiplier, a figure at CHF 100,000, the married/single coincidence and its
-reason, the splitting factor being absent, and both multipliers' values.
-
-Documentation
-
-SWISS_TAX_DATA.md: coverage corrected to 23/3, the refusing table cut to FR, GE
-and VS, and the BL section now records the structural reason for the blank
-workbook row, both sources with their differing strength, and the married-tariff
-finding.
-
-Verified: 186 tests pass, clippy at 9 warnings -- the same pre-existing set as
-HEAD, no new ones. `--canton FR` still refuses and now lists 23 priced cantons.
+Verified: 186 tests pass, clippy unchanged at 9 pre-existing warnings. Both the
+canton-explicit and canton-omitted paths print the comparison, and `--canton FR`
+still refuses.

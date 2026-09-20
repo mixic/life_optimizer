@@ -16,7 +16,7 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions};
 
 use clap::{Parser, Subcommand, ArgAction};
 use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
@@ -676,6 +676,14 @@ fn run_optimization(p: OptimizeParams<'_>) {
     let (optimal, all_scenarios) = (outcome.scenario.clone(), outcome.all_scenarios.clone());
 
     display::print_tax_deduction_breakdown(&tax_schedule, optimal.gross_income);
+
+    // Deductions are the input every tax figure depends on, and two models
+    // currently disagree about them by roughly a factor of five for a single
+    // earner: the hand-entered ~35%-cap estimate in `tax.rs`, and the sourced
+    // ESTV rules in `deductions.rs`. Both are printed so the difference is
+    // visible on a real scenario rather than only in a test fixture.
+    print_deduction_model_comparison(&tax_schedule, &tax_basis, optimal.gross_income, married, children);
+
     // Display work-life balance results, naming the tax basis that produced them
     // so the rate line cannot be read as a different canton's figures.
     display::print_optimal_result_for(&optimal, Some(&tax_basis));
@@ -892,6 +900,105 @@ struct CompareParams<'a> {
     custom_tax_rate: Option<f64>,
     family_tax_mode: bool,
     canton: Option<&'a str>,
+}
+
+/// Print the sourced deduction assessment beside the hand-entered estimate.
+///
+/// Exists because the two models disagree materially and the direction matters:
+/// the estimate overstates deductions, so it *understates* tax. Showing only one
+/// number would hide that, and showing the sourced one alone would silently
+/// change every figure the tool reports — which is a decision, not a detail.
+///
+/// Nothing downstream consumes the sourced figure yet; this is comparison only.
+fn print_deduction_model_comparison(
+    schedule: &TaxSchedule,
+    tax_basis: &str,
+    gross_income: f64,
+    married: bool,
+    children: u32,
+) {
+    // The federal rules always apply, and a canton's add to them. Both are shown
+    // so the reader can see which half a figure came from.
+    let household = deductions::Household::employee(gross_income, married, children);
+    let federal = deductions::assess("Bund", &household);
+    let cantonal = canton_code_from_basis(tax_basis)
+        .map(|code| deductions::assess(code, &household))
+        .filter(|a| !a.applied.is_empty() || a.means_tested > 0.0);
+
+    let estimate = schedule.standard_deduction_estimate(gross_income);
+
+    println!("\n{}", "🧾 DEDUCTION MODEL COMPARISON".bold().cyan());
+    println!("{}", "=".repeat(60));
+    println!(
+        "  Gross income: CHF {gross_income:.0}   ({tax_basis})"
+    );
+    println!(
+        "  Estimated (in use): CHF {estimate:.0} ({:.1}%)",
+        if gross_income > 0.0 { estimate / gross_income * 100.0 } else { 0.0 }
+    );
+    println!(
+        "  Sourced (federal):  CHF {:.0} ({:.1}%)",
+        federal.total(),
+        federal.effective_rate() * 100.0
+    );
+    if let Some(cantonal) = &cantonal {
+        println!(
+            "  Sourced ({}):  CHF {:.0} ({:.1}%)",
+            cantonal.jurisdiction,
+            cantonal.total(),
+            cantonal.effective_rate() * 100.0
+        );
+    }
+
+    // The itemisation is the point: a total with no breakdown cannot be checked.
+    for (label, assessment) in [("Bund", Some(&federal)), ("canton", cantonal.as_ref())] {
+        let Some(assessment) = assessment else { continue };
+        for applied in &assessment.applied {
+            println!(
+                "      {:>9.2}  [{}] {}",
+                applied.amount,
+                label,
+                applied.name
+            );
+        }
+        if assessment.means_tested > 0.0 {
+            println!(
+                "      {:>9.2}  [{}] means-tested deduction (phase-out scale)",
+                assessment.means_tested, label
+            );
+        }
+    }
+
+    // Anything considered and not applied is reported, so a small total reads as
+    // "these facts were not supplied" rather than "there is nothing to deduct".
+    let skipped = federal.skipped().len() + cantonal.as_ref().map_or(0, |a| a.skipped().len());
+    println!(
+        "  {skipped} further rule(s) were considered and not applied: the household \
+         supplied none of the facts they depend on."
+    );
+    println!(
+        "  {}",
+        "  The sourced model is not yet used for the figures below; it is shown for \
+         comparison."
+            .yellow()
+    );
+}
+
+/// The canton code a tax basis label refers to, if it names one.
+///
+/// The basis is a display string like `"ZH ESTV scale x Steuerfuss"` or
+/// `"official Bern table"`, and the deduction engine needs a jurisdiction code.
+/// Anything unrecognised yields `None`, which the caller treats as "no cantonal
+/// deductions to show" rather than guessing a canton.
+fn canton_code_from_basis(tax_basis: &str) -> Option<&str> {
+    let token = tax_basis.split_whitespace().next()?;
+    if token == "official" {
+        return Some("BE");
+    }
+    if token.len() == 2 && token.chars().all(|c| c.is_ascii_uppercase()) {
+        return Some(token);
+    }
+    None
 }
 
 fn run_comparison(p: CompareParams<'_>) {

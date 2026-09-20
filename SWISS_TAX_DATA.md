@@ -486,12 +486,26 @@ FR  Abzug für bescheidenes Einkommen, Ledige ohne Kind
 
 Every scale in the export phases to zero, which is asserted.
 
-### Status: the engine exists; the tax base is not switched yet
+### Status: both models are printed; the tax base is not switched
 
-`src/tax.rs` still uses the original **~35%-cap estimate** for deductions, whose
+`tax.rs` still uses the ~35%-cap estimate for the figures the tool reports, whose
 components (`commuting = 1.5%`, `rent = 12%`, …) are invented rather than sourced.
-The sourced model now exists in `src/deductions.rs` and is tested; pointing the
-tax base at it is a separate, visible decision — see §4a.
+The sourced model in `src/deductions.rs` is tested and is now **printed beside the
+estimate** by `optimize`, so the difference is visible on a real scenario:
+
+```text
+🧾 DEDUCTION MODEL COMPARISON
+  Gross income: CHF 100000   (ZH ESTV scale x Steuerfuss)
+  Estimated (in use): CHF 34300 (34.3%)
+  Sourced (federal):  CHF 12600 (12.6%)
+  Sourced (ZH):       CHF 12600 (12.6%)
+        6800.00  [Bund] Kinderabzug
+        2800.00  [Bund] Verheiratetenabzug
+        ...
+```
+
+Pointing the reported figures at the sourced model is a separate decision, because
+it moves every number the tool produces.
 
 Until then, treat the current deduction figures as an estimate, and prefer
 `--custom-tax-rate` with your observed rate.
