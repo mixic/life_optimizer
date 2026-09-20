@@ -148,6 +148,62 @@ An example of a simple initial calibration is:
 
 These values are starting parameters for scenario analysis, not claims about objectively correct spending levels.
 
+#### 3.1.1 Implemented form: elasticity tiers and the sparing multiplier
+
+The model as implemented splits the basket into three elasticity tiers and
+prices the elastic tier at its sparing-adjusted effective cost
+(`THEORY_OF_SPARING.md` §7c, §8):
+
+$$
+C_t = \underbrace{H_t}_{\text{inelastic}} + \underbrace{Q_t}_{\text{quasi-inelastic}} + \underbrace{L_t}_{\text{elastic}} + \underbrace{D_t}_{\text{committed outflows}}
+$$
+
+with the elastic tier multiplied by:
+
+$$
+m = m_{\text{profile}} \cdot \bigl[1 - \sigma(1 - \phi)\bigr] \cdot \underbrace{\frac{\rho_{\text{ref}}}{\rho_{\text{use}}(d)}}_{\text{utilization penalty}}
+$$
+
+where:
+
+- $m_{\text{profile}}$ is the lifestyle multiplier from the table above
+- $\sigma \in [0,1]$ is the sparing ratio
+- $\phi = 0.60$ is the second-hand price ratio
+- $d \in [0,1]$ is utilization discipline, and
+  $\rho_{\text{use}}(d) = 0.65 + (0.85 - 0.65)d$
+- $\rho_{\text{ref}} = 0.85$
+
+**Normalization.** The utilization penalty is divided by $\rho_{\text{ref}}$ so
+that full discipline yields exactly $1.0$. Without this normalization a
+household doing no sparing at all would still be charged a penalty, which
+silently inflated the reference basket and made every household look less
+affordable than it is. The neutral point is therefore:
+
+$$
+m = 1 \iff \text{normal profile} \;\wedge\; \sigma = 0 \;\wedge\; d = 1
+$$
+
+**Feasibility uses the mandatory floor, not the full basket.** The quantities
+are separated explicitly:
+
+$$
+\underbrace{C^{\text{mandatory}}_t = H_t + Q_t}_{\text{feasibility test}}
+\qquad\text{vs}\qquad
+\underbrace{C^{\text{target}}_t = C^{\text{mandatory}}_t + L_t + D_t}_{\text{consumption-utility ratio}}
+$$
+
+This distinction is what makes the §3.1 claim true — that the same work
+percentage "can be feasible under an extreme-saving profile and infeasible under
+a luxury profile". It also corrects an earlier conflation in which the savings
+goal and discretionary spending were treated as unavoidable obligations, causing
+ordinary households (e.g. CHF 120k with two children) to be reported as having
+no affordable option at any work percentage.
+
+The breakdown by tier is reported in the CLI so the person can see *where* the
+squeeze is landing, as §7c argues: a household with rising inelastic costs can
+practice maximum sparing on the elastic tier and still see little movement in
+total consumption.
+
 ### Interpretation
 
 This formulation emphasizes that the decision is not purely about income maximization. The household solves a trade-off between:
@@ -370,6 +426,104 @@ $$
  $$
 
 The actual value of $r_t$ is stochastic and should be modeled under a regime-aware or Monte Carlo framework.
+
+#### 6.2.1 Conversion rate scenarios
+
+$\gamma$ — the *Umwandlungssatz* — is not a single known number. The statutory
+BVG minimum is $\gamma = 6.8\%$, but many Swiss pension funds apply materially
+less because the same capital must fund a longer retirement. Reporting a single
+pension figure therefore overstates precision, so $\gamma$ is treated as a
+scenario parameter with three reference values plus an optional user-supplied rate:
+
+| Scenario | $\gamma$ | Meaning |
+|---|---|---|
+| Statutory | 6.8% | BVG Art. 14 minimum |
+| Fund-typical | 5.5% | Rate commonly applied by Swiss Pensionskassen |
+| Future projection | $\gamma(t)$ | Forward projection, see below |
+| Custom | user input | The person's actual fund rate |
+
+The forward projection follows a linear reduction, floored at 5.0%:
+
+$$
+ \gamma(t) = \max\Big(\gamma_0 - (t - t_0)\,\Delta\gamma,\ \gamma_{min}\Big)
+ $$
+
+with $\gamma_0 = 0.068$, $t_0 = 2024$, $\Delta\gamma = 0.00036$ (0.036 percentage
+points per year), and $\gamma_{min} = 0.05$. This yields 6.58% by 2030, 6.22% by
+2040, and 5.86% by 2050; the floor binds from about 2074.
+
+Deferred or early retirement scales whichever base rate applies, because
+annuitizing over fewer expected remaining years raises the annually payable
+rate independently of the base:
+
+$$
+ \gamma_{\text{eff}}(a, t) = \gamma(t) \cdot \phi(a),
+ \qquad
+ \phi(65) = 1,\quad \phi(70) = \tfrac{0.078}{0.068},\quad \phi(62) = \tfrac{0.050}{0.068}
+ $$
+
+The monthly pension used for display and adequacy checks is:
+
+$$
+ P_{\text{monthly}} = \frac{\gamma_{\text{eff}} \cdot K_{retirement}}{12}
+ $$
+
+Because several scenarios are computed simultaneously, the reported outcome is a
+range rather than a point estimate:
+
+$$
+ \big[\min_s P_{\text{monthly}}(s),\ \max_s P_{\text{monthly}}(s)\big]
+ \quad\text{over all scenarios } s
+$$
+
+The statutory-vs-typical gap $P_{BVG}(6.8\%) - P_{BVG}(5.5\%)$ is reported
+explicitly, since it is the amount by which the statutory rate flatters the
+outcome for someone whose fund applies the typical rate.
+
+Both the optimizer's security-utility term and the Monte Carlo projection call
+the same `effective_conversion_rate()` function, so the two engines cannot
+disagree about which $\gamma$ is assumed.
+
+#### 6.2.2 Stochastic conversion rate and downside risk
+
+Because a single point value for $\gamma$ implies a precision the input does not
+have, the rate is also modelled as a random variable centred on the projection:
+
+$$
+\gamma \sim \mathcal{N}\!\left(\gamma(t),\ \sigma_\gamma^2\right)
+\quad\text{truncated to}\quad
+\bigl[\gamma_{\min},\ \gamma_0\bigr]
+$$
+
+with $\sigma_\gamma = 0.010$, $\gamma_{\min} = 0.05$ and $\gamma_0 = 0.068$.
+Truncation is deliberate: an untruncated normal would generate conversion rates
+above the statutory minimum or below the projection floor, which no Swiss fund
+applies. Because $P = \gamma K/12$ is linear in $\gamma$, uncertainty in the rate
+translates one-for-one into proportional uncertainty in the pension.
+
+Downside risk is reported as conditional value-at-risk over the worst decile:
+
+$$
+\mathrm{CVaR}_{10\%} = \mathbb{E}\bigl[P \mid P \leq q_{10\%}\bigr]
+$$
+
+This is reported alongside the percentiles rather than instead of them, because
+they answer different questions: $q_{10\%}$ is the level exceeded in 90% of
+draws, while $\mathrm{CVaR}_{10\%}$ is the average outcome *given* that the
+household lands in the worst decile.
+
+Note that $\gamma_{\text{eff}}$ is excluded from this term: the band describes
+dispersion in the *projected* rate, so it is centred on $\gamma(t)$ regardless
+of which scenario the user selected for the headline figure. The two are
+independent inputs — the user's own fund rate changes the headline, not the
+uncertainty band, whose purpose is to show what is at stake if that rate is
+unknown.
+
+**Limitation.** Truncation compresses both tails, which pulls
+$\mathrm{CVaR}_{10\%}$ toward $q_{10\%}$ and understates the severity a true
+fund-level distribution would show. $\sigma_\gamma$ is an assumption, not a
+fitted dispersion; estimating it from observed fund rates is the calibration work
+described in §11.5.
 
 ### 6.3 Total retirement income
 
@@ -641,6 +795,48 @@ A_t \geq G_t.
 $$
 
 This captures the main philosophical point: a reduction in scheduled work is justified only when AI-assisted capacity still meets the required outcomes. However, employers may respond to higher productivity by increasing $G_t$. Therefore, AI does not automatically translate into shorter work.
+
+#### 14.1.1 Implemented form and what it adds to the decision
+
+The constraint is implemented in `optimizer.rs` and applied **in addition to**
+financial feasibility. A candidate work percentage is feasible only when both
+hold:
+
+$$
+\theta \text{ is feasible} \iff \underbrace{(1-\tau(I))I/12 \geq C^{\text{mandatory}}}_{\text{budget}} \;\wedge\; \underbrace{A(\theta) \geq G}_{\text{achievement}}
+$$
+
+Two derived quantities answer the critique's actual questions:
+
+**What is the lowest credible work percentage?** Inverting the linear capacity
+identity gives the §3a answer directly:
+
+$$
+\theta_{\min} = \frac{G}{P(1+\alpha)} \quad \text{when } P(1+\alpha) \geq G
+$$
+
+When $P(1+\alpha) < G$ the goals exceed even full-time capacity, and the model
+returns *no* viable percentage rather than a number. This is a genuine finding:
+the assigned portfolio is infeasible as stated, and the CLI says so explicitly
+("It's a workload problem, not a budget problem") instead of recommending
+something undeliverable.
+
+**How much AI gain would justify reducing to $\theta$?** From §1.2:
+
+$$
+\alpha_{\text{required}}(\theta) = \frac{G}{\theta P} - 1
+$$
+
+Together these let the model represent all three §14.2 outcomes without assuming
+which applies: *shared productivity gain* (α rises, $G$ constant → reduced hours
+become feasible), *employer capture* ($G$ rises with α → the constraint binds
+again), and *labour substitution* (capacity parameters fall, raising the required
+$\theta$).
+
+Both constraints are reported independently, because the remedies differ
+entirely. An infeasible search now distinguishes `Unaffordable`,
+`AchievementUnreachable`, and `Both`, and the CLI prints the corresponding
+advice.
 
 ### 14.2 A possible 10-year, 40% work scenario
 

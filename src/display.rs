@@ -27,7 +27,19 @@ struct ScenarioRow {
 }
 
 pub fn print_optimal_result(scenario: &WorkScenario) {
-    println!("\n{}", "🎯 OPTIMAL SOLUTION FOUND!".bold().green());
+    // Only call it "optimal" when it is actually affordable *and* the
+    // employer's required output is still delivered. Announcing an optimum next
+    // to "below requirements" is the kind of self-contradicting output that
+    // makes a tool untrustworthy.
+    if scenario.is_feasible() {
+        println!("\n{}", "🎯 OPTIMAL SOLUTION FOUND!".bold().green());
+    } else if !scenario.meets_requirements {
+        println!("\n{}", "⚠  NO AFFORDABLE OPTION AT ANY WORK PERCENTAGE".bold().yellow());
+        println!("{}", "   Showing the closest option, not a recommendation.".yellow());
+    } else {
+        println!("\n{}", "⚠  NO OPTION MEETS THE REQUIRED OUTPUT".bold().yellow());
+        println!("{}", "   Financially affordable, but the employer's goals are not deliverable.".yellow());
+    }
     println!("{}", "=".repeat(60));
     
     println!("\n{}", "Work Configuration:".bold());
@@ -52,6 +64,28 @@ pub fn print_optimal_result(scenario: &WorkScenario) {
         println!("  Status:          {} ✗", "BELOW REQUIREMENTS".red().bold());
         println!("  Monthly Deficit: {} CHF", format!("{:.0}", scenario.surplus_deficit).red());
     }
+    println!("  {}", format!(
+        "  (tested against the mandatory floor of CHF {:.0}/month, not the full lifestyle basket)",
+        scenario.mandatory_monthly
+    ).dimmed());
+
+    // ── Employer-side achievement capacity (§5.2) ────────────────────────────
+    if let Some(a) = scenario.achievement {
+        println!("\n{}", "Employer Achievement Capacity:".bold());
+        println!("  Capacity (A):    {:.2}", a.capacity);
+        println!("  Required (G):    {:.2}", a.required_output);
+        if a.satisfied {
+            println!("  Status:          {} (margin {:+.2})",
+                "MEETS REQUIRED OUTPUT ✓".green().bold(), a.margin);
+        } else {
+            println!("  Status:          {} (shortfall {:.2})",
+                "BELOW REQUIRED OUTPUT ✗".red().bold(), -a.margin);
+            println!("  {}", "  Note: a reduced work percentage is not credible here — the".dimmed());
+            println!("  {}", "  organisation's goals would not be delivered.".dimmed());
+        }
+    }
+
+    print_consumption_breakdown(scenario);
 
     println!("\n{}", "Utility Score Breakdown:".bold());
     let breakdown = &scenario.utility_breakdown;
@@ -60,9 +94,60 @@ pub fn print_optimal_result(scenario: &WorkScenario) {
     println!("  Family:          {:.2}", breakdown.family_utility);
     println!("  Health:          {:.2}", breakdown.health_utility);
     println!("  Security:        {:.2}", breakdown.security_utility);
-    println!("  {} {:.2}", "TOTAL UTILITY:".bold(), breakdown.total.to_string().cyan().bold());
+    // Note: precision specifiers have no effect on String, so the value must be
+    // formatted before being coloured.
+    println!("  {} {}", "TOTAL UTILITY:".bold(), format!("{:.2}", breakdown.total).cyan().bold());
 
     println!("\n{}", "=".repeat(60));
+}
+
+/// Show where the budget squeeze actually lands, by elasticity tier.
+///
+/// `THEORY_OF_SPARING.md` §7c: a household with rising inelastic costs can
+/// practice maximum sparing discipline on the elastic tier and still see little
+/// movement in total consumption. Reporting only an aggregate "requirements"
+/// number hides which tier is under pressure.
+pub fn print_consumption_breakdown(scenario: &WorkScenario) {
+    let t = &scenario.consumption_tiers;
+    println!("\n{}", "Consumption by Elasticity Tier:".bold());
+    println!("  {:<38} {:>10}", "Inelastic (non-reducible)", format!("CHF {:.0}", t.inelastic).cyan());
+    println!("  {:<38} {:>10}", "Quasi-inelastic (locked in)", format!("CHF {:.0}", t.quasi_inelastic).cyan());
+    println!("  {:<38} {:>10}", "Elastic (sparing-eligible)", format!("CHF {:.0}", t.elastic).cyan());
+    println!("  {:<38} {:>10}", "Committed outflows (savings, vacation)", format!("CHF {:.0}", t.committed_outflows).cyan());
+    println!("  {}", "─".repeat(49));
+    println!("  {:<38} {:>10}", "Mandatory floor".bold(), format!("CHF {:.0}", scenario.mandatory_monthly).bold());
+    println!("  {:<38} {:>10}", "Full lifestyle basket".bold(), format!("CHF {:.0}", scenario.target_monthly).bold());
+
+    if t.applied_multiplier < 1.0 {
+        let saved = t.unadjusted_discretionary() * (1.0 - t.applied_multiplier);
+        println!("\n  {}", format!(
+            "Sparing multiplier {:.3} applied to discretionary spending.",
+            t.applied_multiplier
+        ).green());
+        if saved > 0.5 {
+            println!("  {}", format!(
+                "This reduces monthly discretionary cost by CHF {:.0}.", saved
+            ).green());
+        }
+    } else if t.applied_multiplier > 1.0 {
+        println!("\n  {}", format!(
+            "Lifestyle/utilisation multiplier {:.3} raises effective discretionary cost.",
+            t.applied_multiplier
+        ).yellow());
+        println!("  {}", "  Low utilisation inflates the real cost of what you buy, even at a discount.".dimmed());
+    }
+
+    // The insight the tier split exists to surface.
+    let total = t.lifestyle_target_monthly();
+    if total > 0.0 {
+        let inelastic_share = (t.inelastic + t.quasi_inelastic) / total * 100.0;
+        if inelastic_share >= 75.0 {
+            println!("  {}", format!(
+                "Note: {:.0}% of your spending is non-reducible — sparing cannot move this much.",
+                inelastic_share
+            ).yellow());
+        }
+    }
 }
 
 pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f64) {

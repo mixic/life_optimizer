@@ -1,8 +1,102 @@
 // Core optimization module
 #![allow(dead_code)]
+use crate::consumption::{ConsumptionProfileConfig, ConsumptionTiers};
 use crate::requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
 use crate::tax::TaxSchedule;
 use serde::{Deserialize, Serialize};
+
+/// Employer-side achievement-capacity constraint, from `CRITICS_CURRENT_WORK.md`
+/// §1.3 and `MATHEMATICS.md` §14.1.
+///
+/// A reduction in work percentage is only credible when effective achievement
+/// capacity still meets the organisation's required output:
+///
+/// ```text
+/// A_t = H_t * P_t * (1 + alpha_t)   subject to   A_t >= G_t
+/// ```
+///
+/// This operationalizes the reframed question from
+/// `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3a: not "what work percentage
+/// maximizes my utility", but "what is the lowest work percentage at which I can
+/// still reliably deliver what is expected of me".
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AchievementConstraint {
+    /// Baseline productivity per unit of work time, normalized so that
+    /// `P_t = 1.0` at full-time capacity.
+    pub baseline_productivity: f64,
+    /// `alpha_t`: productivity gain from AI and other tools. `0.0` means none.
+    pub ai_productivity_gain: f64,
+    /// `G_t`: required output index for the period, in the same normalized
+    /// units as capacity.
+    pub required_output_index: f64,
+}
+
+impl AchievementConstraint {
+    pub fn new(required_output_index: f64, ai_productivity_gain: f64) -> Self {
+        Self {
+            baseline_productivity: 1.0,
+            ai_productivity_gain: ai_productivity_gain.max(0.0),
+            required_output_index: required_output_index.max(0.0),
+        }
+    }
+
+    /// `A_t`: effective achievement capacity at a given work percentage, where
+    /// `H_t = theta * H_full` and `H_full` is normalized to 1.
+    pub fn capacity_at(&self, work_percentage: f64) -> f64 {
+        work_percentage * self.baseline_productivity * (1.0 + self.ai_productivity_gain)
+    }
+
+    /// Whether the worker can still deliver the required output at this work
+    /// percentage.
+    pub fn is_satisfied_at(&self, work_percentage: f64) -> bool {
+        self.capacity_at(work_percentage) >= self.required_output_index
+    }
+
+    /// The lowest work percentage that still meets the requirement — the
+    /// answer to the §3a question. `None` when even full-time work with the
+    /// declared AI gain cannot meet it, which is a genuine finding rather than
+    /// an error: it means the assigned goals are infeasible as stated.
+    pub fn minimum_viable_work_percentage(&self) -> Option<f64> {
+        let capacity_at_full_time = self.capacity_at(1.0);
+        if capacity_at_full_time < self.required_output_index {
+            return None;
+        }
+        if self.required_output_index <= 0.0 {
+            return Some(0.0);
+        }
+        // Capacity is linear in work percentage, so this inverts exactly.
+        Some(
+            (self.required_output_index
+                / (self.baseline_productivity * (1.0 + self.ai_productivity_gain)))
+                .clamp(0.0, 1.0),
+        )
+    }
+
+    /// AI gain required to make a given work percentage viable, which is the
+    /// "can AI justify 80%?" question from §1.2.
+    pub fn required_ai_gain_for(&self, work_percentage: f64) -> Option<f64> {
+        if work_percentage <= 0.0 {
+            return None;
+        }
+        let needed = self.required_output_index / (work_percentage * self.baseline_productivity);
+        if needed <= 1.0 {
+            Some(0.0)
+        } else {
+            Some(needed - 1.0)
+        }
+    }
+}
+
+/// Outcome of the employer-side constraint at one work percentage.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AchievementStatus {
+    pub capacity: f64,
+    pub required_output: f64,
+    pub satisfied: bool,
+    /// Capacity surplus or shortfall against the requirement.
+    pub margin: f64,
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetirementAdequacy {
@@ -27,11 +121,42 @@ pub struct WorkScenario {
     pub effective_tax_rate: f64,
     pub work_hours_per_week: f64,
     pub free_hours_per_week: f64,
+    /// `true` when net income covers the mandatory consumption floor.
+    /// This is a financial-feasibility statement only; see
+    /// [`WorkScenario::achievement_satisfied`] for job-security feasibility.
     pub meets_requirements: bool,
     pub surplus_deficit: f64,
+    /// Consumption split by elasticity tier, so the display can show where the
+    /// budget squeeze is actually landing rather than one aggregate figure.
+    pub consumption_tiers: ConsumptionTiers,
+    /// The mandatory floor that `meets_requirements` was tested against.
+    pub mandatory_monthly: f64,
+    /// The full lifestyle-inclusive basket at this household's sparing settings.
+    pub target_monthly: f64,
+    /// Employer-side achievement-capacity outcome. `None` when the caller did
+    /// not supply a required output index, in which case the constraint is not
+    /// applied and cannot make a scenario infeasible.
+    pub achievement: Option<AchievementStatus>,
     pub utility_score: f64,
     pub utility_breakdown: UtilityBreakdown,
     pub retirement_adequacy: Option<RetirementAdequacy>,  // NEW: family support analysis
+}
+
+impl WorkScenario {
+    /// Whether the employer-side achievement constraint is met. Vacuously true
+    /// when no constraint was supplied.
+    pub fn achievement_satisfied(&self) -> bool {
+        self.achievement.map(|a| a.satisfied).unwrap_or(true)
+    }
+
+    /// Whether this scenario is feasible on *both* counts: the household can
+    /// afford it and the employer's required output is still delivered.
+    ///
+    /// `find_optimal`/`search_outcome` use this, not `meets_requirements`, so a
+    /// work percentage the person could not hold down is never recommended.
+    pub fn is_feasible(&self) -> bool {
+        self.meets_requirements && self.achievement_satisfied()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +167,53 @@ pub struct UtilityBreakdown {
     pub health_utility: f64,
     pub security_utility: f64,
     pub total: f64,
+}
+
+/// Result of a work-percentage search, including whether any candidate was
+/// actually affordable for the person.
+#[derive(Debug, Clone)]
+pub struct SearchOutcome {
+    /// Best candidate: highest utility among feasible ones, or the smallest
+    /// shortfall when nothing is feasible.
+    pub scenario: WorkScenario,
+    /// `true` when `scenario` meets the person's requirements. `false` means
+    /// every candidate fell short and `scenario` is a least-bad fallback.
+    pub feasible_found: bool,
+    /// All evaluated candidates, sorted by utility descending.
+    pub all_scenarios: Vec<WorkScenario>,
+}
+
+impl SearchOutcome {
+    /// Why no candidate was feasible, when none was. Distinguishing "cannot
+    /// afford it" from "the employer's goals cannot be met" matters because the
+    /// remedies are completely different: one is a budget problem, the other is
+    /// a workload or AI-productivity problem.
+    pub fn infeasibility_reason(&self) -> Option<InfeasibilityReason> {
+        if self.feasible_found {
+            return None;
+        }
+        let any_affordable = self.all_scenarios.iter().any(|s| s.meets_requirements);
+        let any_achievable = self.all_scenarios.iter().any(|s| s.achievement_satisfied());
+        Some(match (any_affordable, any_achievable) {
+            (false, false) => InfeasibilityReason::Both,
+            (false, true) => InfeasibilityReason::Unaffordable,
+            (true, false) => InfeasibilityReason::AchievementUnreachable,
+            // Unreachable in practice: if both held for some candidate it would
+            // have been feasible. Kept explicit rather than panicking.
+            (true, true) => InfeasibilityReason::Both,
+        })
+    }
+}
+
+/// Which constraint eliminated every candidate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InfeasibilityReason {
+    /// Net income never covers the mandatory floor at any candidate.
+    Unaffordable,
+    /// Employer's required output is unreachable even at full-time work.
+    AchievementUnreachable,
+    /// Both constraints fail.
+    Both,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +227,16 @@ pub struct OptimizerConfig {
     pub current_age: u32,
     pub retirement_age: u32,
     pub discount_rate: f64,  // Time preference
+    /// Consumption-side parameters: lifestyle profile, sparing ratio,
+    /// utilization discipline, and the quasi-inelastic share.
+    pub consumption: ConsumptionProfileConfig,
+    /// Optional employer-side achievement constraint (§5.2). When `None`, the
+    /// constraint is not applied and only financial feasibility is checked.
+    pub achievement: Option<AchievementConstraint>,
+    /// Conversion rate scenario used by the security-utility term, so the
+    /// optimizer's pension estimate and the Monte Carlo projection do not
+    /// disagree about which Umwandlungssatz is being assumed.
+    pub conversion_scenario: crate::monte_carlo::ConversionRateScenario,
 }
 
 impl OptimizerConfig {
@@ -76,6 +258,9 @@ impl OptimizerConfig {
             current_age,
             retirement_age: 65,
             discount_rate: 0.03,
+            consumption: ConsumptionProfileConfig::default(),
+            achievement: None,
+            conversion_scenario: crate::monte_carlo::ConversionRateScenario::Statutory,
         }
     }
 }
@@ -103,18 +288,37 @@ impl LifeOptimizer {
         let sleep_hours = 8.0 * 7.0;  // 8 hours/day
         let free_hours = 168.0 - work_hours - sleep_hours;
 
-        // Check if requirements are met
+        // Consumption, split by elasticity tier. Feasibility is tested against
+        // the mandatory floor, not the full lifestyle basket: a household is
+        // not "unable to afford" reduced work merely because it would have to
+        // trim discretionary spending. The full basket is still reported as a
+        // target, and drives the consumption-utility ratio.
         let requirements = self.config.requirements.adjusted_for_life_stage(&self.config.life_stage);
-        let monthly_requirements = requirements.total_monthly();
-        let meets_requirements = monthly_after_tax >= monthly_requirements;
-        let surplus_deficit = monthly_after_tax - monthly_requirements;
+        let tiers = requirements.elasticity_tiers(&self.config.consumption);
+        let mandatory_monthly = tiers.mandatory_monthly();
+        let target_monthly = tiers.lifestyle_target_monthly();
+
+        let meets_requirements = monthly_after_tax >= mandatory_monthly;
+        let surplus_deficit = monthly_after_tax - mandatory_monthly;
+
+        // Employer-side achievement capacity (§5.2). Absent constraint means
+        // the scenario cannot be ruled out on job-security grounds.
+        let achievement = self.config.achievement.map(|c| {
+            let capacity = c.capacity_at(work_percentage);
+            AchievementStatus {
+                capacity,
+                required_output: c.required_output_index,
+                satisfied: capacity >= c.required_output_index,
+                margin: capacity - c.required_output_index,
+            }
+        });
 
         // Calculate utility components
         let utility_breakdown = self.calculate_utility(
             after_tax_income,
             work_hours,
             free_hours,
-            monthly_requirements,
+            target_monthly,
             meets_requirements,
         );
 
@@ -129,6 +333,10 @@ impl LifeOptimizer {
             free_hours_per_week: free_hours,
             meets_requirements,
             surplus_deficit,
+            consumption_tiers: tiers,
+            mandatory_monthly,
+            target_monthly,
+            achievement,
             utility_score: utility_breakdown.total,
             utility_breakdown,
             retirement_adequacy: None,
@@ -187,8 +395,18 @@ impl LifeOptimizer {
 
     /// Calculate pension adequacy score
     fn calculate_pension_adequacy(&self, annual_income: f64) -> f64 {
-        let years_to_retirement = (self.config.retirement_age - self.config.current_age) as f64;
-        
+        // Saturating subtraction: a caller may legitimately evaluate a person
+        // who is already at or past retirement age, and `u32` subtraction would
+        // otherwise panic with an arithmetic underflow.
+        let years_to_retirement =
+            self.config.retirement_age.saturating_sub(self.config.current_age) as f64;
+        if years_to_retirement <= 0.0 {
+            // No further accumulation: only AHV is available to this person.
+            let ahv_expected = annual_income * 0.30;
+            let replacement_rate = ahv_expected / annual_income;
+            return ((replacement_rate / 0.60) * 10.0).min(10.0);
+        }
+
         // Swiss pension system (simplified)
         // AHV (1st pillar): ~30% of average income
         // BVG (2nd pillar): depends on contributions
@@ -200,7 +418,18 @@ impl LifeOptimizer {
         // Project BVG savings (simplified)
         let compound_rate: f64 = 1.02;  // 2% annual return
         let bvg_total = bvg_annual * ((compound_rate.powf(years_to_retirement) - 1.0) / (compound_rate - 1.0));
-        let bvg_annual_pension = bvg_total * 0.068;  // 6.8% conversion rate
+        // Use the same conversion-rate scenario as the Monte Carlo projection
+        // rather than an unconditional 6.8%, so the two engines agree.
+        let retirement_year = crate::monte_carlo::retirement_year_from(
+            self.config.current_age,
+            self.config.retirement_age,
+        );
+        let conversion_rate = crate::monte_carlo::effective_conversion_rate(
+            self.config.conversion_scenario,
+            self.config.retirement_age,
+            retirement_year,
+        );
+        let bvg_annual_pension = bvg_total * conversion_rate;
         
         let total_pension = ahv_expected + bvg_annual_pension;
         let current_income = annual_income;
@@ -218,52 +447,91 @@ impl LifeOptimizer {
         score.min(10.0)
     }
 
-    /// Find optimal work percentage using grid search
+    /// Find optimal work percentage using grid search.
+    ///
+    /// Returns the chosen scenario. Use [`Self::search_outcome`] when the caller
+    /// needs to distinguish a genuinely feasible optimum from the best-effort
+    /// fallback returned when *no* candidate meets the person's requirements —
+    /// conflating the two produces advice like "optimal: 50%" printed next to
+    /// "below requirements".
     pub fn find_optimal(&self, candidates: &[f64]) -> (WorkScenario, Vec<WorkScenario>) {
+        let outcome = self
+            .search_outcome(candidates)
+            .expect("find_optimal requires at least one candidate work percentage");
+        (outcome.scenario, outcome.all_scenarios)
+    }
+
+    /// Search for the best work percentage, reporting whether any candidate was
+    /// actually feasible. Returns `None` when `candidates` is empty.
+    pub fn search_outcome(&self, candidates: &[f64]) -> Option<SearchOutcome> {
+        if candidates.is_empty() {
+            return None;
+        }
+
         let mut scenarios: Vec<WorkScenario> = candidates
             .iter()
             .map(|&pct| self.evaluate_scenario(pct))
             .collect();
 
-        // Filter feasible solutions (must meet requirements)
-        let feasible: Vec<_> = scenarios.iter()
-            .filter(|s| s.meets_requirements)
-            .cloned()
+        let feasible: Vec<&WorkScenario> = scenarios
+            .iter()
+            .filter(|s| s.is_feasible())
             .collect();
 
-        let optimal = if feasible.is_empty() {
-            // No feasible solution - return best effort
-            scenarios.iter()
-                .max_by(|a, b| a.utility_score.partial_cmp(&b.utility_score).unwrap())
-                .unwrap()
-                .clone()
+        // Among feasible candidates, the highest utility wins. When none is
+        // feasible, fall back to the smallest shortfall rather than the highest
+        // utility: with no feasible option the useful advice is "here is the
+        // least-bad choice", and utility alone can favour deep under-employment
+        // because leisure and health scores rise as income falls.
+        let (chosen, feasible_found) = if feasible.is_empty() {
+            let least_bad = scenarios
+                .iter()
+                .max_by(|a, b| {
+                    a.surplus_deficit
+                        .partial_cmp(&b.surplus_deficit)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })?;
+            (least_bad.clone(), false)
         } else {
-            // Return feasible solution with highest utility
-            feasible.iter()
-                .max_by(|a, b| a.utility_score.partial_cmp(&b.utility_score).unwrap())
-                .unwrap()
-                .clone()
+            let best = feasible
+                .iter()
+                .max_by(|a, b| {
+                    a.utility_score
+                        .partial_cmp(&b.utility_score)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })?;
+            ((*best).clone(), true)
         };
 
-        scenarios.sort_by(|a, b| b.utility_score.partial_cmp(&a.utility_score).unwrap());
-        (optimal, scenarios)
+        scenarios.sort_by(|a, b| {
+            b.utility_score
+                .partial_cmp(&a.utility_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        Some(SearchOutcome {
+            scenario: chosen,
+            feasible_found,
+            all_scenarios: scenarios,
+        })
     }
 
     /// Calculate lifetime utility for a given work percentage
     pub fn calculate_lifetime_utility(&self, work_percentage: f64) -> f64 {
         let mut total_utility = 0.0;
-        let years = (self.config.retirement_age - self.config.current_age) as usize;
+        let years = self.config.retirement_age.saturating_sub(self.config.current_age) as usize;
 
         for year in 0..years {
             let age = self.config.current_age + year as u32;
             let discount_factor = (1.0 / (1.0 + self.config.discount_rate)).powi(year as i32);
-            
+
             // Simulate life stage progression (simplified)
             let stage = self.simulate_life_stage_at_age(age);
             let requirements = self.config.requirements.adjusted_for_life_stage(&stage);
-            
+            let mandatory = requirements.mandatory_monthly(&self.config.consumption);
+
             let scenario = self.evaluate_scenario(work_percentage);
-            let period_utility = if scenario.monthly_after_tax >= requirements.total_monthly() {
+            let period_utility = if scenario.monthly_after_tax >= mandatory {
                 scenario.utility_score
             } else {
                 scenario.utility_score - 10.0  // Heavy penalty for not meeting needs
@@ -336,9 +604,12 @@ impl LifeOptimizer {
     fn calculate_year_utility(&self, age: u32, work_percentage: f64) -> f64 {
         let stage = self.simulate_life_stage_at_age(age);
         let requirements = self.config.requirements.adjusted_for_life_stage(&stage);
+        let mandatory = requirements.mandatory_monthly(&self.config.consumption);
         let scenario = self.evaluate_scenario(work_percentage);
-        
-        if scenario.monthly_after_tax >= requirements.total_monthly() {
+
+        // Both constraints must hold for a year to count as feasible: the
+        // household must afford it and the employer's goals must still be met.
+        if scenario.monthly_after_tax >= mandatory && scenario.achievement_satisfied() {
             scenario.utility_score
         } else {
             scenario.utility_score - 10.0
@@ -454,6 +725,9 @@ mod tests {
             current_age: 45,
             retirement_age: 65,
             discount_rate: 0.03,
+            consumption: ConsumptionProfileConfig::default(),
+            achievement: None,
+            conversion_scenario: crate::monte_carlo::ConversionRateScenario::Statutory,
         });
 
         let scenario = optimizer.evaluate_scenario(1.0);
@@ -471,3 +745,4 @@ mod tests {
                 "effective rate should still include the mandatory social contributions");
     }
 }
+

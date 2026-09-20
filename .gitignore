@@ -23,3 +23,6 @@ target
 /target
 *.tar.gz
 .DS_Store
+
+# DSH harness session state
+.dsh/

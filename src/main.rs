@@ -1,10 +1,6 @@
-mod tax;
-mod requirements;
-mod optimizer;
-mod display;
-mod monte_carlo;
-mod mc_display;
-mod economic_regimes;
+// The binary is a thin CLI wrapper over the `life_optimizer` library so that
+// the integration tests in `tests/` can exercise the same code paths.
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption};
 
 use clap::{Parser, Subcommand, ArgAction};
 use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
@@ -79,6 +75,44 @@ enum Commands {
         /// Monthly education support cost per child during higher education (CHF)
         #[arg(long, default_value = "500")]
         education_cost_per_child: f64,
+
+        /// Actual conversion rate (Umwandlungssatz) applied by your pension fund,
+        /// as a decimal — e.g. 0.055 for 5.5%. When supplied it drives the
+        /// headline projection; the 6.8% / 5.5% / projected range is still shown.
+        #[arg(long)]
+        conversion_rate: Option<f64>,
+
+        /// Named pension fund profile (publica, bvk, statutory, typical).
+        /// A reference rate only — verify it, or prefer --conversion-rate.
+        #[arg(long)]
+        pension_fund: Option<String>,
+
+        /// Lifestyle consumption profile (extreme-saving, moderate, normal, luxury)
+        #[arg(long, default_value = "normal")]
+        consumption_profile: String,
+
+        /// Fraction of elastic spending sourced second-hand/shared/borrowed (0.0-1.0)
+        #[arg(long, default_value = "0.0")]
+        sparing_ratio: f64,
+
+        /// How strictly you apply the purchase prioritization hierarchy (0.0-1.0)
+        #[arg(long, default_value = "0.0")]
+        utilization_discipline: f64,
+
+        /// Share of nominally discretionary spending locked in by switching costs (0.0-1.0)
+        #[arg(long, default_value = "0.0")]
+        quasi_inelastic_share: f64,
+
+        /// Required project output index for your role (G_t). Enables the
+        /// employer achievement-capacity constraint; without it, work percentage
+        /// is treated as fully discretionary.
+        #[arg(long)]
+        required_output_index: Option<f64>,
+
+        /// Productivity gain from AI and other tools, as a decimal — e.g. 0.25
+        /// for +25%. Only meaningful with --required-output-index.
+        #[arg(long, default_value = "0.0")]
+        ai_productivity_gain: f64,
     },
 
     /// Compare specific work percentage scenarios
@@ -171,6 +205,16 @@ enum Commands {
         /// Custom tax rate (as decimal, e.g. 0.1382 for 13.82%)
         #[arg(long)]
         custom_tax_rate: Option<f64>,
+
+        /// Actual conversion rate (Umwandlungssatz) applied by your pension fund,
+        /// as a decimal — e.g. 0.055 for 5.5%.
+        #[arg(long)]
+        conversion_rate: Option<f64>,
+
+        /// Named pension fund profile (publica, bvk, statutory, typical).
+        /// A reference rate only — verify it, or prefer --conversion-rate.
+        #[arg(long)]
+        pension_fund: Option<String>,
     },
 }
 
@@ -184,7 +228,10 @@ fn main() {
             married,
             children,
             youngest_child_age,
-            canton,
+            // `--canton` is accepted for CLI compatibility but is not yet wired to a
+        // tax table: only the Bern schedule exists (`zurich_default` delegates
+        // to it). Binding is intentionally skipped so the gap stays visible.
+        canton: _canton,
             profile,
             custom_tax_rate,
             family_tax_mode,
@@ -193,8 +240,40 @@ fn main() {
             pillar3a,
             children_ages,
             education_cost_per_child,
+            conversion_rate,
+            pension_fund,
+            consumption_profile,
+            sparing_ratio,
+            utilization_discipline,
+            quasi_inelastic_share,
+            required_output_index,
+            ai_productivity_gain,
         } => {
-            run_optimization(salary, age, married, children, youngest_child_age, &canton, &profile, custom_tax_rate, family_tax_mode, retirement_age, life_expectancy, pillar3a, children_ages.as_deref(), education_cost_per_child);
+            let consumption = match consumption_config(consumption_profile, sparing_ratio, utilization_discipline, quasi_inelastic_share) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("{} {}", "error:".red().bold(), e);
+                    std::process::exit(2);
+                }
+            };
+            run_optimization(OptimizeParams {
+                salary,
+                age,
+                married,
+                children,
+                youngest_child_age,
+                profile: &profile,
+                custom_tax_rate,
+                family_tax_mode,
+                retirement_age,
+                life_expectancy,
+                pillar3a,
+                children_ages: children_ages.as_deref(),
+                education_cost_per_child,
+                conversion: resolve_conversion(conversion_rate, pension_fund),
+                consumption_profile: consumption,
+                achievement: achievement_constraint(required_output_index, ai_productivity_gain),
+            });
         }
         Commands::Compare {
             salary,
@@ -228,30 +307,195 @@ fn main() {
             life_expectancy,
             pillar3a,
             custom_tax_rate,
+            conversion_rate,
+            pension_fund,
         } => {
-            run_pension_simulation(salary, age, married, work_pct, retirement_age, life_expectancy, pillar3a, custom_tax_rate);
+            run_pension_simulation(salary, age, married, work_pct, retirement_age, life_expectancy, pillar3a, custom_tax_rate, resolve_conversion(conversion_rate, pension_fund));
         }
     }
 }
 
-fn run_optimization(
+/// Explain which constraint eliminated every candidate, and what would change
+/// the answer. Silent failure is the least useful outcome for a planning tool.
+fn print_infeasibility_hint(
+    reason: optimizer::InfeasibilityReason,
+    achievement: Option<optimizer::AchievementConstraint>,
+) {
+    use optimizer::InfeasibilityReason;
+
+    println!("\n{}", "Why no option worked:".bold());
+    match reason {
+        InfeasibilityReason::Unaffordable => {
+            println!("  Net income never covers your mandatory spending floor at any work");
+            println!("  percentage. Working more cannot fix a shortfall of this size alone.");
+            println!("  Consider: a lower-cost canton, reduced inelastic costs, a second");
+            println!("  income, or revisiting the consumption profile (--consumption-profile).");
+        }
+        InfeasibilityReason::AchievementUnreachable => {
+            println!("  Your household finances are fine, but the required project output");
+            println!("  cannot be delivered even at 100% work. This is a workload problem,");
+            println!("  not a budget problem.");
+            if let Some(c) = achievement {
+                match c.required_ai_gain_for(1.0) {
+                    Some(gain) if gain > 0.0 => println!(
+                        "  The goals as stated would need a {:.0}% productivity gain at full time.",
+                        gain * 100.0
+                    ),
+                    _ => {}
+                }
+            }
+            println!("  Consider: renegotiating the project portfolio, or modelling an AI");
+            println!("  productivity gain with --ai-productivity-gain.");
+        }
+        InfeasibilityReason::Both => {
+            println!("  Both constraints fail: net income misses your mandatory floor, and");
+            println!("  the required output is not deliverable even at 100% work.");
+            println!("  Address the budget gap first, then the workload.");
+        }
+    }
+}
+
+/// Resolve the conversion-rate scenario from the two related flags.
+///
+/// `--conversion-rate` wins over `--pension-fund` when both are given, because
+/// an explicit figure from the user's own fund statement is always better than
+/// a reference profile. Using a named profile prints a reminder to verify it,
+/// since a stale or superseded rate is a plausible-looking but wrong input.
+fn resolve_conversion(
+    conversion_rate: Option<f64>,
+    pension_fund: Option<String>,
+) -> monte_carlo::ConversionRateScenario {
+    if let Some(rate) = conversion_rate {
+        return monte_carlo::ConversionRateScenario::Custom(rate);
+    }
+    if let Some(id) = pension_fund {
+        match monte_carlo::find_pension_fund(&id) {
+            Some(profile) => {
+                println!(
+                    "Using pension fund profile: {} at {:.2}%",
+                    profile.name.cyan().bold(),
+                    profile.conversion_rate * 100.0
+                );
+                println!("  {}", format!("  {}", profile.source_note).dimmed());
+                println!(
+                    "  {}\n",
+                    "Verify this rate with your fund — rates change annually.".yellow()
+                );
+                return monte_carlo::ConversionRateScenario::Custom(profile.conversion_rate);
+            }
+            None => {
+                eprintln!(
+                    "{} unknown pension fund '{id}'. Known profiles: {}",
+                    "error:".red().bold(),
+                    monte_carlo::pension_fund_ids()
+                );
+                eprintln!("  Or pass your fund's rate directly with --conversion-rate.");
+                std::process::exit(2);
+            }
+        }
+    }
+    monte_carlo::ConversionRateScenario::Statutory
+}
+
+/// Build consumption parameters from the CLI flags, rejecting an unknown
+/// profile rather than silently defaulting to normal.
+fn consumption_config(
+    profile: String,
+    sparing_ratio: f64,
+    utilization_discipline: f64,
+    quasi_inelastic_share: f64,
+) -> Result<consumption::ConsumptionProfileConfig, String> {
+    let profile = consumption::ConsumptionProfile::parse(&profile)
+        .ok_or_else(|| format!(
+            "unknown consumption profile '{profile}'. Expected one of: extreme-saving, moderate, normal, luxury"
+        ))?;
+    Ok(consumption::ConsumptionProfileConfig::new(profile)
+        .with_sparing_ratio(sparing_ratio)
+        .with_utilization_discipline(utilization_discipline)
+        .with_quasi_inelastic_share(quasi_inelastic_share))
+}
+
+/// Build the employer-side achievement constraint. Absent a required output
+/// index the constraint is not applied, preserving the previous behaviour in
+/// which work percentage is fully discretionary.
+fn achievement_constraint(
+    required_output_index: Option<f64>,
+    ai_productivity_gain: f64,
+) -> Option<optimizer::AchievementConstraint> {
+    required_output_index.map(|g| optimizer::AchievementConstraint::new(g, ai_productivity_gain))
+}
+
+/// Validate an age/retirement-age pair before it reaches the optimizer.
+///
+/// A retirement age at or before the current age leaves no accumulation period;
+/// this used to reach `u32` subtraction in the optimizer and panic. Fail with a
+/// clear message instead of a backtrace.
+fn validate_ages(age: u32, retirement_age: u32, life_expectancy: u32) {
+    if retirement_age <= age {
+        eprintln!(
+            "{} retirement age ({}) must be greater than your current age ({}).",
+            "error:".red().bold(),
+            retirement_age,
+            age
+        );
+        std::process::exit(2);
+    }
+    if life_expectancy <= retirement_age {
+        eprintln!(
+            "{} life expectancy ({}) must be greater than the retirement age ({}).",
+            "error:".red().bold(),
+            life_expectancy,
+            retirement_age
+        );
+        std::process::exit(2);
+    }
+}
+
+/// Inputs for one optimization run, grouped so the entry point does not take a
+/// seventeen-argument parameter list.
+struct OptimizeParams<'a> {
     salary: f64,
     age: u32,
     married: bool,
     children: u32,
     youngest_child_age: Option<u32>,
-    _canton: &str,
-    profile: &str,
+    profile: &'a str,
     custom_tax_rate: Option<f64>,
     family_tax_mode: bool,
     retirement_age: u32,
     life_expectancy: u32,
     pillar3a: f64,
-    children_ages: Option<&str>,
+    children_ages: Option<&'a str>,
     education_cost_per_child: f64,
-) {
+    conversion: monte_carlo::ConversionRateScenario,
+    consumption_profile: consumption::ConsumptionProfileConfig,
+    achievement: Option<optimizer::AchievementConstraint>,
+}
+
+fn run_optimization(p: OptimizeParams<'_>) {
+    let OptimizeParams {
+        salary,
+        age,
+        married,
+        children,
+        youngest_child_age,
+        profile,
+        custom_tax_rate,
+        family_tax_mode,
+        retirement_age,
+        life_expectancy,
+        pillar3a,
+        children_ages,
+        education_cost_per_child,
+        conversion,
+        consumption_profile,
+        achievement,
+    } = p;
+
     println!("\n{}", "=== LIFE OPTIMIZER ===".bold().cyan());
     println!("Finding optimal work percentage for your situation...\n");
+
+    validate_ages(age, retirement_age, life_expectancy);
 
     let mut tax_schedule = if let Some(rate) = custom_tax_rate {
         println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
@@ -285,14 +529,27 @@ fn run_optimization(
         preferences,
     );
     config.retirement_age = retirement_age;
+    config.conversion_scenario = conversion;
+    config.consumption = consumption_profile;
+    config.achievement = achievement;
 
     let optimizer = LifeOptimizer::new(config);
     let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-    let (optimal, all_scenarios) = optimizer.find_optimal(&candidates);
+    let outcome = optimizer
+        .search_outcome(&candidates)
+        .expect("candidate list is non-empty");
+    let (optimal, all_scenarios) = (outcome.scenario.clone(), outcome.all_scenarios.clone());
 
     display::print_tax_deduction_breakdown(&tax_schedule, optimal.gross_income);
     // Display work-life balance results
     display::print_optimal_result(&optimal);
+
+    // When nothing was feasible, say which constraint eliminated the options.
+    // The remedies are completely different: one is a budget problem, the other
+    // a workload or AI-productivity problem.
+    if let Some(reason) = outcome.infeasibility_reason() {
+        print_infeasibility_hint(reason, achievement);
+    }
 
     // ── Monte Carlo pension simulation ──────────────────────────────────────
     let monthly_needs = requirements
@@ -313,6 +570,7 @@ fn run_optimization(
         monthly_retirement_needs: monthly_needs,
         n_simulations: 10_000,
         seed: Some(42),
+        conversion_scenario: conversion,
     }
     .run_all_scenarios();
 
@@ -331,8 +589,21 @@ fn run_optimization(
         monthly_retirement_needs: monthly_needs,
         n_simulations: 10_000,
         seed: Some(42),
+        conversion_scenario: conversion,
     };
     let regime_result = regime_sim.run_regime_switching();
+
+    // ── Conversion-rate (Umwandlungssatz) transparency ──────────────────────
+    let pension_range = regime_sim.pension_range_for_capital(regime_result.median_capital);
+    mc_display::print_conversion_rate_scenarios(&pension_range, regime_result.ahv_monthly);
+
+    // Stochastic rate uncertainty, with explicit downside (CVaR).
+    let rate_uncertainty = regime_sim.conversion_rate_uncertainty(
+        regime_result.median_capital,
+        monthly_needs,
+    );
+    mc_display::print_conversion_rate_uncertainty(&rate_uncertainty);
+
     mc_display::print_regime_switching_result(&regime_result, monthly_needs);
 
     let stress_result = regime_sim.run_retirement_shock_stress_test();
@@ -523,7 +794,24 @@ fn run_interactive() {
 
     println!("\n{}", "Analyzing your situation...".yellow());
     
-    run_optimization(salary, age, married, children, youngest_age, "ZH", profile, None, married && children > 0, 65, 90, 0.0, None, 500.0);
+    run_optimization(OptimizeParams {
+        salary,
+        age,
+        married,
+        children,
+        youngest_child_age: youngest_age,
+        profile,
+        custom_tax_rate: None,
+        family_tax_mode: married && children > 0,
+        retirement_age: 65,
+        life_expectancy: 90,
+        pillar3a: 0.0,
+        children_ages: None,
+        education_cost_per_child: 500.0,
+        conversion: monte_carlo::ConversionRateScenario::Statutory,
+        consumption_profile: consumption::ConsumptionProfileConfig::default(),
+        achievement: None,
+    });
 }
 
 fn run_pension_simulation(
@@ -535,8 +823,11 @@ fn run_pension_simulation(
     life_expectancy: u32,
     pillar3a: f64,
     custom_tax_rate: Option<f64>,
+    conversion: monte_carlo::ConversionRateScenario,
 ) {
     println!("\n{}", "=== PENSION SIMULATION ===".bold().cyan());
+
+    validate_ages(age, retirement_age, life_expectancy);
 
     let tax_schedule = if let Some(rate) = custom_tax_rate {
         TaxSchedule::custom_rate(rate)
@@ -561,9 +852,18 @@ fn run_pension_simulation(
     );
     sim.pillar3a_annual = pillar3a;
     sim.n_simulations = 10_000;
+    sim.conversion_scenario = conversion;
 
     let (con, base, opt) = sim.run_all_scenarios();
     mc_display::print_monte_carlo_summary(&con, &base, &opt, monthly_needs, retirement_age, life_expectancy);
+
+    // Conversion-rate transparency, before the regime/stress sections
+    let pension_range = sim.pension_range_for_capital(base.median_capital);
+    mc_display::print_conversion_rate_scenarios(&pension_range, base.ahv_monthly);
+
+    // Stochastic rate uncertainty, with explicit downside (CVaR).
+    let rate_uncertainty = sim.conversion_rate_uncertainty(base.median_capital, monthly_needs);
+    mc_display::print_conversion_rate_uncertainty(&rate_uncertainty);
 
     // Regime-switching + stress test
     let regime_result = sim.run_regime_switching();

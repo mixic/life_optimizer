@@ -1,5 +1,6 @@
 // Personal requirements and consumption basket
 #![allow(dead_code)]
+use crate::consumption::{ConsumptionProfileConfig, ConsumptionTiers};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +62,55 @@ impl PersonalRequirements {
 
     pub fn total_annual(&self) -> f64 {
         self.total_monthly() * 12.0
+    }
+
+    /// Split monthly consumption by elasticity tier, applying the household's
+    /// sparing and lifestyle parameters.
+    ///
+    /// The tier assignment follows `THEORY_OF_SPARING.md` §7a–§7c: housing,
+    /// food, transport, insurance, childcare and healthcare are treated as
+    /// genuinely inelastic (no real elastic margin); savings goal and vacation
+    /// are committed outflows the household has already promised; and
+    /// `discretionary` is the sparing-eligible elastic tier, part of which the
+    /// household may declare as quasi-inelastic via `quasi_inelastic_share`.
+    pub fn elasticity_tiers(&self, config: &ConsumptionProfileConfig) -> ConsumptionTiers {
+        let inelastic =
+            self.housing + self.food + self.transport + self.insurance + self.childcare + self.healthcare;
+
+        // `discretionary` is the nominally elastic tier; `education` behaves the
+        // same way (activities and materials are trimmable, unlike Kita fees).
+        let nominally_elastic = self.discretionary + self.education;
+        let quasi_inelastic =
+            nominally_elastic * config.quasi_inelastic_share.clamp(0.0, 1.0);
+        let responsive = nominally_elastic - quasi_inelastic;
+
+        let multiplier = config.discretionary_multiplier();
+        let elastic = responsive * multiplier;
+
+        ConsumptionTiers {
+            inelastic,
+            quasi_inelastic,
+            elastic,
+            committed_outflows: self.savings_goal + self.vacation,
+            applied_multiplier: multiplier,
+        }
+    }
+
+    /// The mandatory monthly floor: what the household cannot avoid.
+    ///
+    /// This is the correct quantity for the feasibility test. `total_monthly`
+    /// includes the savings goal and discretionary spending, which are targets
+    /// the household can flex rather than obligations it cannot meet.
+    pub fn mandatory_monthly(&self, config: &ConsumptionProfileConfig) -> f64 {
+        self.elasticity_tiers(config).mandatory_monthly()
+    }
+
+    /// The full lifestyle-inclusive basket under the given parameters.
+    ///
+    /// This is what `total_monthly` reports for a normal lifestyle with no
+    /// sparing, and less when the household declares sparing.
+    pub fn target_monthly(&self, config: &ConsumptionProfileConfig) -> f64 {
+        self.elasticity_tiers(config).lifestyle_target_monthly()
     }
 
     /// Adjust requirements based on life stage

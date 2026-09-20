@@ -186,8 +186,8 @@ still-open work:
 | Jump-diffusion or discrete tail-shock component | Not done | — |
 | Historical backtesting / calibration pipeline | Not done | — |
 | Benchmark suite comparing model families | Not done | — |
-| Elasticity-tiered, utilization-weighted consumption model | Documented only | `THEORY_OF_SPARING.md` §8 |
-| Employer-side achievement-capacity constraint on work % | Documented only | `CRITICS_CURRENT_WORK.md` §1.3 |
+| Elasticity-tiered, utilization-weighted consumption model | **Shipped** | `consumption.rs`, `requirements.rs::elasticity_tiers` |
+| Employer-side achievement-capacity constraint on work % | **Shipped** | `optimizer.rs::AchievementConstraint` |
 | Production / stress-test / research model separation | Not done | — |
 
 ---
@@ -306,6 +306,10 @@ This track has no open research question attached to it — every formula below
 already exists in a markdown document in this repository. The work is
 translating it into `PersonalRequirements` and `OptimizerConfig`.
 
+> **Status: both §5.1 and §5.2 are now implemented and tested.** What shipped,
+> and the two design decisions that differed from the sketch below, are recorded
+> in §5.4.
+
 ### 5.1 Elasticity-tiered consumption model
 
 `THEORY_OF_SPARING.md` §7c and §8 propose splitting the flat `discretionary`
@@ -366,6 +370,57 @@ burnout and engagement literature cited in `HAPPINESS_OR_FEAR_WORK_LIFE.md`,
 would let the optimizer discover — rather than assume — cases where 100% work
 is self-defeating even under the pure achievement-capacity constraint of §5.2.
 
+### 5.4 Implementation status and deviations from the sketch
+
+Both §5.1 and §5.2 shipped, with 36 new tests. Two decisions deliberately
+differed from the sketches above; both are recorded here because a future reader
+would otherwise reasonably assume the sketch was followed literally.
+
+**1. §5.1 did not add `rent` / `essential_inelastic` / `quasi_inelastic` /
+`sparing_eligible` fields to `PersonalRequirements`.** Instead the tiers are
+*derived* from the existing basket by `PersonalRequirements::elasticity_tiers()`,
+and the sparing parameters live in a new `ConsumptionProfileConfig` in
+`consumption.rs`. The reason is that `THEORY_OF_SPARING.md` §8 (the more detailed
+of the two specs) explicitly asks for "a discretionary-spending multiplier
+derived from these, applied to the **existing** `discretionary` field" and
+"reported alongside a breakdown by elasticity tier". Deriving the tiers keeps
+every existing caller working, avoids duplicating quantities that would then
+have to be kept consistent, and is directly testable — `tiers_partition_the_basket_exactly`
+asserts the tiers sum to the full basket with nothing double-counted.
+
+**2. Feasibility now tests the mandatory floor, not the full basket.** This is
+the substantive fix. Previously `meets_requirements` compared net income against
+`total_monthly()`, which includes the savings goal and discretionary spending as
+though they were unavoidable. That made the §3.1 claim — the same work
+percentage being feasible under one lifestyle and infeasible under another —
+literally false in the code, because lifestyle could not affect the outcome. It
+also produced a real usability defect: CHF 120k with two children was reported as
+having **no affordable option at any work percentage**.
+
+The model now separates:
+
+- `C_mandatory = inelastic + quasi-inelastic` → the feasibility test
+- `C_target = C_mandatory + elastic + committed outflows` → the consumption-utility ratio
+
+This is faithful to `MATHEMATICS.md` §3 constraint 4, which defines $R_t$ as
+"minimum required consumption to meet basic needs", not as the household's full
+aspirational basket.
+
+**A calibration bug found and fixed during implementation.** The first version of
+the utilization penalty applied the raw reciprocal $\rho_{\text{use}}^{-1}$
+against an arbitrary baseline, so a household declaring *no* sparing still had
+its discretionary spending inflated by ~54%, making it look less affordable than
+the basket it was being compared against. The penalty is now normalized so that
+full discipline yields exactly 1.0, and
+`tests/consumption_model.rs::neutral_configuration_has_unit_multiplier` guards
+against regression. This is worth flagging as a general lesson: a "realism"
+term that is not normalized against an explicit neutral point can silently
+change every recommendation in the model.
+
+**New CLI surface:** `--consumption-profile`, `--sparing-ratio`,
+`--utilization-discipline`, `--quasi-inelastic-share`, `--required-output-index`,
+`--ai-productivity-gain`.
+
 ---
 
 ## 6. Strategic Priorities, Ranked
@@ -375,13 +430,10 @@ is self-defeating even under the pure achievement-capacity constraint of §5.2.
    parameters traceable to data.
 2. **Dependence and tail risk layered on the existing regime model** (§4.2–4.3)
    — copula dependence and jump-diffusion, not a replacement architecture.
-3. **Consumption-model code integration** (§5.1) — the highest-value, lowest-
-   research-risk item on this list, since the formula is already fully
-   specified; it is also the piece most directly usable by anyone running the
-   tool today.
-4. **Employer-side achievement constraint** (§5.2) — second-highest value for
-   the same reason: fully specified, addresses a critique already validated
-   by an outside domain expert (`CRITICS_CURRENT_WORK.md` §1).
+3. **Consumption-model code integration** (§5.1) — ~~the highest-value, lowest-
+   research-risk item on this list~~ **done** (see §5.4).
+4. **Employer-side achievement constraint** (§5.2) — ~~second-highest value for
+   the same reason~~ **done** (see §5.4).
 5. **Benchmark suite and production/stress/research separation** (§4.5–4.6) —
    necessary for credibility once §1–4 exist, but depends on them being done
    first.
@@ -510,31 +562,55 @@ This leads to projected rates of:
 | 2040 | 6.22% |
 | 2050 | 5.86% |
 | 2060 | 5.50% |
+| 2074+ | 5.00% (floor binds) |
 
 The rate is bounded at a minimum of 5.0% (lower threshold based on expert projections).
+The floor begins to bind in 2074, when the unfloored line would cross it.
+
+> **Correction.** An earlier version of this table listed 5.00% for the year
+> 2050. That was inconsistent with the formula above, which gives 5.86% at 2050
+> and does not reach the floor until 2074. The implementation follows the
+> formula; `tests/conversion_rate.rs::projection_matches_documented_table` pins
+> the values and `projection_is_floored` pins the 2074 crossing.
 
 ### 10.4 Impact Analysis: From Capital to Monthly Pension
 
-The following table shows the impact of different conversion rates on the monthly pension for a given pension capital of CHF 500,000:
+The following table shows the impact of different conversion rates on the monthly pension for a given pension capital of CHF 500,000. The "Future Projection" row uses the rate the formula above actually yields for 2050 (5.86%), not the 5.0% floor, so that the row reflects the model rather than the lower bound:
 
 | Scenario | Conversion Rate | Annual Pension | Monthly Pension | Difference from Statutory |
 |----------|----------------|----------------|-----------------|---------------------------|
-| **Statutory (BVG)** | 6.8% | CHF 34,000 | CHF 2,833 | CHF 0 |
-| **Typical Fund Rate** | 5.5% | CHF 27,500 | CHF 2,292 | -CHF 541 |
-| **Future Projection** | 5.0% | CHF 25,000 | CHF 2,083 | -CHF 750 |
-| **Conservative Estimate** | 4.5% | CHF 22,500 | CHF 1,875 | -CHF 958 |
+| **Statutory (BVG)** | 6.80% | CHF 34,000 | CHF 2,833 | CHF 0 |
+| **Future Projection (2050)** | 5.86% | CHF 29,300 | CHF 2,442 | −CHF 392 |
+| **Typical Fund Rate** | 5.50% | CHF 27,500 | CHF 2,292 | −CHF 542 |
+| **Projection floor (2074+)** | 5.00% | CHF 25,000 | CHF 2,083 | −CHF 750 |
+| **Conservative Estimate** | 4.50% | CHF 22,500 | CHF 1,875 | −CHF 958 |
 
-**Example Output Format:**
+Because $P = \gamma K / 12$ is linear in $\gamma$, each 0.1 percentage point of
+conversion rate is worth CHF 41.67 per month on CHF 500,000 — which is why the
+spread from the statutory rate to a typical fund rate is the single largest
+identifiable adjustment in the whole projection.
 
+**Example Output Format** (on a projected capital of CHF 500,000 at 6.8%):
+
+```
 MONTHLY PENSION BY CONVERSION RATE
 --------------------------------------
-Statutory Rate (6.8%): CHF 5'374
-Typical Fund Rate (5.5%): CHF 4'345
-Future Projection (5.0%): CHF 3'950
-Actual Range: CHF 3'950 - 5'374
+Statutory Rate (6.80%):  CHF 2'833
+Future Projection (2050, 5.86%): CHF 2'442
+Typical Fund Rate (5.50%): CHF 2'292
+Projection Floor (5.00%): CHF 2'083
+Actual Range: CHF 2'083 - 2'833
 
 Note: The actual pension depends on your pension fund's conversion rate.
 Many funds apply a lower rate. Use --conversion-rate for a precise calculation.
+```
+
+> **Correction.** An earlier version of this example printed `CHF 5'374` at the
+> statutory rate, which implies a capital of roughly CHF 948,000 rather than the
+> CHF 500,000 the section is written around — a 90% inconsistency. The figures
+> above are computed from the stated capital. In the tool itself the numbers are
+> never hand-written at all: `calculate_pension_range()` derives them from the
+> simulated capital, and `tests/conversion_rate.rs` asserts the arithmetic.
 
 ### 10.5 Planned Improvements
 
@@ -544,15 +620,15 @@ Many funds apply a lower rate. Use --conversion-rate for a precise calculation.
 - **Transparent Disclaimer**: Clear indication of the discrepancy between statutory and actual rates in the output
 
 #### Medium-Term (Next 2-3 Releases)
-- **Dynamic Conversion Rate Modelling**: Linear reduction of the rate over time based on demographic and economic trends
-- **Fund-Specific Profiles**: Integration of standard profiles for major Swiss pension funds (Publica, BVK, etc.)
-- **Pension Range as Standard Output**: Display of the possible range instead of a single value
+- **Dynamic Conversion Rate Modelling**: Linear reduction of the rate over time based on demographic and economic trends — **done**
+- **Fund-Specific Profiles**: Integration of standard profiles for major Swiss pension funds (Publica, BVK, etc.) — **done, as a verified-reference registry** (`PENSION_FUND_PROFILES`, CLI `--pension-fund`)
+- **Pension Range as Standard Output**: Display of the possible range instead of a single value — **done**
 
 #### Long-Term (Roadmap 2027+)
-- **Stochastic Modelling**: Monte Carlo simulation of the conversion rate based on interest rate and life expectancy scenarios
-- **Historical Analysis**: Display of conversion rate development over the last 30 years with trend projections
-- **Personalized Fund Database**: Building a community-based database with actual conversion rates of various pension funds
-- **Capital Withdrawal Optimisation**: Simulation of the tax implications of capital withdrawal vs. pension withdrawal
+- **Stochastic Modelling**: Monte Carlo simulation of the conversion rate based on interest rate and life expectancy scenarios — **done** (§10.10)
+- **Historical Analysis**: Display of conversion rate development over the last 30 years with trend projections — **not done; needs historical data**
+- **Personalized Fund Database**: Building a community-based database with actual conversion rates of various pension funds — **not done; needs external data and a maintenance model**
+- **Capital Withdrawal Optimisation**: Simulation of the tax implications of capital withdrawal vs. pension withdrawal — **not done**
 
 ### 10.6 Technical Implementation
 
@@ -609,11 +685,95 @@ Precision When Needed: With --conversion-rate, the user can input the exact rate
 Transparency: The tool shows the range of possible outcomes rather than a single, potentially misleading number.
 
 10.8 Next Steps
-□ Implementation of the --conversion-rate parameter in CLI
-□ Extension of output in mc_display.rs to include three scenarios
-□ Integration of dynamic model (linear reduction) in monte_carlo.rs
-□ Creation of fund-specific profiles for the 5 largest Swiss pension funds
-□ Documentation of new features in MATHEMATICS.md
-□ Update EXAMPLES.md with conversion rate usage examples
+- [x] Implementation of the --conversion-rate parameter in CLI
+- [x] Extension of output in mc_display.rs to include three scenarios
+- [x] Integration of dynamic model (linear reduction) in monte_carlo.rs
+- [x] Creation of fund-specific profiles for the 5 largest Swiss pension funds (4 profiles: publica, bvk, statutory, typical — the fifth is best covered by `--conversion-rate`)
+- [x] Documentation of new features in MATHEMATICS.md
+- [x] Update EXAMPLES.md with conversion rate usage examples
+- [x] Stochastic conversion-rate modelling (§10.10)
+- [x] Pension range as standard output
+
+### 10.9 Implementation Status
+
+All of §10.5's short-term and medium-term items shipped, plus the
+stochastic-modelling long-term item. `monte_carlo.rs` defines
+`ConversionRateScenario` (`Statutory` / `FundTypical` / `FutureProjection` /
+`Custom(f64)`), `PensionRange`, `PensionFundProfile`, `project_conversion_rate()`,
+`effective_conversion_rate()`, and
+`simulate_conversion_rate_uncertainty()`. `mc_display.rs` prints the scenario
+table, the range, the stochastic distribution with CVaR, and an explicit
+statutory-vs-typical gap. `--conversion-rate` and `--pension-fund` are available
+on both `optimize` and `pension`. 25 tests cover the projection table, the
+floor, deferral scaling, range ordering, custom-rate handling,
+optimizer/simulator agreement, the fund registry, and the stochastic model.
+
+**Corrections made to this document.** Two numeric errors were found in §10 while
+implementing it, both now fixed above and pinned by tests: the §10.3 table
+listed 5.00% for 2050 where the formula gives 5.86% (the floor binds in 2074),
+and the §10.4 example printed a statutory-rate pension of CHF 5'374 that implied
+a capital of ~CHF 948k rather than the CHF 500k the section describes. The unit
+test `projection_matches_documented_table` now checks the published table
+against the code, so the document cannot silently drift from the model again.
+
+**The AHV double-count defect is fixed.** `PensionSimulator::run` previously
+baked `ahv_annual` into `monthly_pensions` and then added it *again* for
+`median_total_monthly`, while `run_regime_switching` excluded it. All three
+simulation paths (`run`, `run_regime_switching`, `run_retirement_shock_stress_test`)
+now hold **BVG only** in the pension arrays, add AHV exactly once for the
+`*_total_monthly` figures, and use total income for the adequacy and quality-of-life
+comparisons. The display labels the BVG-only table explicitly, so the numbers a
+reader sees are internally consistent.
+
+**Still open, and deliberately so:**
+
+1. **Historical conversion-rate analysis** and a **community fund database**
+   both need external data and, in the second case, an ongoing maintenance
+   commitment. Neither should be faked with a handful of hand-written numbers.
+2. **Capital withdrawal optimisation** (lump sum vs. annuity, and the tax
+   implications) is a genuinely separate piece of modelling.
+3. **The uncertainty band** (`CONVERSION_RATE_UNCERTAINTY_BAND = 1.0pp`) is an
+   explicit assumption, not a fitted dispersion. It is centred on the projection
+   so the model does not claim to know the direction of the error — only its
+   plausible spread. Fitting it properly is §4.1 work and needs the same
+   historical data.
+
+### 10.10 Stochastic Conversion-Rate Modelling
+
+§10.5 listed this as a long-term item. It is implemented as
+`simulate_conversion_rate_uncertainty()`, which draws the conversion rate
+$\gamma$ from a distribution centred on the forward projection:
+
+$$
+\gamma \sim \mathcal{N}\!\left(\gamma(t),\ \sigma_\gamma^2\right)
+\quad\text{truncated to}\quad
+\bigl[\gamma_{\min},\ \gamma_0\bigr]
+$$
+
+with $\gamma(t)$ from §10.3, $\sigma_\gamma = 1.0$ percentage point,
+$\gamma_{\min} = 5.0\%$ (the projection floor) and $\gamma_0 = 6.8\%$ (the
+statutory rate). Since $P = \gamma K/12$ is linear in $\gamma$, this translates
+one-for-one into proportional uncertainty in the pension.
+
+**Reported statistics.** Percentiles (P10/P25/median/P75/P90), the probability
+of falling below the household's needs, and — following §4.4's request to report
+downside risk explicitly — the **CVaR** over the worst decile:
+
+$$
+\mathrm{CVaR}_{10\%} = \mathbb{E}\bigl[P \mid P \leq q_{10\%}\bigr]
+$$
+
+Percentiles and CVaR are shown side by side because they answer different
+questions: the P10 is the level exceeded 90% of the time, whereas CVaR is the
+average outcome *given* that the household lands in the worst decile — which is
+the quantity that matters for a decision that cannot be reversed.
+
+**Honest limitation.** The truncation at both ends compresses the tails, which
+pulls CVaR toward the P10 and makes the reported tail look less severe than a
+true fund-rate distribution would. That is a deliberate trade-off: the bounds
+are defensible (funds rarely convert above the statutory rate), and the
+alternative — an untruncated normal — would generate conversion rates above 6.8%
+and below 5.0% that no Swiss fund actually applies. The band itself remains an
+assumption, and is labelled as one in the CLI output.
 
 

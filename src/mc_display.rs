@@ -1,6 +1,143 @@
 // Display module for Monte Carlo pension simulation results
-use crate::monte_carlo::{MonteCarloResult, WorkPctComparison, RegimeSwitchingResult};
+use crate::monte_carlo::{MonteCarloResult, WorkPctComparison, RegimeSwitchingResult, PensionRange};
 use colored::*;
+
+/// Display the monthly pension across conversion-rate (Umwandlungssatz)
+/// scenarios, plus the transparent range and the statutory-vs-actual gap.
+///
+/// The point of this section is to *remove* unjustified precision: the pension
+/// a person actually receives depends on their fund's conversion rate, and many
+/// Swiss funds apply materially less than the 6.8% statutory minimum.
+pub fn print_conversion_rate_scenarios(range: &PensionRange, ahv_monthly: f64) {
+    println!("\n{}", "═══════════════════════════════════════════════════════════".yellow());
+    println!("{}", "    MONTHLY PENSION BY CONVERSION RATE (Umwandlungssatz)".bold().yellow());
+    println!("{}", "═══════════════════════════════════════════════════════════".yellow());
+
+    println!("\n  {}", format!(
+        "Based on projected BVG capital of CHF {:.0} at retirement in {}",
+        range.capital, range.retirement_year
+    ).dimmed());
+
+    println!("\n  {:<28} {:>10} {:>16}", "Conversion rate scenario", "Rate", "Monthly BVG");
+    println!("  {}", "─".repeat(56));
+    println!("  {:<28} {:>10} {:>16}",
+        "Statutory minimum (BVG)",
+        format!("{:.2}%", crate::monte_carlo::STATUTORY_CONVERSION_RATE * 100.0),
+        format!("CHF {:.0}", range.statutory));
+    println!("  {:<28} {:>10} {:>16}",
+        "Typical Swiss fund",
+        format!("{:.2}%", crate::monte_carlo::TYPICAL_FUND_CONVERSION_RATE * 100.0),
+        format!("CHF {:.0}", range.typical).yellow().to_string());
+    println!("  {:<28} {:>10} {:>16}",
+        format!("Projected for {}", range.retirement_year),
+        format!("{:.2}%", range.future_rate * 100.0),
+        format!("CHF {:.0}", range.future));
+
+    if let Some(custom) = range.custom {
+        println!("  {:<28} {:>10} {:>16}",
+            "Your pension fund",
+            format!("{:.2}%", range.selected_rate * 100.0),
+            format!("CHF {:.0}", custom).green().bold().to_string());
+    }
+    println!("  {}", "─".repeat(56));
+
+    println!("\n  {} {}",
+        "Realistic range:".bold(),
+        format!("CHF {:.0} – {:.0} per month", range.range.0, range.range.1).bold());
+
+    if let Some(custom) = range.custom {
+        let diff = range.difference_from_statutory(custom);
+        if diff > 0.0 {
+            println!("  {} {}",
+                "Your rate is below the statutory minimum by".yellow(),
+                format!("CHF {:.0}/month", diff).yellow().bold());
+        } else if diff < 0.0 {
+            println!("  {} {}",
+                "Your rate is above the statutory minimum by".green(),
+                format!("CHF {:.0}/month", diff.abs()).green().bold());
+        }
+    }
+
+    println!("\n  {}", "Note on interpretation:".bold());
+    println!("  {}", "  • The statutory rate understates the risk for most people:".dimmed());
+    println!("  {}", format!(
+        "    at the typical fund rate you receive CHF {:.0}/month less than the statutory figure.",
+        range.statutory_minus_typical
+    ).dimmed());
+    println!("  {}", "  • Rates are projected to keep declining (rising life expectancy,".dimmed());
+    println!("  {}", "    low rates, demographics), so the projection is the planning case.".dimmed());
+    println!("  {}", "  • The actual amount depends on YOUR pension fund's rate.".dimmed());
+    println!("  {}", "    Use --conversion-rate to compute with the precise figure.".dimmed());
+
+    if ahv_monthly > 0.0 {
+        println!("\n  {}", format!(
+            "Add AHV (Pillar 1) of ~CHF {:.0}/month for total retirement income.",
+            ahv_monthly
+        ).dimmed());
+    }
+
+    println!("{}", "═══════════════════════════════════════════════════════════\n".yellow());
+}
+
+/// Report the pension distribution arising from conversion-rate uncertainty
+/// (`FutureWork.md` §10.5, long-term item) with explicit downside risk.
+///
+/// Percentiles and CVaR are shown side by side because they answer different
+/// questions: the P10 is the level you would exceed 90% of the time, while CVaR
+/// is the average outcome *given* that you land in the worst decile — which is
+/// what actually matters for a decision you cannot reverse.
+pub fn print_conversion_rate_uncertainty(
+    result: &crate::monte_carlo::StochasticConversionRateResult,
+) {
+    println!("\n{}", "───────────────────────────────────────────────────────────".dimmed());
+    println!("{}", "CONVERSION-RATE UNCERTAINTY (stochastic)".bold());
+    println!("{}", "───────────────────────────────────────────────────────────".dimmed());
+
+    println!("  {}", format!(
+        "Rate drawn ~ N({:.2}%, {:.2}pp), truncated to [{:.2}%, {:.2}%]",
+        result.mean_rate * 100.0,
+        result.rate_std_dev * 100.0,
+        crate::monte_carlo::MIN_PROJECTED_CONVERSION_RATE * 100.0,
+        crate::monte_carlo::STATUTORY_CONVERSION_RATE * 100.0,
+    ).dimmed());
+
+    println!("\n  {:<24} {:>14}", "Monthly BVG pension", "CHF");
+    println!("  {}", "─".repeat(40));
+    println!("  {:<24} {:>14}", "P10 (bad luck)", format!("{:.0}", result.p10_monthly));
+    println!("  {:<24} {:>14}", "P25", format!("{:.0}", result.p25_monthly));
+    println!("  {:<24} {:>14}", "Median".bold(), format!("{:.0}", result.median_monthly).bold());
+    println!("  {:<24} {:>14}", "P75", format!("{:.0}", result.p75_monthly));
+    println!("  {:<24} {:>14}", "P90 (good luck)", format!("{:.0}", result.p90_monthly));
+    println!("  {}", "─".repeat(40));
+    println!("  {:<24} {:>14}", "CVaR (worst 10%)".red(), format!("{:.0}", result.cvar_10_monthly).red());
+
+    println!("\n  {}", format!(
+        "Probability of falling below CHF {:.0}/month: {:.0}%",
+        result.floor_monthly,
+        result.prob_below_floor * 100.0
+    ).bold());
+
+    if result.prob_below_floor > 0.25 {
+        println!("  {}", "  A material chance of falling short of your needs. Treat the".yellow());
+        println!("  {}", "  median as optimistic and plan against the CVaR figure.".yellow());
+    } else if result.prob_below_floor > 0.10 {
+        println!("  {}", "  Some downside risk — verify your fund's actual rate.".yellow());
+    } else {
+        println!("  {}", "  Downside risk is limited under these assumptions.".green());
+    }
+
+    // CVaR is bounded from below by the truncation floor, so it can coincide
+    // with the P10. Say so rather than letting the reader assume the two
+    // statistics are independent.
+    if (result.cvar_10_monthly - result.p10_monthly).abs() < 1.0 {
+        println!("\n  {}", "  CVaR equals P10 here because the rate distribution is truncated at".dimmed());
+        println!("  {}", "  the projection floor: the worst decile collapses onto that bound.".dimmed());
+        println!("  {}", "  Truncation compresses both tails, so the true downside is somewhat".dimmed());
+        println!("  {}", "  worse than this figure shows.".dimmed());
+    }
+
+    println!("{}", "───────────────────────────────────────────────────────────\n".dimmed());
+}
 
 pub fn print_monte_carlo_summary(
     conservative: &MonteCarloResult,
@@ -29,6 +166,7 @@ pub fn print_monte_carlo_summary(
     print_capital_table(conservative, base, optimistic);
 
     println!("\n{}", "─── Monthly Pension in TODAY'S CHF (inflation-adjusted) ─────".bold());
+    println!("  {}", "BVG (occupational) annuity only — AHV is added in the section below.".dimmed());
     println!("  {:<20} {:>12} {:>12} {:>12}", "Scenario", "Pessimistic", "Median", "Optimistic");
     println!("  {:<20} {:>12} {:>12} {:>12}",
         "Conservative",
