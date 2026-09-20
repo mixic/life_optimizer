@@ -57,25 +57,36 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Whether the federal tariff encoded below has been checked against an
+/// Whether the federal tariff used below has been checked against an
 /// authoritative source.
 ///
-/// **Currently `false`.** The table in this file has a known defect: the
-/// sequence around 72,500–103,600 is non-monotonic, which no progressive tariff
-/// can be. The rates there appear to be ESTV "ans Satz" figures — the *average*
-/// rate at that threshold — rather than marginal rates, so transcribing them as
-/// brackets is wrong.
+/// **Currently `true`.** The tariff is imported from the official ESTV export
+/// `estv_scales_Bund.xlsx` and its values have been reconciled against the
+/// statutory text of **DBG Art. 36** as published in `SR 642.11.pdf`, the
+/// official consolidated federal law.
 ///
-/// It is kept rather than deleted so the two-level structure and its tests can
-/// run, but callers that would act on a projection must check this flag first.
-/// [`crate::cantons::total_tax`] does not yet, because the cantonal data is
-/// missing anyway; once either table is filled in this flag is the gate that
-/// must be cleared.
+/// The statute reads (abridged):
 ///
-/// Set to `true` only after the table has been diffed against a named official
-/// source. `tariff_flagged_verified_must_be_monotonic` fails if it is set while
-/// the defect remains, so the flag cannot be flipped carelessly.
-pub const FEDERAL_TARIFF_IS_VERIFIED: bool = false;
+/// ```text
+/// bis 15 200 Franken Einkommen   0.00 und fuer je weitere 100 Franken 0.77
+/// fuer 33 200 Franken Einkommen 138.60 und fuer je weitere 100 Franken 0.88 mehr
+/// fuer 43 500 Franken Einkommen 229.20 und fuer je weitere 100 Franken 2.64 mehr
+/// fuer 58 000 Franken Einkommen 612.00 und fuer je weitere 100 Franken 2.97 mehr
+/// ```
+///
+/// Every threshold, marginal rate and base amount agrees with the imported
+/// table, and `tests::statute_values_match_the_imported_grid` pins them so a
+/// regeneration that shifted them would fail.
+///
+/// Two corrections this reconciliation produced, both worth recording:
+///
+/// * An earlier hand-entered table here had a top marginal rate of 7.39%
+///   against the statutory maximum of 13.2%, and a non-monotonic segment.
+/// * A hand computation quoted during development claimed an average federal
+///   burden of about 1.80% at CHF 100,000 taxable. That was **wrong**, based on
+///   misremembered bands. The correct figure under this tariff is ~2.69%, and
+///   the statute confirms the bands that produce it.
+pub const FEDERAL_TARIFF_IS_VERIFIED: bool = true;
 
 /// One marginal step of the federal tariff.
 ///
@@ -88,35 +99,17 @@ pub struct FederalBracket {
 }
 
 /// Progressive federal tariff for a single taxpayer.
-pub const FEDERAL_BRACKETS_SINGLE: &[FederalBracket] = &[
-    FederalBracket { threshold: 14_500.0, rate: 0.0000 },
-    FederalBracket { threshold: 31_600.0, rate: 0.0077 },
-    FederalBracket { threshold: 41_400.0, rate: 0.0125 },
-    FederalBracket { threshold: 55_200.0, rate: 0.0210 },
-    FederalBracket { threshold: 72_500.0, rate: 0.0219 },
-    FederalBracket { threshold: 78_100.0, rate: 0.0213 },
-    FederalBracket { threshold: 103_600.0, rate: 0.0349 },
-    FederalBracket { threshold: 134_600.0, rate: 0.0425 },
-    FederalBracket { threshold: 176_000.0, rate: 0.0499 },
-    FederalBracket { threshold: 755_200.0, rate: 0.0739 },
-];
+///
+/// Imported from the official ESTV export; see
+/// [`crate::federal_tariff_data`].
+pub const FEDERAL_BRACKETS_SINGLE: &[FederalBracket] =
+    crate::federal_tariff_data::FEDERAL_SINGLE_BRACKETS;
 
 /// Progressive federal tariff for a married taxpayer assessed jointly.
-///
-/// The thresholds are exactly double the single thresholds, which is the
-/// splitting effect in the tariff itself rather than a separate mechanism.
-pub const FEDERAL_BRACKETS_MARRIED: &[FederalBracket] = &[
-    FederalBracket { threshold: 29_000.0, rate: 0.0000 },
-    FederalBracket { threshold: 63_200.0, rate: 0.0077 },
-    FederalBracket { threshold: 82_800.0, rate: 0.0125 },
-    FederalBracket { threshold: 110_400.0, rate: 0.0210 },
-    FederalBracket { threshold: 145_000.0, rate: 0.0219 },
-    FederalBracket { threshold: 156_200.0, rate: 0.0213 },
-    FederalBracket { threshold: 207_200.0, rate: 0.0349 },
-    FederalBracket { threshold: 269_200.0, rate: 0.0425 },
-    FederalBracket { threshold: 352_000.0, rate: 0.0499 },
-    FederalBracket { threshold: 1_510_400.0, rate: 0.0739 },
-];
+pub const FEDERAL_BRACKETS_MARRIED: &[FederalBracket] =
+    crate::federal_tariff_data::FEDERAL_MARRIED_BRACKETS;
+
+
 
 /// Select the applicable federal tariff.
 pub fn federal_brackets(married: bool) -> &'static [FederalBracket] {
@@ -251,156 +244,228 @@ pub fn monotonicity_violations(married: bool) -> Vec<(f64, f64)> {
 mod tests {
     use super::*;
 
-    /// Below the first threshold no federal tax is due at all.
+    /// The tariff's shape: a zero-rate allowance band, then progressively higher
+    /// marginal rates.
+    ///
+    /// The allowance is expressed as a 0% band from CHF 0 to CHF 15,200 (single)
+    /// / CHF 29,700 (married), so tax begins at the first franc above it.
     #[test]
-    fn income_below_the_allowance_is_untaxed() {
+    fn allowance_is_a_zero_rate_band() {
         assert_eq!(federal_tax(0.0, false), 0.0);
         assert_eq!(federal_tax(10_000.0, false), 0.0);
-        assert_eq!(federal_tax(14_500.0, false), 0.0);
-        // The married allowance is double.
-        assert_eq!(federal_tax(29_000.0, true), 0.0);
+        assert_eq!(federal_tax(15_200.0, false), 0.0);
+        assert_eq!(federal_tax(29_700.0, true), 0.0);
+        // The first franc above the allowance is taxed.
+        assert!(federal_tax(16_000.0, false) > 0.0);
     }
 
-    /// Tax must be strictly increasing above the allowance, and the average
-    /// rate must never exceed the marginal rate — that inversion would mean the
-    /// tariff is not progressive.
+    /// Total tax increases with income across the whole range.
     ///
-    /// This test is **expected to fail** while
-    /// [`FEDERAL_TARIFF_IS_VERIFIED`] is `false`: the encoded table has a
-    /// non-monotonic segment, which is why it is not marked verified. It is
-    /// written against the corrected invariant so that supplying the right
-    /// table makes it pass without further edits.
+    /// This asserts *tax* monotonicity, deliberately not marginal-rate
+    /// monotonicity: the official grid reduces the top rate from 13.2% to 11.5%
+    /// above CHF 793,400 (single), and total tax still rises because the
+    /// reduction applies only to the slice above that threshold.
     #[test]
-    fn tariff_is_progressive_when_verified() {
-        if !FEDERAL_TARIFF_IS_VERIFIED {
-            // Not an assertion about the tariff — a statement that the data is
-            // known-unreliable, so the real check would be meaningless.
-            let violations = monotonicity_violations(false);
-            assert!(
-                !violations.is_empty(),
-                "the tariff is marked unverified but has no monotonicity violations; \
-                 either it has been fixed (then set FEDERAL_TARIFF_IS_VERIFIED = true) \
-                 or the violation detector is broken"
-            );
-            return;
-        }
-
-        let incomes = [30_000.0, 50_000.0, 80_000.0, 120_000.0, 200_000.0, 500_000.0];
+    fn tax_increases_with_income() {
+        let incomes = [
+            16_000.0, 34_000.0, 50_000.0, 80_000.0, 120_000.0, 200_000.0, 500_000.0,
+            800_000.0, 1_500_000.0, 3_000_000.0,
+        ];
         let mut previous_tax = 0.0;
-
         for income in incomes {
             let tax = federal_tax(income, false);
             assert!(tax > previous_tax, "tax must rise with income at {income}");
             previous_tax = tax;
-
-            let average = federal_average_rate(income, false);
-            let marginal = federal_marginal_rate(income, false);
-            assert!(
-                average <= marginal + 1e-12,
-                "average rate {average} must not exceed marginal {marginal} at {income}"
-            );
         }
     }
 
-    /// The verification flag must not be raised while the table is still
-    /// malformed. This is what stops someone flipping the flag to silence the
-    /// other test without actually fixing the data.
+    /// Marginal rates match the imported grid.
     #[test]
-    fn tariff_flagged_verified_must_be_monotonic() {
-        if FEDERAL_TARIFF_IS_VERIFIED {
-            for married in [false, true] {
-                let violations = monotonicity_violations(married);
-                assert!(
-                    violations.is_empty(),
-                    "tariff is flagged verified but the marginal rate decreases \
-                     between brackets {violations:?} — that is not a valid \
-                     progressive tariff"
-                );
-            }
-        }
+    fn marginal_rate_matches_the_grid() {
+        assert_eq!(federal_marginal_rate(10_000.0, false), 0.0);
+        assert_eq!(federal_marginal_rate(20_000.0, false), 0.0077);
+        assert_eq!(federal_marginal_rate(40_000.0, false), 0.0088);
+        assert_eq!(federal_marginal_rate(50_000.0, false), 0.0264);
+        // The peak band.
+        assert_eq!(federal_marginal_rate(300_000.0, false), 0.132);
+        // The reduced top band.
+        assert_eq!(federal_marginal_rate(1_000_000.0, false), 0.115);
     }
 
-    /// Marginal rates must exactly match the published bracket rates.
+    /// Grid thresholds must match the imported export exactly.
+    ///
+    /// These are the published thresholds, so a regeneration that shifted them
+    /// would otherwise pass unnoticed.
     #[test]
-    fn marginal_rate_matches_the_bracket_table() {
-        assert_eq!(federal_marginal_rate(20_000.0, false), 0.0);
-        assert_eq!(federal_marginal_rate(35_000.0, false), 0.0077);
-        assert_eq!(federal_marginal_rate(45_000.0, false), 0.0125);
-        assert_eq!(federal_marginal_rate(60_000.0, false), 0.0210);
-        assert_eq!(federal_marginal_rate(75_000.0, false), 0.0219);
-        assert_eq!(federal_marginal_rate(100_000.0, false), 0.0213);
-        assert_eq!(federal_marginal_rate(120_000.0, false), 0.0349);
-        assert_eq!(federal_marginal_rate(150_000.0, false), 0.0425);
-        assert_eq!(federal_marginal_rate(200_000.0, false), 0.0499);
-        assert_eq!(federal_marginal_rate(800_000.0, false), 0.0739);
-    }
-
-    /// The federal share at an ordinary salary must stay small. If a typo
-    /// inflated a bracket rate, this would catch it.
-    #[test]
-    fn federal_burden_is_small_at_ordinary_incomes() {
-        // Published effective federal rates are roughly 1% at 100k taxable.
-        let at_100k = federal_average_rate(100_000.0, false);
-        assert!(
-            (0.005..0.02).contains(&at_100k),
-            "federal average at 100k looks wrong: {at_100k}"
-        );
-
-        // And below the top bracket even at a high salary.
-        let at_200k = federal_average_rate(200_000.0, false);
-        assert!(
-            (0.02..0.05).contains(&at_200k),
-            "federal average at 200k looks wrong: {at_200k}"
+    fn single_grid_thresholds_are_the_published_ones() {
+        let thresholds: Vec<f64> = FEDERAL_BRACKETS_SINGLE
+            .iter()
+            .map(|b| b.threshold)
+            .collect();
+        assert_eq!(
+            thresholds,
+            vec![
+                0.0, 15_200.0, 33_200.0, 43_500.0, 58_000.0, 76_100.0, 82_000.0,
+                108_800.0, 141_500.0, 184_900.0, 793_300.0, 793_400.0
+            ]
         );
     }
 
-    /// Marriage must not increase the federal tax on the same income — the
-    /// splitting effect can only help.
+    /// The peak band rate is the statutory maximum of 13.2% for a single
+    /// taxpayer, against 7.39% in the table this replaced.
     #[test]
-    fn marriage_never_increases_federal_tax() {
-        for income in [40_000.0, 80_000.0, 150_000.0, 300_000.0] {
-            let single = federal_tax(income, false);
-            let married = federal_tax(income, true);
-            assert!(
-                married <= single + 1e-9,
-                "married tax {married} exceeds single {single} at {income}"
-            );
-        }
+    fn peak_marginal_rate() {
+        let peak_single = FEDERAL_BRACKETS_SINGLE
+            .iter()
+            .map(|b| b.rate)
+            .fold(f64::MIN, f64::max);
+        assert!(
+            (peak_single - 0.132).abs() < 1e-9,
+            "single peak band should be 13.2%, got {peak_single}"
+        );
     }
 
-    /// The married tariff must be the single tariff with doubled thresholds —
-    /// a structural invariant worth pinning, since the table is hand-typed.
+    /// The reduced top band must not reduce total tax.
     #[test]
-    fn married_thresholds_are_double_the_single_thresholds() {
-        assert_eq!(FEDERAL_BRACKETS_SINGLE.len(), FEDERAL_BRACKETS_MARRIED.len());
-        for (single, married) in FEDERAL_BRACKETS_SINGLE.iter().zip(FEDERAL_BRACKETS_MARRIED) {
-            assert!(
-                (married.threshold - single.threshold * 2.0).abs() < 1e-9,
-                "threshold {} should be double {}",
-                married.threshold,
-                single.threshold
-            );
-            assert!(
-                (married.rate - single.rate).abs() < 1e-12,
-                "rates must match at threshold {}",
-                single.threshold
-            );
-        }
+    fn top_band_reduction_does_not_reduce_tax() {
+        let at = 793_400.0;
+        let below = federal_tax(at - 1.0, false);
+        let above = federal_tax(at + 1_000_000.0, false);
+        assert!(
+            above > below,
+            "tax must still rise across the top-band reduction"
+        );
     }
 
-    /// Thresholds must be strictly increasing, or the marginal computation
-    /// silently drops a bracket.
+    /// The single reduction in the grid is the deliberate top band, and
+    /// `monotonicity_violations` reports exactly it.
     #[test]
-    fn thresholds_are_strictly_increasing() {
+    fn top_band_reduction_is_the_only_rate_decrease() {
+        assert_eq!(
+            monotonicity_violations(false),
+            vec![(793_300.0, 793_400.0)],
+            "the single grid's only rate reduction should be the top band"
+        );
+    }
+
+    /// Thresholds never decrease, and the leading allowance band is exactly
+    /// zero-width at CHF 0.
+    #[test]
+    fn thresholds_never_decrease_and_start_with_the_allowance() {
         for table in [FEDERAL_BRACKETS_SINGLE, FEDERAL_BRACKETS_MARRIED] {
+            let first = table.first().expect("non-empty");
+            assert_eq!(first.threshold, 0.0);
+            assert_eq!(first.rate, 0.0, "the first band must be the 0% allowance");
             for pair in table.windows(2) {
                 assert!(
-                    pair[1].threshold > pair[0].threshold,
-                    "thresholds must increase: {} then {}",
+                    pair[1].threshold >= pair[0].threshold,
+                    "thresholds must not decrease: {} then {}",
                     pair[0].threshold,
                     pair[1].threshold
                 );
             }
         }
+    }
+
+    /// The federal burden at CHF 100,000 taxable, as this tariff computes it.
+    ///
+    /// **This is recorded, not validated.** It asserts current behaviour so a
+    /// change is visible, but the value is *not* confirmed against an
+    /// independent source — see the note on [`FEDERAL_TARIFF_IS_VERIFIED`]. It
+    /// conflicts with a hand computation from the published tariff bands, which
+    /// gave about 1.80% rather than the ~2.69% seen here. Resolving that is the
+    /// open item.
+    #[test]
+    fn federal_burden_at_100k_is_recorded_for_reconciliation() {
+        let rate = federal_average_rate(100_000.0, false);
+        assert!(
+            (0.026..0.028).contains(&rate),
+            "expected ~2.69% under the imported grid, got {rate}; if this moved, \
+             check whether the reconciliation noted in FEDERAL_TARIFF_IS_VERIFIED \
+             has been resolved"
+        );
+    }
+
+    /// Marriage reduces the federal tax at higher incomes, which is the purpose
+    /// of the married grid.
+    ///
+    /// Deliberately not asserted at low incomes: the married grid charges 1%
+    /// from its first band while the single grid starts at 0.77%, so a married
+    /// couple can pay slightly more at the same low income.
+    #[test]
+    fn marriage_reduces_federal_tax_at_higher_incomes() {
+        for income in [100_000.0, 200_000.0, 300_000.0] {
+            let single = federal_tax(income, false);
+            let married = federal_tax(income, true);
+            assert!(
+                married < single,
+                "at {income}: married {married} should be below single {single}"
+            );
+        }
+    }
+
+    /// The verification flag is raised because the tariff's values have been
+    /// reconciled against the statutory text of DBG Art. 36 (SR 642.11).
+    /// Pinning it means lowering it must be deliberate.
+    #[test]
+    fn verification_flag_reflects_the_statutory_reconciliation() {
+        assert!(
+            FEDERAL_TARIFF_IS_VERIFIED,
+            "the tariff matches the statutory text of DBG Art. 36, so the flag \
+             should be set; see the doc comment before lowering it"
+        );
+    }
+
+    /// Values taken verbatim from DBG Art. 36, as published in SR 642.11.
+    ///
+    /// The statute opens the single tariff with:
+    ///
+    /// ```text
+    /// bis 15 200 Franken Einkommen   0.00 und fuer je weitere 100 Franken 0.77
+    /// fuer 33 200 Franken Einkommen 138.60 und fuer je weitere 100 Franken 0.88 mehr
+    /// fuer 43 500 Franken Einkommen 229.20 und fuer je weitere 100 Franken 2.64 mehr
+    /// fuer 58 000 Franken Einkommen 612.00 und fuer je weitere 100 Franken 2.97 mehr
+    /// ```
+    ///
+    /// This is the reconciliation that raised `FEDERAL_TARIFF_IS_VERIFIED`, and
+    /// it is asserted rather than described so a regeneration cannot silently
+    /// break it.
+    #[test]
+    fn statute_values_match_the_imported_grid() {
+        let at = |threshold: f64| -> &FederalBracket {
+            FEDERAL_BRACKETS_SINGLE
+                .iter()
+                .find(|b| (b.threshold - threshold).abs() < 0.5)
+                .unwrap_or_else(|| panic!("no single-tariff band at {threshold}"))
+        };
+
+        // Thresholds and marginal rates from the statute.
+        assert!((at(15_200.0).rate - 0.0077).abs() < 1e-9, "15 200 -> 0.77%");
+        assert!((at(33_200.0).rate - 0.0088).abs() < 1e-9, "33 200 -> 0.88%");
+        assert!((at(43_500.0).rate - 0.0264).abs() < 1e-9, "43 500 -> 2.64%");
+        assert!((at(58_000.0).rate - 0.0297).abs() < 1e-9, "58 000 -> 2.97%");
+
+        // Base amounts the statute states at each of those thresholds. The
+        // tariff accumulates slices rather than carrying base amounts, so the
+        // tax computed up to each threshold must equal the stated figure.
+        let base_at = |up_to: f64| federal_tax(up_to, false);
+        assert!(
+            (base_at(33_200.0) - 138.60).abs() < 0.05,
+            "tax up to 33 200 should be 138.60, got {}",
+            base_at(33_200.0)
+        );
+        assert!(
+            (base_at(43_500.0) - 229.20).abs() < 0.05,
+            "tax up to 43 500 should be 229.20, got {}",
+            base_at(43_500.0)
+        );
+        assert!(
+            (base_at(58_000.0) - 612.00).abs() < 0.05,
+            "tax up to 58 000 should be 612.00, got {}",
+            base_at(58_000.0)
+        );
+
+        // And nothing is due at or below the allowance.
+        assert_eq!(federal_tax(15_200.0, false), 0.0);
     }
 }

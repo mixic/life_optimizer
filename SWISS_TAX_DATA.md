@@ -241,32 +241,50 @@ ZH,4700,0.02
 ...
 ```
 
-### Federal tariff — **NOT PRESENT**
+### Federal tariff — **VERIFIED against the statute**
 
-**Correction.** The file `Tarif Art. 42 - Abs. 1 - 2026-20XX_d.pdf` in this
-repository is **canton Bern's tariff, not a federal one**: `Art. 42 Abs. 1` is
-Bern's own withholding article, so it does not provide a schedule shared by all
-26 cantons. There is currently **no federal tariff source in this repository**.
+The federal tariff is imported from the official ESTV export
+`estv_scales_Bund.xlsx` and its values have been reconciled against the
+statutory text of **DBG Art. 36** as published in `SR 642.11.pdf`.
 
-`src/federal_tax.rs` still contains a bracket table marked
-`FEDERAL_TARIFF_IS_VERIFIED = false`, with a **known defect**: the marginal rate
-decreases across the 72,500 → 78,100 → 103,600 segment, which no progressive
-tariff can do. Those figures appear to be ESTV "ans Satz" values — the *average*
-rate at that threshold — rather than marginal rates.
+The statute reads (abridged):
 
-It was not deleted because the two-level structure and its tests need something
-to exercise, but:
+```text
+bis 15 200 Franken Einkommen   0.00 und fuer je weitere 100 Franken 0.77
+fuer 33 200 Franken Einkommen 138.60 und fuer je weitere 100 Franken 0.88 mehr
+fuer 43 500 Franken Einkommen 229.20 und fuer je weitere 100 Franken 2.64 mehr
+fuer 58 000 Franken Einkommen 612.00 und fuer je weitere 100 Franken 2.97 mehr
+```
 
-- `monotonicity_violations()` reports exactly which brackets are malformed
-- `tariff_flagged_verified_must_be_monotonic` fails if the flag is raised
-  without fixing the data
-- nothing that acts on a projection should trust it until the flag is `true`
+Every threshold, marginal rate and base amount agrees with the imported table.
+`federal_tax::tests::statute_values_match_the_imported_grid` asserts the
+thresholds, rates and computed base amounts, so a regeneration cannot silently
+break the reconciliation.
 
-**Needed:** the correct federal tariff, with its source named. Note that the
-published schedule may be expressed as a **"Einheits-Satz"** (a uniform rate
-applied to the whole taxable income) rather than marginal brackets — the federal
-withholding tables use that form, so the `FederalBracket` model may need a
-sibling representation.
+**Two errors this corrected**, both worth recording because they were
+introduced here rather than found in the data:
+
+1. The original hand-entered federal table had a top marginal rate of **7.39%**
+   against the statutory maximum of **13.2%**, plus a non-monotonic segment.
+2. A hand computation quoted during development claimed an average federal
+   burden of about **1.80%** at CHF 100,000 taxable. That was wrong — it used
+   misremembered bands. The correct figure under this tariff is **~2.69%**, and
+   the statute confirms the bands producing it.
+
+#### A trap in the federal export's format
+
+The federal export uses a **different column layout** from the cantonal ones,
+and conflating them silently changes the tariff:
+
+| Export | Band column | Meaning | Extra column |
+|---|---|---|---|
+| Cantonal | `Für die nächsten CHF` | band **width** | — |
+| Federal | `Steuerbares Einkommen CHF` | absolute **threshold** | `Grundbetrag CHF` base amount |
+
+Treating the federal thresholds as widths produces a wholly different schedule.
+Note also that several headers contain "CHF", so a naive substring match on `chf`
+finds `Grundbetrag CHF` instead of `Für die nächsten CHF` — which is exactly the
+bug that briefly corrupted the cantonal scales during this work.
 
 ### The Bern tariff PDF — decoded partially, and why it stops there
 

@@ -89,23 +89,67 @@ def find_splitting_factor(rows, header_idx):
 def classify_subject(text):
     """Map a `Steuersubjekt` value to 'single', 'married' or 'all'.
 
-    The ESTV exports use a small vocabulary here:
-      * "Alle"                                 -> one scale serves everyone
-      * "Alleinstehend ohne Kinder"            -> single
-      * "Verheiratet / Alleinstehend mit Kind" -> married
+    The real exports use more spellings than one might expect, and marital status
+    must be tested in a careful order:
 
-    These two spellings come from real exports and are documented in
-    SWISS_TAX_DATA.md. Note the married label deliberately also covers single
-    parents with children, which is how the cantons treat them.
+    * "Verheiratet" is unambiguous -> married.
+    * "Alleinstehend mit Kindern im Konkurrenz" contains "Alleinstehend" and is a
+      *single-parent* case -> single, not married.
+    * "Alleinstehend mit / ohne Kinder" -> single.
+    * "Alle" -> one shared scale.
+
+    Observed across the 2026 exports:
+
+        Alle                                       -> all
+        Alleinstehend ohne Kinder                   -> single
+        Alleinstehend mit Kindern im Konkurrenz     -> single
+        Alleinstehend mit / ohne Kinder             -> single
+        Alleinstehend                               -> single
+        Verheiratet / Alleinstehend mit Kindern     -> married
+        Verheiratet                                 -> married
     """
-    low = text.lower()
-    if "alle" == low.strip():
+    low = " ".join(text.lower().split())
+
+    if low == "alle":
         return "all"
-    if "alleinstehend ohne" in low or low.startswith("ledig"):
-        return "single"
     if "verheiratet" in low:
         return "married"
+    if "alleinstehend" in low or low.startswith("ledig"):
+        return "single"
     return "unknown"
+
+
+def dedupe_same_scale(kinds):
+    """Collapse subject labels that map to identical band tables.
+
+    Input is keyed by `(subject_class, label)`, because several exports publish
+    two labels that mean the same thing to the calculation. Jura, for example,
+    lists "Alleinstehend ohne Kinder" and "Alleinstehend mit Kindern im
+    Konkubinat" with byte-identical bands.
+
+    If two labels in the same class have *different* bands, that is a real
+    distinction this model does not yet represent (single parent in a household
+    versus not). It is reported rather than silently collapsed, and the first is
+    used so the result is deterministic.
+    """
+    by_class = {}
+    for (kind, label), bands in kinds.items():
+        signature = tuple((w, r) for w, r, _ in bands)
+        by_class.setdefault(kind, []).append((label, signature, bands))
+
+    collapsed = {}
+    for kind, entries in by_class.items():
+        # Deterministic: sort by label so "the first" is stable across runs.
+        entries.sort(key=lambda e: e[0])
+        signatures = {sig for _label, sig, _bands in entries}
+        if len(signatures) > 1:
+            labels = ", ".join(f"'{lbl}'" for lbl, _s, _b in entries)
+            print(
+                f"  NOTE: {kind} has {len(signatures)} distinct scales ({labels}); "
+                f"using the first. The model treats them as one."
+            )
+        collapsed[kind] = entries[0][2]
+    return collapsed
 
 
 def find_columns(header_row):
@@ -119,6 +163,13 @@ def find_columns(header_row):
     `Kanton` must be matched with `id` excluded, otherwise `Kantons-Id` wins and
     the numeric canton id (19, 12, 1) is returned where a two-letter code is
     expected.
+
+    Two band formats exist and both are returned:
+
+    * `Für die nächsten CHF` — a band **width**, used by the cantonal exports.
+    * `Steuerbares Einkommen CHF` — an **absolute threshold**, with a
+      `Grundbetrag CHF` base amount, used by the federal export. Treating that
+      column as a width silently produces a wholly different tariff.
     """
     names = [clean(c) for c in header_row]
 
@@ -136,7 +187,17 @@ def find_columns(header_row):
         "Steuerart": find("steuerart", fallback=2),
         "Steuersubjekt": find("steuersubjekt", fallback=3),
         "Steuerhoheit": find("steuerhoheit", fallback=4),
-        "Für die nächsten CHF": find("chf", fallback=5),
+        # Width form (cantons). The exclusions matter: several headers contain
+        # "CHF", so a bare `chf` match picks `Grundbetrag CHF` or `Steuerbares
+        # Einkommen CHF` and the width column is then read from the wrong place,
+        # silently turning a threshold grid into a band-width grid.
+        "Für die nächsten CHF": find(
+            "chf", exclude=("grundbetrag", "steuerbares", "einkommen"),
+            fallback=None,
+        ),
+        # Threshold form (federation).
+        "Steuerbares Einkommen CHF": find("steuerbares", "einkommen", fallback=None),
+        "Grundbetrag CHF": find("grundbetrag", fallback=None),
         "Zusätzlich %": find("zus", fallback=6),
     }
 
@@ -145,6 +206,7 @@ def parse_cantons(src):
     """Return {canton_code: {subject_class: [(width, rate_percent, label)]}} plus factors."""
     out = {}
     factors = {}
+    grids = {}
 
     for sheet_name, rows in read_xlsx(src):
         header_idx, _ = find_header(rows)
@@ -154,53 +216,115 @@ def parse_cantons(src):
         columns = find_columns(rows[header_idx])
         factor = find_splitting_factor(rows, header_idx)
         width_col = columns["Für die nächsten CHF"]
+        threshold_col = columns["Steuerbares Einkommen CHF"]
         rate_col = columns["Zusätzlich %"]
+
+        # The federal export tabulates absolute thresholds plus a base amount,
+        # so `Grundbetrag + rate x (income - threshold)` gives the tax directly.
+        # Cantonal exports tabulate band widths instead. Treating the federal
+        # thresholds as widths produces a completely different tariff, so the
+        # two shapes are distinguished here rather than inferred later.
+        absolute_grid = width_col is None and threshold_col is not None
 
         # A canton publishes EITHER one "Alle" scale (marital difference is then
         # expressed through the splitting factor) OR separate scales per
         # Steuersubjekt (marital difference is then already in the scale).
         # Applying splitting on top of an already-married-specific scale would
         # double-count the marital adjustment, so the two axes are kept apart.
-        for row in rows[header_idx + 1:]:
-            if len(row) <= max(columns.values()):
-                row = list(row) + [""] * (max(columns.values()) + 1 - len(row))
+        # `columns` legitimately holds `None` for the band column that this
+        # export does not use, so the padding width must ignore those.
+        widest = max(v for v in columns.values() if v is not None)
 
-            code = clean(row[columns["Kanton"]]).upper()
+        for row in rows[header_idx + 1:]:
+            if len(row) <= widest:
+                row = list(row) + [""] * (widest + 1 - len(row))
+
+            raw_code = clean(row[columns["Kanton"]])
+            code = raw_code.upper()
             steuerart = clean(row[columns["Steuerart"]])
             authority = clean(row[columns["Steuerhoheit"]])
             subject = clean(row[columns["Steuersubjekt"]])
 
-            if not code or len(code) != 2:
+            # The federal export uses "Bund" where cantons use a two-letter
+            # code, so both shapes must be accepted or it is silently skipped.
+            if code != "BUND" and not (len(code) == 2 and code.isalpha()):
                 continue
             if steuerart and steuerart.lower() != "einkommen":
                 continue
-            if authority and authority.lower() not in ("kanton", "kantonssteuer"):
+
+            # Take cantonal rows only for cantons, and Bundessteuer for the
+            # federation. Several exports also carry `Gemeinde` rows; including
+            # those would apply municipal tax twice, because the Steuerfuss
+            # already carries the municipal multiplier.
+            auth_low = authority.lower()
+            if code == "BUND":
+                if auth_low not in ("bundessteuer", "bund"):
+                    continue
+                code = "Bund"
+            else:
+                if auth_low not in ("kanton", "kantonssteuer"):
+                    continue
+
+            width = to_float(row[width_col]) if width_col is not None else None
+            rate = to_float(row[rate_col])
+            if rate is None:
                 continue
 
-            width = to_float(row[width_col])
-            rate = to_float(row[rate_col])
-            if width is None or rate is None:
-                continue
+            if absolute_grid:
+                # Emit the threshold and rate; the base amount is implied by the
+                # preceding bands, which `tax_with_scale` reproduces by
+                # accumulating each slice.
+                threshold = to_float(row[threshold_col])
+                if threshold is None:
+                    continue
+                value = threshold
+            else:
+                if width is None:
+                    continue
+                value = width
 
             kind = classify_subject(subject)
-            out.setdefault(code, {}).setdefault(kind, []).append((width, rate, subject))
+            if kind == "unknown":
+                continue
+            # Key by label as well as class: several exports list two labels that
+            # mean the same thing to the calculation (Jura publishes
+            # "Alleinstehend ohne Kinder" and "Alleinstehend mit Kindern im
+            # Konkubinat" with identical bands). Appending both to one list would
+            # concatenate two scales into one, which silently produces a wrong
+            # tariff, so labels are kept separate and merged afterwards.
+            out.setdefault(code, {}).setdefault((kind, subject), []).append(
+                (value, rate, subject)
+            )
             factors[code] = factor
+            grids[code] = absolute_grid
 
-    return out, factors
+    return out, factors, grids
 
 
-def bands_to_thresholds(bands):
-    """Convert band widths into (threshold, rate_fraction) pairs.
+def bands_to_thresholds(bands, absolute_grid=False):
+    """Convert an export's band column into (threshold, rate_fraction) pairs.
 
-    A width band means: the first `w1` CHF are taxed at `r1`, the next `w2` at
-    `r2`, and so on. That is exactly a threshold schedule, so the widths
-    accumulate into thresholds.
+    Two source shapes, and conflating them changes the entire tariff:
+
+    * **width** (cantonal exports): the column is "for the next N CHF", so the
+      first N are taxed at r1, the next at r2, and the widths accumulate into
+      thresholds. `(w1, r1), (w2, r2)` -> `(0, r1), (w1, r2)`.
+    * **threshold** (the federal export): the column already *is* the income at
+      which the band begins, paired with a base amount, so each row maps
+      straight through: `(t1, r1), (t2, r2)` -> `(t1, r1), (t2, r2)`.
+
+    Because a width schedule and a threshold schedule both express the tax as
+    `sum(slice x rate)`, `tax_with_scale` evaluates either form once the
+    thresholds are correct.
     """
+    if absolute_grid:
+        return [(value, rate_percent / 100.0) for value, rate_percent, _s in bands]
+
     out = []
     threshold = 0.0
-    for width, rate_percent, _subject in bands:
+    for value, rate_percent, _subject in bands:
         out.append((threshold, rate_percent / 100.0))
-        threshold += width
+        threshold += value
     return out
 
 
@@ -211,16 +335,24 @@ def main():
     # idempotent.
     if len(sys.argv) < 3:
         raise SystemExit(
-            "usage: import_estv_scales.py <out.rs> <file.xlsx> [more.xlsx ...]"
+            "usage: import_estv_scales.py <out.rs> <file.xlsx> [more.xlsx ...] "
+            "[--federal-out <path.rs>]"
         )
-    out_path = sys.argv[1]
-    srcs = sys.argv[2:]
+    argv = sys.argv[1:]
+    federal_out_path = "src/federal_tariff_data.rs"
+    if "--federal-out" in argv:
+        i = argv.index("--federal-out")
+        federal_out_path = argv[i + 1]
+        del argv[i:i + 2]
+    out_path = argv[0]
+    srcs = argv[1:]
 
     cantons = {}
     factors = {}
+    grids = {}
     contributing = []
     for src in srcs:
-        parsed, parsed_factors = parse_cantons(src)
+        parsed, parsed_factors, parsed_grids = parse_cantons(src)
         if not parsed:
             print(f"  {os.path.basename(src)}: no cantonal income bands found")
             continue
@@ -231,12 +363,14 @@ def main():
                 continue
             cantons[code] = kinds
             factors[code] = parsed_factors.get(code)
+            grids[code] = parsed_grids.get(code, False)
 
     if not cantons:
         raise SystemExit(f"no cantonal income bands found in {srcs}")
 
     results = []
     for code, by_kind in sorted(cantons.items()):
+        by_kind = dedupe_same_scale(by_kind)
         single = by_kind.get("single")
         married = by_kind.get("married")
         shared = by_kind.get("all")
@@ -269,6 +403,7 @@ def main():
                 "married": married_bands,
                 "splitting_for_married": applies_for_married,
                 "subjects": subjects,
+                "absolute_grid": grids.get(code, False),
                 "shared_scale": bool(shared and not (single or married)),
             }
         )
@@ -355,8 +490,11 @@ def main():
     lines.append("")
 
     for r in results:
+        # The federal export's code is "Bund", which is not a valid Rust
+        # identifier segment as-is; canton codes are already uppercase.
+        ident_code = r["code"].upper()
         for kind in ("single", "married"):
-            ident = f"{r['code']}_{kind.upper()}_BRACKETS"
+            ident = f"{ident_code}_{kind.upper()}_BRACKETS"
             lines.append(
                 f"/// Simple-tax scale for canton {r['code']}, {kind} taxpayer."
             )
@@ -364,7 +502,7 @@ def main():
                 lines.append("/// The canton publishes one shared scale; this is the same table")
                 lines.append("/// for both marital statuses.")
             lines.append(f"pub const {ident}: &[FederalBracket] = &[")
-            for threshold, rate in bands_to_thresholds(r[kind]):
+            for threshold, rate in bands_to_thresholds(r[kind], r["absolute_grid"]):
                 # `repr` on a float gives the shortest round-tripping decimal,
                 # which is valid Rust float syntax.
                 lines.append(
@@ -376,14 +514,18 @@ def main():
     lines.append("/// Every imported scale.")
     lines.append("pub const BASE_SCALES: &[BaseScale] = &[")
     for r in results:
+        # The federal tariff is stored separately in `src/federal_tax.rs`, so it
+        # is not repeated in this cantonal registry.
+        if r["code"] == "Bund":
+            continue
         factor = r["splitting_for_married"]
         splitting = "None" if factor is None else f"Some({factor!r})"
         subjects = ", ".join(f'"{s}"' for s in r["subjects"])
         lines.append("    BaseScale {")
         lines.append(f'        canton_code: "{r["code"]}",')
         lines.append(f"        splitting_factor_married: {splitting},")
-        lines.append(f"        single: {r['code']}_SINGLE_BRACKETS,")
-        lines.append(f"        married: {r['code']}_MARRIED_BRACKETS,")
+        lines.append(f"        single: {r['code'].upper()}_SINGLE_BRACKETS,")
+        lines.append(f"        married: {r['code'].upper()}_MARRIED_BRACKETS,")
         lines.append(f"        shared_scale: {str(r['shared_scale']).lower()},")
         lines.append(f"        subjects: &[{subjects}],")
         lines.append("    },")
@@ -395,14 +537,59 @@ def main():
     lines.append("}")
     lines.append("")
 
+    # The federal tariff is emitted into its own module so `federal_tax.rs` can
+    # use the official published scale. Before this it held a hand-entered table
+    # with a known non-monotonic defect and a wrong top marginal rate (7.39%
+    # against the statutory 13.2%).
+    bund = next((r for r in results if r["code"] == "Bund"), None)
+    if bund is not None:
+        # Reuse only the leading licence comment block, not the cantonal module
+        # documentation that follows it.
+        licence = []
+        for ln in lines:
+            if ln.startswith("// Life Optimizer") or licence:
+                licence.append(ln)
+                if ln == "" and len(licence) > 1:
+                    break
+        fed = list(licence)
+        fed.append("//! Official federal direct-tax tariff (direkte Bundessteuer),")
+        fed.append("//! imported from the ESTV Tarife export `estv_scales_Bund.xlsx`.")
+        fed.append("//!")
+        fed.append("//! GENERATED by `tools/import_estv_scales.py` -- do not edit by hand.")
+        fed.append("//!")
+        fed.append("//! This is the authoritative published tariff, replacing an earlier")
+        fed.append("//! hand-entered table whose top marginal rate was 7.39% against the")
+        fed.append("//! statutory 13.2%, and which contained a non-monotonic segment.")
+        fed.append("//!")
+        fed.append("//! `threshold` is the income at which the band begins and `rate` is that")
+        fed.append("//! band's marginal rate as a fraction.")
+        fed.append("")
+        fed.append("use crate::federal_tax::FederalBracket;")
+        fed.append("")
+        for kind in ("single", "married"):
+            fed.append(f"/// Federal tariff, {kind} taxpayer.")
+            fed.append(f"pub const FEDERAL_{kind.upper()}_BRACKETS: &[FederalBracket] = &[")
+            for threshold, rate in bands_to_thresholds(bund[kind], bund["absolute_grid"]):
+                fed.append(
+                    f"    FederalBracket {{ threshold: {threshold!r}, rate: {rate!r} }},"
+                )
+            fed.append("];")
+            fed.append("")
+        with open(federal_out_path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("\n".join(fed))
+        print(f"wrote {federal_out_path}  (federal tariff: "
+              f"{len(bund['single'])} single bands, {len(bund['married'])} married)")
+    else:
+        print("  no Bund export supplied; federal tariff left unchanged")
+
     with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines))
 
     print(f"wrote {out_path}  ({len(results)} cantons)")
     print(f"  sources: {', '.join(contributing)}")
     for r in results:
-        top_s = bands_to_thresholds(r["single"])[-1][0]
-        top_m = bands_to_thresholds(r["married"])[-1][0]
+        top_s = bands_to_thresholds(r["single"], r["absolute_grid"])[-1][0]
+        top_m = bands_to_thresholds(r["married"], r["absolute_grid"])[-1][0]
         factor = r["splitting_for_married"]
         print(
             f"  {r['code']:3} single={len(r['single']):2}b/{top_s:>11.0f}  "

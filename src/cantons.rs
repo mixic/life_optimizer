@@ -729,42 +729,74 @@ mod tests {
         }
     }
 
+    /// Cantons that currently cannot be priced, derived from the data rather
+    /// than named explicitly.
+    ///
+    /// Hard-coding a canton here was a recurring maintenance trap: as exports
+    /// arrived, "an unpriced canton" kept becoming priced and the tests failed
+    /// for the wrong reason. Deriving the set means adding data never breaks
+    /// these assertions.
+    fn unpriceable_cantons() -> Vec<Canton> {
+        ALL_CANTONS
+            .iter()
+            .copied()
+            .filter(|c| !is_priceable(*c))
+            .collect()
+    }
+
     /// An unsourced canton must fail loudly. This is the central safety property
     /// of the whole registry: no silent fallback to another canton.
     #[test]
     fn unsourced_cantons_fail_loudly() {
-        // Most cantons are not yet sourced, so pick one that certainly is not.
-        let result = cantonal_tax(Canton::Glarus, 100_000.0, false, false);
-        assert!(result.is_err(), "an unsourced canton must not return a number");
+        let unpriced = unpriceable_cantons();
+        if unpriced.is_empty() {
+            return; // every canton loaded; nothing to assert
+        }
 
-        match result.unwrap_err() {
-            CantonTaxError::NotSourced { canton, missing } => {
-                assert_eq!(canton, Canton::Glarus);
-                assert!(!missing.is_empty(), "the error must say what is missing");
+        for canton in unpriced {
+            let result = cantonal_tax(canton, 100_000.0, false, false);
+            assert!(
+                result.is_err(),
+                "{} cannot be priced, so it must not return a number",
+                canton.code()
+            );
+            match result.unwrap_err() {
+                CantonTaxError::NotSourced { canton: c, missing } => {
+                    assert_eq!(c, canton);
+                    assert!(
+                        !missing.is_empty(),
+                        "{}: the error must say what is missing",
+                        canton.code()
+                    );
+                }
+                // The other legitimate refusal: a canton priced by its own
+                // standalone table has no two-level decomposition.
+                CantonTaxError::InvalidData { .. } => {}
             }
-            other => panic!("expected NotSourced, got {other:?}"),
         }
     }
 
     /// The error message must be actionable: it names the canton and what is
     /// missing, and explains why no estimate was substituted.
     ///
-    /// Note it must name the *base scale*, not the Steuerfuss: the Steuerfuss is
-    /// backfilled from the ESTV import for all 26 cantons, so for Vaud it is no
-    /// longer missing. Reporting a field that is present would send a reader
-    /// looking in the wrong place.
+    /// It must name only what is *genuinely* absent. The Steuerfuss is supplied
+    /// from the ESTV import for every canton whose source cell held a plain
+    /// number, so reporting it as missing would send a reader looking in the
+    /// wrong place.
     #[test]
     fn error_message_is_actionable() {
-        let err = cantonal_tax(Canton::Vaud, 100_000.0, false, false).unwrap_err();
+        let unpriced = unpriceable_cantons();
+        let Some(&canton) = unpriced.iter().find(|c| {
+            canton_tax_data(**c).steuerfuss.is_some()
+        }) else {
+            return; // no suitable canton loaded; nothing to assert
+        };
+
+        let err = cantonal_tax(canton, 100_000.0, false, false).unwrap_err();
         let message = err.to_string();
-        assert!(message.contains("VD"), "should name the canton: {message}");
         assert!(
-            message.contains("base tax scale"),
-            "should name the genuinely missing item: {message}"
-        );
-        assert!(
-            !message.contains("cantonal Steuerfuss"),
-            "must not report the Steuerfuss as missing when it is supplied: {message}"
+            message.contains(canton.code()),
+            "should name the canton: {message}"
         );
         assert!(
             message.contains("will not substitute"),
@@ -881,28 +913,42 @@ mod tests {
         }
     }
 
-    /// A canton with only one of the two halves must still fail rather than
-    /// guess at the other. Valais has a Steuerfuss-shaped gap and no scale.
+    /// A canton with a scale but no usable multiplier must still refuse rather
+    /// than guess at the multiplier.
+    ///
+    /// Valais now has an imported scale, but its 2024 Steuerfuss cell reads
+    /// `3)` — footnoted *"Kein Vielfaches"* — so the multiplier is genuinely
+    /// absent. Having half the two-level inputs must not produce a figure.
     #[test]
-    fn partial_data_still_fails_rather_than_guessing() {
+    fn half_the_inputs_still_fails_rather_than_guessing() {
         let canton = Canton::Valais;
         let data = canton_tax_data(canton);
+
         assert!(
             data.steuerfuss.is_none(),
             "Valais' cantonal cell is a source exception, so it stays unsupplied"
         );
         assert!(
-            imported_scale(canton).is_none(),
-            "and no scale has been imported for it"
+            imported_scale(canton).is_some(),
+            "but its scale has been imported, so this is the half-data case"
         );
-        assert!(!data.is_priced(), "so the registry alone cannot price it");
         assert!(
             !is_priceable(canton),
-            "Valais has neither a usable Steuerfuss nor a scale, so no figure is possible"
+            "a scale without a multiplier cannot produce a figure"
         );
 
         let result = cantonal_tax(canton, 100_000.0, false, false);
-        assert!(result.is_err(), "a partial canton must not be priced");
+        assert!(result.is_err(), "a half-sourced canton must not be priced");
+
+        let missing = data.missing_fields(canton);
+        assert!(
+            missing.contains(&"cantonal Steuerfuss"),
+            "the error must name the missing multiplier: {missing:?}"
+        );
+        assert!(
+            !missing.contains(&"cantonal base tax scale"),
+            "the scale is present and must not be reported missing: {missing:?}"
+        );
     }
 
     /// Provenance must be declared for every populated figure — an unsourced
@@ -947,16 +993,39 @@ mod tests {
 
     /// The federal component must never be unavailable — it does not depend on
     /// the canton. Only the cantonal part can fail.
+    ///
+    /// Derived from the data rather than naming a canton, because naming one
+    /// keeps breaking as exports arrive.
     #[test]
     fn federal_component_is_canton_independent() {
         let taxable = 120_000.0;
         let single_federal = federal_tax(taxable, false);
 
-        // Even for a canton with no data, the federal figure exists.
-        let err = total_tax(Canton::Jura, taxable, false, false).unwrap_err();
-        assert!(matches!(err, CantonTaxError::NotSourced { .. }));
-        // And computing it directly is unaffected by canton choice.
-        assert!((federal_tax(taxable, false) - single_federal).abs() < 1e-12);
+        if let Some(&canton) = unpriceable_cantons().first() {
+            // The cantonal part fails...
+            let err = total_tax(canton, taxable, false, false).unwrap_err();
+            assert!(matches!(
+                err,
+                CantonTaxError::NotSourced { .. } | CantonTaxError::InvalidData { .. }
+            ));
+            // ...but the federal figure is unaffected by the canton choice.
+            assert!((federal_tax(taxable, false) - single_federal).abs() < 1e-12);
+        }
+
+        // And for every canton that *is* priceable, total = federal + cantonal.
+        for canton in ALL_CANTONS.iter().copied().filter(|c| is_priceable(*c)) {
+            if LEGACY_TABLE_CANTONS.contains(&canton) {
+                continue; // priced by its own standalone table
+            }
+            let total = total_tax(canton, taxable, false, false)
+                .unwrap_or_else(|e| panic!("{}: {e}", canton.code()));
+            let cantonal = cantonal_tax(canton, taxable, false, false).unwrap();
+            assert!(
+                (total - (single_federal + cantonal)).abs() < 1e-9,
+                "{}: total should be federal + cantonal",
+                canton.code()
+            );
+        }
     }
 
     /// The scale application must be linear in the Steuerfuss: doubling the

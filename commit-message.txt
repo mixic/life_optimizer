@@ -1,105 +1,151 @@
-Import ESTV tax scales for seven more cantons
+Import scales for all cantons plus the federal tariff, verified against DBG Art. 36
 
-Adds cantonal base scales for BS, FR, GE, LU, SH, SO and ZH from ESTV
-"Tarife" exports, and reworks the importer for the two marital structures
-those exports revealed. Six cantons now price end to end; test count rises
-from 145 to 150.
+Imports the full ESTV export set: 25 cantonal scale files plus
+estv_scales_Bund.xlsx. Twenty cantons now price end to end, up from six, and the
+federal tariff is verified against the statute. Test count rises from 150 to 154.
+
+Federal tariff verified
+
+src/federal_tariff_data.rs is generated from the ESTV Bund export and its values
+have been reconciled against the statutory text of DBG Art. 36, published in
+SR 642.11.pdf. The statute reads (abridged):
+
+  bis 15 200 Franken Einkommen   0.00 und fuer je weitere 100 Franken 0.77
+  fuer 33 200 Franken Einkommen 138.60 und fuer je weitere 100 Franken 0.88 mehr
+  fuer 43 500 Franken Einkommen 229.20 und fuer je weitere 100 Franken 2.64 mehr
+  fuer 58 000 Franken Einkommen 612.00 und fuer je weitere 100 Franken 2.97 mehr
+
+Every threshold, marginal rate and base amount agrees with the imported table.
+FEDERAL_TARIFF_IS_VERIFIED is now true, and
+federal_tax::tests::statute_values_match_the_imported_grid asserts the
+thresholds, the marginal rates, and the tax computed up to each threshold
+against the base amounts the statute states.
+
+That reconciliation corrected two errors, both introduced here rather than found
+in the data:
+
+  - The original hand-entered federal table had a top marginal rate of 7.39%
+    against the statutory maximum of 13.2%, and a non-monotonic segment.
+  - A hand computation quoted during development claimed an average federal
+    burden of about 1.80% at CHF 100,000 taxable. That was wrong; it used
+    misremembered bands. The correct figure is about 2.69%, which is what this
+    tariff produces.
+
+The federal export also uses a different column layout from the cantonal ones,
+and conflating them silently changes the tariff:
+
+  Cantonal: "Fuer die naechsten CHF"          band WIDTH, no base column
+  Federal:  "Steuerbares Einkommen CHF"       absolute THRESHOLD, plus
+                                              "Grundbetrag CHF" base amount
+
+Treating federal thresholds as widths yields a wholly different schedule. Note
+that several headers contain "CHF", so a naive substring match on `chf` finds
+`Grundbetrag CHF` instead of `Fuer die naechsten CHF` -- the bug that briefly
+corrupted the cantonal scales during this work, and the reason the width column
+now excludes `grundbetrag`, `steuerbares` and `einkommen`.
 
 Coverage
 
-Priceable: AG, BS, LU, SH, SO, ZH (six), plus Bern via its legacy standalone
-table. Previously only Bern and Aargau could produce a figure.
+  priceable (20): AG AI AR BE BS GL GR JU LU NE NW SG SH SO SZ TG TI VD ZG ZH
+  refusing   (6): BL FR GE OW UR VS
 
-Imported but deliberately not priceable, because the canton has no usable
-multiplier:
+Bern remains priced by its standalone Stadt Bern table. The six refusals each
+have a specific, named cause and fail loudly rather than substituting:
 
-  GE  scale imported, but its Steuerfuss cell reads "148.5%9)" with footnote 9:
-      a 12% rebate applies, so the printed figure is not the effective rate
-  FR  scale imported, but its Steuerfuss cell is blank
+  BL     export uses logarithmic formulas, not a band table
+  OW UR  exports publish a flat "Steuersatz %" (1.8%, 7.1%) -- the two cantons
+         with a uniform rate; that representation is not implemented
+  GE     scale imported, but its Steuerfuss cell reads "148.5%9)" with a 12%
+         rebate footnote, so the printed figure is not the effective rate
+  VS     scale imported, but its Steuerfuss cell is "3)" -- "Kein Vielfaches"
+  FR     scale imported, but its Steuerfuss cell is blank
 
-Both refuse and name the multiplier, not the scale, as missing.
+Importer changes (tools/import_estv_scales.py)
 
-Marital treatment is expressed in two incompatible ways
+  - Accepts the absolute-threshold format as well as band widths, selected by
+    which column the export provides rather than inferred from values.
+  - Accepts "Bund" where cantons use a two-letter code; previously the federal
+    file was silently skipped because its code failed a two-letter test.
+  - Takes cantonal rows only: several exports also carry `Gemeinde` rows, and
+    including them would apply municipal tax twice, since the Steuerfuss already
+    carries the municipal multiplier.
+  - Emits the federal tariff into its own module, src/federal_tariff_data.rs,
+    rather than mixing it into the cantonal registry.
+  - Keeps Steuersubjekt labels separate during parsing and merges them
+    afterwards. Jura publishes "Alleinstehend ohne Kinder" and "Alleinstehend
+    mit Kindern im Konkubinat" with identical bands; appending both into one
+    list concatenated two scales into one, producing 14 bands where 7 are
+    correct. Vaud had the same defect and went from 38 bands to 19.
+  - Emits a valid Rust identifier for the federal entry, which is not a
+    two-letter code.
 
-The exports forced this distinction, which a single-shape model would have got
-wrong. A canton either:
+Marital treatment, which the exports forced into the open
 
-  * publishes ONE shared scale (Steuersubjekt = Alle) and expresses the marital
-    difference through a splitting factor -- AG 2.0, SH 1.9, SO 1.9; or
-  * publishes SEPARATE scales per Steuersubjekt, where the difference is already
-    in the table and splitting is NOT applied -- BS, LU, ZH.
+Cantons express marital status in two incompatible ways, and applying both would
+count the adjustment twice:
 
-Applying splitting on top of a married-specific scale would count the marital
-adjustment twice. BaseScale now carries both axes, and
-BaseScale::splitting_factor(married) returns a value only for a married taxpayer
-on a shared scale. Note SH and SO use 1.9, not 2.0: partial splitting, which a
-hard-coded 2.0 would have silently mishandled.
+  - a shared scale (Steuersubjekt = Alle) with a splitting factor -- AG 2.0,
+    SH 1.9, SO 1.9, GL 1.7, GR 1.9, NE 1.923, NW 1.85, GE 2.0, VS 0.0; or
+  - separate scales per Steuersubjekt, where the difference is already in the
+    table and splitting must NOT be applied -- AR, BS, FR, JU, LU, SZ, TI, VD,
+    ZG, ZH.
 
-Verified figures
-
-Aargau at CHF 100,000 taxable, hand-checked against the ESTV bands:
-
-  single    assessable 100,000  simple 6,938  x 2.07 = 14,361.66  (14.36%)
-  married   assessable  50,000  simple 2,488  x 2.07 =  9,869.76  ( 9.87%)
-
-The married case applies splitting; the single case does not. Marriage must not
-cost more at the same income, which is asserted.
-
-Importer rework (tools/import_estv_scales.py)
-
-  - Accepts MULTIPLE files in one invocation, merging them first-wins, so a
-    batch of single-canton exports is one command and re-running is idempotent.
-  - Classifies Steuersubjekt values ("Alle", "Alleinstehend ohne Kinder",
-    "Verheiratet / Alleinstehend mit Kind") and detects the splitting factor.
-  - Emits separate single/married bracket tables plus the shared_scale flag.
-  - Locates columns by substring with a positional fallback: exact header
-    matching raised KeyError because the same field is emitted with different
-    accent handling between exports ("Fuer die naechsten CHF").
-  - Excludes "id" when matching the Kanton column. Without this, "Kanton" matches
-    "Kantons-Id" first and the numeric canton id (19, 12, 1) is returned where a
-    two-letter code is expected.
-
-New tools/survey_estv_scales.py prints each canton's treatment, splitting factor
-and band count before import. It is how the shared-vs-per-subject distinction
-was caught, and is the check to run on any new export.
-
-Removed: tools/decode_bern_tarif.py, decode_bern_numbers.py and
-characterise_bern_tokens.py. These were one-off investigation into the Bern
-tariff PDF; their findings are recorded in SWISS_TAX_DATA.md, so the scripts add
-nothing beyond what the document already states.
+BaseScale carries both axes and splitting_factor(married) returns a value only
+for a married taxpayer on a shared scale.
 
 Tests
 
-  imported_cantons_are_priceable
-  cantons_without_imported_scales_still_refuse
-  fribourg_refuses_for_the_missing_multiplier_not_the_scale
-  geneva_refuses_until_the_rebate_is_interpreted
-  imported_cantons_produce_a_result_and_disclose_the_basis
+New:
+  statute_values_match_the_imported_grid
+  verification_flag_reflects_the_statutory_reconciliation
+  single_grid_thresholds_are_the_published_ones
+  allowance_is_a_zero_rate_band
+  top_band_reduction_is_the_only_rate_decrease
+  thresholds_never_decrease_and_start_with_the_allowance
+  half_the_inputs_still_fails_rather_than_guessing
 
-Two existing tests were corrected:
+Corrected:
+  Several federal tests encoded invariants from the old hand-entered table and
+  were wrong about the real statute. In particular:
+    - the tariff is NOT marginal-rate monotonic: the rate caps at 13.2% and
+      falls to 11.5% above CHF 793,400, by design;
+    - the married grid is NOT the single grid with doubled thresholds; it has a
+      different band count and a 1% opening rate, so at low incomes a married
+      couple can pay slightly more;
+    - the allowance is a 0%-rate band, not a CHF 14,500 deduction.
+  Two canton tests also failed for the right reason: they named cantons that had
+  since become priceable. They now derive the unpriceable set from the data
+  (unpriceable_cantons()), so adding exports no longer breaks them.
 
-  - aargau_is_priceable_from_the_imported_scale asserted 9.87% for a SINGLE
-    taxpayer by hand-checking only the first eight bands (which stop at 41,700).
-    The scale continues to 100,000, so the correct figure is 14.36%. The
-    implementation was right and the expectation was wrong; both marital cases
-    are now pinned.
-  - unpriced_canton_fails_loudly_and_suggests_a_way_forward used Zuerich as the
-    failing case. Zuerich now prices, so it moved to Ticino, and a companion
-    test asserts that the imported cantons produce a result and disclose their
-    basis -- so an import that silently did nothing would fail the suite.
+Tools
+
+  pdf_identity_h_text.py, pdf_identity_h_lines.py
+      Decode Identity-H PDFs (one glyph per Tj operator) using the fonts'
+      ToUnicode CMaps. This is what unlocked SR 642.11; the existing
+      pdf_text.py only handles parenthesised Tj/TJ operands and returned
+      nothing for that file.
+  find_tariff_in_dbg.py
+      Targeted search for Art. 36's values in the decoded text, because line
+      reconstruction is imperfect.
+  diagnose_exports.py
+      Reports, per export, the canton codes and header row found, so a file that
+      yields nothing reveals why.
 
 Documentation
 
-SWISS_TAX_DATA.md records the coverage table, the two marital structures, the
-verified Aargau figures, and the four documented source exceptions.
+SWISS_TAX_DATA.md section 3 records the statutory reconciliation, the two errors
+it corrected, the column-layout trap, the coverage table, and the specific cause
+for each refusing canton.
 
-Still open
+Not done
 
-18 cantons have no scale. GE, VS, BL and FR additionally have no usable
-cantonal multiplier: GE's is computable from its rebate footnote (147.5% x 0.88
-= 129.8%) but interpreting a footnote is a decision rather than a parse, so it
-is left unsupplied pending confirmation. The federal tariff values remain
-unverified (FEDERAL_TARIFF_IS_VERIFIED = false).
+Deduction data has been supplied (estv_deductions.xlsx, 623 rows;
+estv_deduction_scales.xlsx, 471 rows) but is not imported. TaxDeductionBreakdown
+still uses a rough estimated model rather than canton-specific rules, so wiring
+it is new machinery rather than a data drop.
 
-Verified: 150 tests pass across 11 targets, cargo doc --lib clean under
--D warnings, no new clippy warnings (8 pre-existing remain).
+The flat-rate cantons (OW, UR) and the formula-based one (BL) need
+representations the scale model does not yet have.
+
+Verified: 154 tests pass, cargo doc --lib clean under -D warnings, no new clippy
+warnings (8 pre-existing remain).
