@@ -1,60 +1,73 @@
-Let the CLI supply the household facts, and fix two insurance-premium bugs
+Fix a rate-base defect: the printed Tax Rate used gross income
 
-Exposes the widened deduction engine through flags, so its property, pensioner and
-insurance coverage is reachable rather than only testable -- and wiring the flags
-found two more bugs. Test count rises from 194 to 198.
+`TaxSchedule` had two accessors that disagreed about which income the rate schedule
+applies to, and the one feeding the printed "Tax Rate" was the wrong one. Test
+count rises from 198 to 199.
 
-New flags on `optimize`
+    effective_tax_rate(gross)  ->  looked up on taxable_income_after_estimates(gross)
+    tax_only_rate(gross)       ->  looked up on gross
 
-  --imputed-rental-value <CHF>   the home's Eigenmietwert
-  --pensioner                    receives an AHV/IV pension
-  --insurance-premiums <CHF>     declared premiums and savings interest
+The tax actually charged was always computed on deducted income, which is correct.
+Only the number shown to the user was wrong -- and consistently too high, because
+the progressive schedule was applied to a larger base:
 
-A fact that is NOT supplied is skipped rather than assumed, which is why an
-unadorned run shows a small sourced total: it is reporting what it was told. The
-"N further rule(s) were considered and not applied" line is the measure of what the
-household did not declare. Supplying all three moves a CHF 100,000 married Zurich
-household from CHF 3,000 to roughly CHF 14,000 of federal deductions.
+    gross 100,000   shown 17.24%   charged 15.76%   overstated by 1.48pp
+    gross  50,000   shown 12.00%   charged 10.56%   overstated by 1.44pp
+    gross 150,000   shown 21.34%   charged 19.50%   overstated by 1.84pp
+    gross 250,000   shown 24.73%   charged 24.73%   overstated by 0.00pp
 
-Two bugs, found by running the flags rather than by reasoning
+The gap closes at 250,000 because the Bern table clamps above 200,000 -- which is
+exactly why the defect could sit at the top of the range unnoticed.
 
-  The insurance-premium family deducted NOTHING, in all 27 jurisdictions
+How it stayed hidden, which is the instructive part
 
-    These rules state only a CEILING -- `Betrag = 0`, `Prozent = 0`,
-    `Maximum = 5800` -- so the generic `clamp(amount + percent * base, ...)`
-    returned zero for every one of them. The deduction is what the taxpayer
-    declared, capped at the canton's ceiling, which is the same shape as pillar 3a
-    and needed the same treatment: ZH's married ceiling is 8,700, the federal one
-    5,550, and a declared 3,000 deducts 3,000.
+THREE tests called `tax_only_rate` with a TAXABLE figure and asserted the published
+rates. They passed because the function deducted a second time and the tests then
+compared against positions that tolerated the result. The bug and its tests agreed
+with each other, so neither looked wrong. The clearest case is
+`bern_table_is_close_to_the_published_figures`, which asserted `|diff| < 15.0`
+where the real answer is -5.74pp -- a tolerance wide enough to accept either the
+correct figure or the twice-deducted one.
 
-  A rule yielding zero was dropped SILENTLY
+The fix
 
-    This is why the first bug was invisible. The engine discarded zero-amount
-    rules with a bare `continue`, so the family vanished from both the applied AND
-    the skipped list -- and a dropped rule cannot be distinguished from a rule that
-    does not exist. That is precisely the failure the `skipped` list was built to
-    prevent, and it had a hole in it. A new test asserts rules are accounted for,
-    so a future family cannot disappear the same way.
+  - `tax_only_rate(gross)` now deducts first, so both accessors use one base
+  - `tax_rate_on_taxable(taxable)` is new, for asking about an income that is
+    already taxable. Converting a taxable figure back to a gross one just to have
+    it deducted again is the mistake that hid this.
+  - `rate_accessors_agree_on_the_same_income` asserts the invariant directly: the
+    tax-only rate equals `tax_rate_on_taxable(taxable_income_after_estimates(gross))`
+    to within 1e-12, and the effective rate equals it plus payroll charges.
 
-Refactor
+Corroboration rather than assertion
 
-The comparison function took eight arguments once the flags were added, so the
-three facts are grouped into a `HouseholdFacts` struct with `Default`. The defaults
-mean *not supplied*, which is the same distinction the engine makes, and it drops
-the lint rather than silencing it.
+The three tests that encoded the bug now call `tax_rate_on_taxable`, and the model
+figures they produce reproduce the table already documented in SWISS_TAX_DATA.md
+EXACTLY -- 5.41 / 12.00 / 17.24 / 24.73 / 24.73 against published 16.01 / 18.50 /
+22.98 / 32.15 / 37.09, i.e. -10.60 / -6.50 / -5.74 / -7.42 / -12.36pp. Those
+numbers were written down before this defect existed, so their restoration is
+independent evidence that the fix corrects the base rather than moving a figure.
 
-Tests (tests/deduction_engine.rs, 4 new)
+`bern_table_is_close_to_the_published_figures` now pins that documented -13.5 to
+-5.0pp envelope instead of `|diff| < 15.0`, so a future regression fails rather
+than hides.
 
-  insurance_premiums_deduct_the_declared_amount_within_the_ceiling
-  insurance_premiums_are_capped_at_the_cantonal_ceiling
-  insurance_variants_follow_marital_status
-  every_rule_is_accounted_for
+One assertion in `optimizer.rs` had to change meaning: it expected the effective
+rate to be strictly BELOW tax-only plus payroll charges, a gap that existed only
+because the two accessors disagreed. It now asserts equality.
+
+What did NOT change
+
+The deduction MODEL is untouched: still the ~35%-cap estimate, still with the
+sourced model printed beside it. This makes the reported rate consistent with the
+tax already being charged rather than moving anything between models -- which is
+why it was safe to do without the user's decision on switching the tax base.
 
 Documentation
 
-SWISS_TAX_DATA.md: the bug table grows to nine, a new section tabulates the three
-flags and explains that an unsupplied fact is skipped rather than assumed, and the
-insurance bugs are recorded with the reason the second one hid the first.
+SWISS_TAX_DATA.md gains section 6 on the defect, with the table, the reason it hid,
+and an explicit statement that the model is unchanged. DesignDocument.md's
+TaxSchedule interface gains the new method.
 
-Verified: 198 tests pass, clippy unchanged at 9 pre-existing warnings. All three
-flags exercised end to end through the binary.
+Verified: 199 tests pass, clippy unchanged at 9 pre-existing warnings, and the
+published-reference figures match the documented table exactly.

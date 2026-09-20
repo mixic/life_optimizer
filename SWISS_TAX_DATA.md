@@ -132,6 +132,12 @@ they imply. Two things worth noting:
   | CHF 250,000 | 24.73% | 32.15% | −7.42pp |
   | CHF 500,000 | 24.73% | 37.09% | −12.36pp |
 
+  These five figures are pinned to a band by `bern_table_is_close_to_the_published_figures`,
+  which is worth more than the loose tolerance it replaced. The model figures were
+  briefly *different* — 5.41% became 14.70%, 12.00% became 10.56% — because of the
+  rate-base defect described below. Restoring them to the documented table is what
+  confirmed the fix rather than merely asserting it.
+
   Two causes are visible in the numbers. First, `TaxSchedule::bern_city_default`
   is Steuerjahr 2024 while these figures are 2025. Second, and more
   significantly, that table has **no entries above CHF 200,000**, so
@@ -743,7 +749,52 @@ printed alongside the error.
 
 ---
 
-## 6. What works in the meantime
+## 6. A rate-base defect in the reported figures
+
+Found while auditing the two deduction models against each other, and unrelated to
+either: `TaxSchedule` had **two accessors that disagreed about which income the rate
+schedule applies to**.
+
+```rust
+effective_tax_rate(gross)  ->  looked up on taxable_income_after_estimates(gross)  ✅
+tax_only_rate(gross)       ->  looked up on gross                                  ❌
+```
+
+`tax_only_rate` supplies the **printed "Tax Rate"**, so the tool reported a rate
+that was not the rate it charged. The tax itself was always computed on deducted
+income, which is correct — only the number shown to the user was wrong, by:
+
+| Gross income | Rate on gross (shown) | Rate on taxable (charged) | Overstated by |
+|---|---|---|---|
+| CHF 50,000 | 12.00% | 10.56% | 1.44pp |
+| CHF 100,000 | 17.24% | 15.76% | 1.48pp |
+| CHF 150,000 | 21.34% | 19.50% | 1.84pp |
+| CHF 250,000 | 24.73% | 24.73% | 0.00pp |
+
+The gap closes at CHF 250,000 because the Bern table clamps above CHF 200,000 —
+which is precisely why the defect could sit at the *top* of the range unnoticed.
+
+**How it stayed hidden.** Three tests called `tax_only_rate` with a *taxable*
+figure and asserted the published rates. They passed only because the function
+deducted a second time and the test then compared against a band that tolerated the
+result. The bug and its tests agreed with each other, so neither looked wrong.
+`bern_table_is_close_to_the_published_figures` is the case in point: it asserted
+`|diff| < 15.0` where the real answer is −5.74pp.
+
+**The fix.** `tax_only_rate(gross)` now deducts first, so both accessors use one
+base and agree to within 1e-12 — asserted by
+`rate_accessors_agree_on_the_same_income`. A new `tax_rate_on_taxable(income)` is
+the way to ask about an income that is already taxable, which is what the
+published-reference tests actually wanted; converting a taxable figure back to a
+gross one just to have it deducted again is the mistake that hid this.
+
+**What did not change.** The deduction *model* is untouched — still the ~35%-cap
+estimate, still with the sourced model printed beside it. This fix makes the
+reported rate consistent with the tax already being charged, rather than moving any
+figure between models. That it restores the documented Bern table exactly is the
+evidence it is a fix and not a recalculation.
+
+---
 
 There are two honest paths today:
 
@@ -757,7 +808,21 @@ There are two honest paths today:
 
 ---
 
-## 7. Current status summary
+## 7. What works in the meantime
+
+The two honest paths, unchanged by the work above:
+
+1. **`--custom-tax-rate`** — pass your own observed effective rate as a decimal
+   (e.g. `0.1382` for 13.82%), taken from your tax assessment. This bypasses the
+   canton tables entirely and is the most accurate option available, because it
+   uses your actual figure rather than a modelled one.
+2. **Bern** — `TaxSchedule::bern_city_default` carries the original hand-entered
+   Stadt Bern table (cantonal + municipal + church combined), sourced from the
+   city's own `Steuerbelastung des Arbeitseinkommens` publication.
+
+---
+
+## 8. Current status summary
 
 | Piece | Status | Location |
 |---|---|---|

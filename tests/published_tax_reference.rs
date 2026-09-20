@@ -156,14 +156,19 @@ fn cantonal_ordering_matches_the_published_table() {
 /// the article quotes.
 #[test]
 fn bern_table_is_close_to_the_published_figures() {
-    // `tax_only_rate` is the official cantonal + municipal + church rate
+    // `tax_rate_on_taxable` is the official cantonal + municipal + church rate
     // schedule, which is the quantity the article's "Steuer" column represents
-    // (Bund + Kanton + Gemeinde).
+    // (Bund + Kanton + Gemeinde) for a given *taxable* income.
+    //
+    // It must be the taxable variant: the published figures are quoted against
+    // taxable income, and `tax_only_rate` takes *gross* income and deducts first.
+    // Calling that here would subtract the estimate a second time and understate
+    // the rate.
     let schedule = TaxSchedule::bern_city_default(false, 0);
 
     let mut checked = 0;
     for r in REFERENCES.iter().filter(|r| r.canton == "BE") {
-        let modelled_rate = schedule.tax_only_rate(r.taxable_income) * 100.0;
+        let modelled_rate = schedule.tax_rate_on_taxable(r.taxable_income) * 100.0;
         let published = published_rate(r);
         let diff_pp = modelled_rate - published;
 
@@ -177,10 +182,21 @@ fn bern_table_is_close_to_the_published_figures() {
         );
         checked += 1;
 
+        // The published column is total tax (Bund + Kanton + Gemeinde) as a
+        // share of taxable income; the model here is the cantonal + municipal +
+        // church schedule alone, and the table is Steuerjahr 2024 against 2025
+        // figures. The gap is therefore expected and *documented* — it is the
+        // table in SWISS_TAX_DATA.md section 3. Pinning it to a band keeps a
+        // regression visible without pretending the two quantities are the same.
+        //
+        // A rate-base bug once made these numbers disagree with that table: the
+        // schedule was being looked up on income that had already been reduced,
+        // so it deducted twice and understated every model figure by 1.3-1.8pp.
         assert!(
-            diff_pp.abs() < 15.0,
+            (-13.5..=-5.0).contains(&diff_pp),
             "BE at CHF {}: modelled {modelled_rate:.2}% vs published {published:.2}% \
-             differ by {diff_pp:+.2}pp, which is too large to be a definitional difference",
+             differ by {diff_pp:+.2}pp, outside the documented -5.7 to -12.4pp range. \
+             Either the table has drifted or the rate base changed.",
             r.taxable_income
         );
     }

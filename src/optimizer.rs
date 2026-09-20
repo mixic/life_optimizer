@@ -750,11 +750,20 @@ mod tests {
 
         assert!((scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
                 "tax-only rate should match the official Bern table");
-        assert!(scenario.effective_tax_rate < schedule.tax_only_rate(140_000.0)
+        // The scenario's tax-only rate is now the schedule's rate on the *deducted*
+        // income, so the effective rate is exactly that plus payroll charges --
+        // not below it. The old assertion expected a gap, which existed only
+        // because the two accessors disagreed about the base.
+        assert!(
+            (scenario.effective_tax_rate
+                - (scenario.tax_only_rate
                     + schedule.social_security_rate
                     + schedule.unemployment_rate
-                    + schedule.pension_rate,
-                "effective rate should be lower than the official table plus payroll charges when standard deductions are applied");
+                    + schedule.pension_rate))
+                .abs()
+                < 1e-9,
+            "effective rate should be the tax-only rate plus payroll charges"
+        );
         assert!(scenario.effective_tax_rate > schedule.social_security_rate
                     + schedule.unemployment_rate
                     + schedule.pension_rate,

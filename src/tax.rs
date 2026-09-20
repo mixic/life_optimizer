@@ -300,7 +300,7 @@ impl TaxSchedule {
         let taxable_income = self.taxable_income_after_estimated_deductions(gross_income);
 
         // Get base tax rate from official table on reduced taxable income.
-        let base_tax_rate = self.lookup_tax_rate(taxable_income);
+        let base_tax_rate = self.tax_rate_on_taxable(taxable_income);
 
         // Add social security contributions
         let social_security_total = self.social_security_rate +
@@ -311,9 +311,29 @@ impl TaxSchedule {
         base_tax_rate + social_security_total
     }
 
-    /// Get tax-only rate (without social security) - matches official document
+    /// Get tax-only rate (without social security) for a **gross** income.
+    ///
+    /// Deductions are applied first, because the rate schedule is a function of
+    /// *taxable* income and applying it to gross income overstates the rate:
+    /// 17.24% instead of 15.76% for a single Bern household at CHF 100,000.
+    ///
+    /// This previously looked the rate up on gross income while
+    /// [`effective_tax_rate`](Self::effective_tax_rate) looked it up on deducted
+    /// income, so the printed "Tax Rate" and the tax actually charged disagreed
+    /// by 1.3–1.8 percentage points on the same schedule. Use
+    /// [`tax_rate_on_taxable`](Self::tax_rate_on_taxable) when the taxable figure
+    /// is already known, rather than converting it back to a gross one.
     pub fn tax_only_rate(&self, gross_income: f64) -> f64 {
-        self.lookup_tax_rate(gross_income)
+        let taxable = self.taxable_income_after_estimated_deductions(gross_income);
+        self.tax_rate_on_taxable(taxable)
+    }
+
+    /// The rate schedule applied to an income that is **already taxable**.
+    ///
+    /// The only way to ask "what rate does the published schedule give on this
+    /// taxable income?" without deductions being applied a second time.
+    pub fn tax_rate_on_taxable(&self, taxable_income: f64) -> f64 {
+        self.lookup_tax_rate(taxable_income)
     }
 
     /// Lookup tax rate from official table with linear interpolation
@@ -367,21 +387,25 @@ mod tests {
     #[test]
     fn test_exact_official_rates_single() {
         let schedule = TaxSchedule::bern_city_default(false, 0);
-        
-        // Test tax-only rate (should match document exactly)
-        let rate_40k = schedule.tax_only_rate(40_000.0);
+
+        // The published table's rates, at the published thresholds. These are
+        // `tax_rate_on_taxable` values: the document quotes a rate for a given
+        // *taxable* income, and `tax_only_rate` takes gross income and deducts
+        // first. Using the gross method here subtracted the deduction estimate a
+        // second time, which is how the base inconsistency stayed hidden.
+        let rate_40k = schedule.tax_rate_on_taxable(40_000.0);
         assert!((rate_40k - 0.1008).abs() < 0.001, 
                 "40k tax should be 10.08%, got {:.2}%", rate_40k * 100.0);
         
-        let rate_60k = schedule.tax_only_rate(60_000.0);
+        let rate_60k = schedule.tax_rate_on_taxable(60_000.0);
         assert!((rate_60k - 0.1345).abs() < 0.001,
                 "60k tax should be 13.45%, got {:.2}%", rate_60k * 100.0);
         
-        let rate_80k = schedule.tax_only_rate(80_000.0);
+        let rate_80k = schedule.tax_rate_on_taxable(80_000.0);
         assert!((rate_80k - 0.1538).abs() < 0.001,
                 "80k tax should be 15.38%, got {:.2}%", rate_80k * 100.0);
         
-        let rate_100k = schedule.tax_only_rate(100_000.0);
+        let rate_100k = schedule.tax_rate_on_taxable(100_000.0);
         assert!((rate_100k - 0.1724).abs() < 0.001,
                 "100k tax should be 17.24%, got {:.2}%", rate_100k * 100.0);
     }
@@ -405,12 +429,51 @@ mod tests {
     fn test_interpolation() {
         let schedule = TaxSchedule::bern_city_default(false, 0);
         
-        // Test value between 80k and 90k
-        let rate_85k = schedule.tax_only_rate(85_000.0);
+        // Between the published 80k and 90k points, on the taxable figure those
+        // points refer to. See `test_exact_official_rates_single` for why this is
+        // the taxable variant rather than `tax_only_rate`.
+        let rate_85k = schedule.tax_rate_on_taxable(85_000.0);
         
         // Should be between 15.38% and 16.26%
         assert!(rate_85k > 0.1538 && rate_85k < 0.1626,
                 "85k rate should be between 15.38% and 16.26%, got {:.2}%", rate_85k * 100.0);
+    }
+
+    /// The two public rate accessors must agree on the same income.
+    ///
+    /// They did not: `tax_only_rate` looked the schedule up on gross income while
+    /// `effective_tax_rate` looked it up on deducted income, so the printed "Tax
+    /// Rate" was 1.3-1.8 percentage points above the rate backing the tax the
+    /// tool actually charged. The invariant is that the tax-only component of the
+    /// effective rate equals the tax-only rate.
+    #[test]
+    fn rate_accessors_agree_on_the_same_income() {
+        for schedule in [
+            TaxSchedule::bern_city_default(false, 0),
+            TaxSchedule::bern_city_default(true, 2),
+        ] {
+            for gross in [40_000.0, 60_000.0, 100_000.0, 140_000.0] {
+                let taxable = schedule.taxable_income_after_estimated_deductions(gross);
+                let via_gross = schedule.tax_only_rate(gross);
+                let via_taxable = schedule.tax_rate_on_taxable(taxable);
+                assert!(
+                    (via_gross - via_taxable).abs() < 1e-12,
+                    "at gross {gross}: tax_only_rate {via_gross} != \
+                     tax_rate_on_taxable(taxable) {via_taxable}"
+                );
+
+                // And the effective rate is exactly the tax-only rate plus the
+                // social-security components.
+                let social = schedule.social_security_rate
+                    + schedule.unemployment_rate
+                    + schedule.pension_rate;
+                let effective = schedule.effective_tax_rate(gross);
+                assert!(
+                    (effective - (via_gross + social)).abs() < 1e-12,
+                    "at gross {gross}: effective {effective} != tax-only {via_gross} + social {social}"
+                );
+            }
+        }
     }
 
     #[test]

@@ -721,6 +721,7 @@ impl TaxSchedule {
     pub fn after_tax_income(&self, gross: f64) -> f64;
     pub fn effective_tax_rate(&self, gross: f64) -> f64;
     pub fn tax_only_rate(&self, gross: f64) -> f64;  // excludes BVG/social
+    pub fn tax_rate_on_taxable(&self, taxable: f64) -> f64;  // already-deducted income
 }
 ```
 
