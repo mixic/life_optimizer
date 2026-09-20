@@ -467,12 +467,54 @@ fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
             },
         },
 
-        // Aargau and Zürich are priced entirely from the bulk import below:
-        // scale from the ESTV "Tarife" export, Steuerfuss and capital-municipal
-        // multiplier from the ESTV Steuerfuss workbook, both at
-        // [`SELF_ASSESSMENT_YEAR`]. They were previously hand-entered, which
-        // pinned them to a stale vintage for no benefit — the workbook carries
-        // the same cells.
+        // Basel-Landschaft: the ESTV Steuerfuss workbook leaves the Liestal row
+        // **entirely blank for all 32 years it covers** — both the cantonal and
+        // the municipal cell — so there is nothing for the bulk import to read,
+        // and a comment in the source spreadsheet does not explain why.
+        //
+        // The reason is structural, and it is why the figure is determinate
+        // despite the blank: BL does not adjust its multiplier annually. The
+        // Steuerfussdekret (SGS 331.2) fixes the cantonal Steuerfuss at 100% of
+        // the normal state tax, and when revenue must change the canton amends
+        // the **tariff brackets** instead of the multiplier. That is consistent
+        // with BL's tariff being the only one in this repository published as
+        // algebraic formulas rather than a band table.
+        //
+        // The 100% figure is stated verbatim in a Landrat *Vorlage* restating the
+        // decree: *"Der kantonale Einkommenssteuerfuss fuer das Steuerjahr ...
+        // betraegt 100 Prozent der normalen Staatsteuer vom Einkommen der
+        // natuerlichen Personen"*. The user supplied the Steuerfussdekret itself
+        // (SGS 331.2, in force 01.01.2022) as the legal source; its body text is
+        // image-only, so the decree's identity is machine-verifiable from that
+        // file but its article text is not quoted from here.
+        //
+        // Liestal's municipal multiplier is 65%, from a cantonal tax comparison
+        // rather than from an ESTV publication — the weakest source of the four
+        // figures this entry carries, and recorded as such so a better one can
+        // replace it without re-deriving anything else.
+        Canton::BaselLandschaft => CantonTaxData {
+            steuerfuss: Some(1.00),
+            steuerfuss_provenance: Provenance::Official {
+                source: "SGS 331.2, Dekret ueber den Steuerfuss (Steuerfussdekret BL) — \
+                         cantonal multiplier fixed at 100% of the normal state tax",
+                year: SELF_ASSESSMENT_YEAR,
+            },
+            base_scale: None,
+            base_scale_provenance: Provenance::Official {
+                source: "ESTV Steuerrechner, Tarife export (estv_scales_BL.xlsx, Formel)",
+                year: 2026,
+            },
+            capital_municipal_fuss: Some(0.65),
+            municipal_provenance: Provenance::Official {
+                source: "Liestal municipal Steuerfuss (65%) — cantonal comparison, \
+                         not an ESTV publication",
+                year: SELF_ASSESSMENT_YEAR,
+            },
+        },
+
+        // The cantons below are priced entirely from the bulk import: scale from
+        // the ESTV "Tarife" export, Steuerfuss and capital-municipal multiplier
+        // from the ESTV Steuerfuss workbook, both at [`SELF_ASSESSMENT_YEAR`].
         _ => CantonTaxData::unsourced(),
     }
 }
@@ -875,10 +917,15 @@ mod tests {
     ///   multiplier is not the printed figure.
     /// * `VS` — cell reads `3)`, footnoted *"Kein Vielfaches"*: Valais does not
     ///   express a cantonal multiplier at all.
-    /// * `BL` — the cell is blank, so there is nothing to read.
     /// * `FR` — the cantonal cell is blank; Fribourg splits income and wealth
     ///   rows instead.
-    const STEUERFUSS_SOURCE_EXCEPTIONS: &[&str] = &["GE", "VS", "BL", "FR"];
+    ///
+    /// `BL` used to be on this list and is deliberately no longer: its cell is
+    /// blank in the workbook for all 32 years, but the multiplier is fixed by law
+    /// (SGS 331.2, 100%), so it is *sourced* rather than absent. Removing it here
+    /// is what makes that visible — the exception list means "the source states
+    /// no figure", not "this project has not found one".
+    const STEUERFUSS_SOURCE_EXCEPTIONS: &[&str] = &["GE", "VS", "FR"];
 
     /// The bulk Steuerfuss import must reach every canton whose source cell
     /// actually held a multiplier.
@@ -1462,14 +1509,18 @@ mod tests {
     /// Basel-Landschaft publishes its tariff as algebraic expressions rather
     /// than a band table, so it exercises the formula path.
     ///
-    /// Its *multiplier* is blank in the 2026 ESTV workbook (the Liestal row is
-    /// empty for every year the workbook covers), so the canton still refuses —
-    /// but it must refuse for the multiplier, not for the tariff. This test pins
-    /// that distinction so "BL is unimplemented" can never again be true of the
-    /// formula machinery, and so the day a sourced multiplier arrives nothing
-    /// else has to change.
+    /// It was blocked for a while on its Steuerfuss, and the reason is worth
+    /// keeping: the ESTV workbook leaves the Liestal row **entirely blank for all
+    /// 32 years it covers**, both cells. BL does not adjust its multiplier
+    /// annually — the Steuerfussdekret (SGS 331.2) fixes it at 100% of the normal
+    /// state tax, and revenue is changed by amending the tariff brackets instead.
+    /// That is precisely why the workbook cell is empty, and it is the structural
+    /// fact that makes the sourced figure determinate rather than absent.
+    ///
+    /// This test pins the whole chain: an imported formula tariff, a
+    /// legally-fixed multiplier, and a figure.
     #[test]
-    fn basel_landschaft_tariff_is_formulas_and_only_the_multiplier_is_missing() {
+    fn basel_landschaft_prices_from_a_formula_tariff() {
         let scale = imported_scale(Canton::BaselLandschaft)
             .expect("BL's Tarife export must be imported");
         assert!(
@@ -1497,31 +1548,73 @@ mod tests {
              applied on top of it"
         );
 
-        // The tariff itself computes: CHF 100,000 taxable, with a fictitious
-        // multiplier of 1.0, gives the raw formula result times 1.
+        // The tariff itself computes.
         let simple = crate::federal_tax::formula_tax(scale.formulas(false), 100_000.0);
         assert!(
             simple > 0.0 && simple < 20_000.0,
             "BL simple tax at 100k should be a plausible figure, got {simple}"
         );
-        let with_fuss = cantonal_tax_from_formulas(
-            scale.formulas(false),
-            100_000.0,
-            1.0,
-            None,
-            false,
-        )
-        .expect("the formula path must produce a figure");
+        let with_fuss =
+            cantonal_tax_from_formulas(scale.formulas(false), 100_000.0, 1.0, None, false)
+                .expect("the formula path must produce a figure");
         assert!((with_fuss - simple).abs() < 1e-9);
 
-        // Only the two multipliers are unsourced.
-        let missing = canton_tax_data(Canton::BaselLandschaft).missing_fields(Canton::BaselLandschaft);
-        assert_eq!(
-            missing,
-            vec!["cantonal Steuerfuss", "capital municipal Steuerfuss"],
-            "BL should now be blocked on its multipliers alone"
+        // And the canton is now priceable, with both multipliers sourced.
+        assert!(
+            is_priceable(Canton::BaselLandschaft),
+            "BL has a formula tariff and a legally-fixed 100% multiplier, so it \
+             must be priceable"
         );
-        assert!(!is_priceable(Canton::BaselLandschaft));
+        let data = canton_tax_data(Canton::BaselLandschaft);
+        assert_eq!(data.steuerfuss, Some(1.00), "BL's cantonal Steuerfuss is 100%");
+        assert_eq!(data.capital_municipal_fuss, Some(0.65), "Liestal adds 65%");
+        assert!(
+            data.missing_fields(Canton::BaselLandschaft).is_empty(),
+            "nothing should be missing: {:?}",
+            data.missing_fields(Canton::BaselLandschaft)
+        );
+
+        // End to end: 1.65 x the simple tax, and marriage costs no more.
+        let single = cantonal_tax(Canton::BaselLandschaft, 100_000.0, false, true)
+            .expect("BL is priceable");
+        assert!(
+            (single - simple * 1.65).abs() < 0.5,
+            "expected {} at 100k, got {single}",
+            simple * 1.65
+        );
+        let married = cantonal_tax(Canton::BaselLandschaft, 100_000.0, true, true)
+            .expect("BL is priceable");
+        assert!(
+            married <= single + 0.5,
+            "BL's married tariff must not cost more: {married} vs {single}"
+        );
+        // At CHF 100,000 the two are equal, and that is the source's own shape
+        // rather than a missing married table: BL's married formulas differ from
+        // the single ones only by an extra 0.49% band running from CHF 8,366 to
+        // the first shared threshold at CHF 16,731. Above CHF 16,731 the two
+        // tables are the same expression, so BL expresses no marital relief at
+        // this income — which is a fact about BL, not a defect here.
+        //
+        // Note the export *also* declares `Splittingfaktor 2.0`. Applying it
+        // would give 2 x simple(50,000) = 6,981.51, a materially different
+        // figure, so it is worth being explicit that it is NOT applied: the
+        // export publishes separate per-subject tables, and the two axes are
+        // mutually exclusive throughout this model.
+        assert!(
+            (married - single).abs() < 0.5,
+            "expected the two BL tables to coincide above the shared threshold"
+        );
+        assert!(
+            scale.splitting_factor(true).is_none(),
+            "splitting must not be applied on top of per-subject tables"
+        );
+        // A plausible effective cantonal burden for a Swiss canton at 100k.
+        let rate = single / 100_000.0;
+        assert!(
+            (0.05..0.30).contains(&rate),
+            "BL's effective cantonal rate {:.1}% is implausible",
+            rate * 100.0
+        );
     }
 
     /// A canton with no imported scale must still refuse rather than fall back.

@@ -1,102 +1,76 @@
-Add a sourced deduction engine, and fix five selection bugs it exposed
+Price Basel-Landschaft from its legally-fixed Steuerfuss
 
-`src/deductions.rs` assesses a household against the imported ESTV rules, so the
-invented ~35%-cap estimate in `tax.rs` now has a sourced counterpart to be
-compared against. Test count rises from 175 to 186.
+Coverage rises from 22 to 23 of 26 cantons. BL's formula tariff already worked;
+what was missing was its multiplier, and it turns out not to be missing at all.
+Test count is unchanged at 186 -- one test was rewritten rather than added.
 
-The arithmetic is trivial; the work is selection
+The workbook is blank for a structural reason, not a gap
 
-The data holds 574 deduction rules per jurisdiction -- every deduction a canton
-offers. A taxpayer takes a SUBSET, so summing them would understate taxable income
-far more badly than the 35% cap overstates it. Selection is therefore explicit:
-each rule gets a `RuleCategory` from a closed list, a `Household` states the facts
-a category depends on, an unknown fact skips the category rather than assuming it,
-mutually exclusive variants are grouped so at most one applies, and anything
-unclassified is REPORTED rather than applied.
+The ESTV Steuerfuss workbook leaves the Liestal row ENTIRELY EMPTY for all 32
+years it covers -- both the cantonal and the municipal cell -- with no footnote
+explaining why. That is what kept BL unpriced after its tariff was implemented.
 
-Five bugs, all found by comparing output rather than by reasoning
+The reason is that BL does not adjust its multiplier annually. The
+Steuerfussdekret (SGS 331.2) fixes the cantonal Steuerfuss at 100% of the normal
+state tax, and when revenue has to change the canton amends the TARIFF BRACKETS
+instead. That is entirely consistent with BL being the only canton in this
+repository whose tariff is published as algebraic formulas rather than a band
+table -- the two facts are the same fact.
 
-Every one produced a plausible number rather than an error, which is why the
-module was built with a diagnostic beside the existing estimate from the start.
-Each is now a regression test:
+The 100% figure is stated verbatim in a Landrat Vorlage restating the decree:
+"Der kantonale Einkommenssteuerfuss fuer das Steuerjahr ... betraegt 100 Prozent
+der normalen Staatsteuer vom Einkommen der natuerlichen Personen". Liestal's
+municipal multiplier is 65%. BL at CHF 100,000 taxable now prices at 13.5%
+effective (simple tax x 1.65).
 
-  Verheiratetenabzug on a single taxpayer            CHF 2,800 too much
-  all three child age brackets summed                37.4% of income deducted
-  secondary-employment expenses with no such income  CHF 2,400 too much
-  pillar 3a tied AND untied variants summed          CHF 7,056 deducted twice
-  contains("Kind") matched "ohne Kind"               disabled FR's and VS's
-                                                     single-person deductions
+Source strength is recorded per figure, because the two are not equal
 
-The last is the same class of mistake as reading `Kantons-Id` as `Kanton`:
-`"ohne Kind"` contains `"Kind"`, so a keyword test demanded children for a scale
-that explicitly excludes them. Child conditions had to be parsed as conditions
-rather than searched for as keywords. The `Alleinerziehende oder Verheiratete`
-scale had a parallel flaw: "Alleinerziehende" is a single parent, not a married
-household, so gating it on `married` was wrong in the other direction.
+  cantonal 100%   SGS 331.2, Dekret ueber den Steuerfuss, in force 01.01.2022
+  municipal 65%   a cantonal tax comparison, NOT an ESTV publication
 
-What the two models produce
+The Steuerfussdekret was supplied as a PDF. Its body text is image-only, so the
+decree's IDENTITY is machine-verifiable from the file (the extractor recovers the
+"Vademecum SGS 331.2" amendment table, the 16.12.2021 enactment date and the
+"Gesetzessammlung Kanton Basel-Landschaft" signature) but its article text cannot
+be quoted from it. The municipal figure is therefore the weakest of the four
+numbers this entry carries, and its provenance says so -- so replacing it needs no
+re-derivation of anything else.
 
-At CHF 100,000 gross for a household declaring nothing optional:
+BL used to be listed as a source exception and is deliberately removed from that
+list. The list means "the source states no figure", not "this project has not
+found one", and conflating the two is what let a determinate multiplier sit
+unused. `source_exception_set_is_exactly_as_documented` now expects FR, GE, VS.
 
-  Bund  single              sourced  3,000 ( 3.0%)  estimate 15,700 (15.7%)
-  Bund  married, 2 children sourced 12,600 (12.6%)  estimate 15,700 (15.7%)
-  ZH    single              sourced  3,300 ( 3.3%)  estimate 15,700 (15.7%)
-  ZH    married, 2 children sourced 12,600 (12.6%)  estimate 28,300 (28.3%)
-  AG    single              sourced  3,000 ( 3.0%)  estimate 15,700 (15.7%)
-  AG    married, 2 children sourced 15,400 (15.4%)  estimate 28,300 (28.3%)
+A finding about BL's married tariff, recorded rather than "fixed"
 
-The estimate is roughly FIVE TIMES the sourced figure for a single earner. It
-overstates deductions and therefore understates tax -- an error in the taxpayer's
-favour, which is part of why it survived this long without anyone questioning it.
+At CHF 100,000 the single and married cantonal figures are EQUAL. That is the
+source's own shape, not a missing table: BL's married formulas differ from the
+single ones only by an extra 0.49% band running from CHF 8,366 to the first shared
+threshold at CHF 16,731. Above CHF 16,731 the two tables are the same expression,
+so BL expresses no marital relief at this income.
 
-The sourced figure is lower for a real reason, not an omission: this household
-declares no insurance premiums, no pillar 3a, no childcare and no commuting costs,
-and the engine refuses to invent them. With all four declared plus a second income
-the federal total at CHF 100,000 becomes 42,056 (42.1%), with pillar 3a,
-childcare, commuting and the second-earner deduction each itemised -- so the model
-does reach high totals when a household actually has the facts to support them.
+Worth being explicit about the trap this avoided: the same export also declares
+`Splittingfaktor 2.0`. Applying it would give 2 x simple(50,000) = 6,981.51
+instead of 11,218.97 -- a materially different figure, and a marriage BONUS the
+canton does not grant. Splitting is not applied because the export publishes
+separate per-subject tables, and the test asserts that, so the two axes cannot
+silently be combined.
 
-The tax base is deliberately NOT switched
+Test rewritten
 
-`tax.rs` still uses the estimate. Changing it would move every number the tool
-produces, and that should be a visible decision made against a stated comparison
-rather than smuggled into the same commit as the engine. The module doc comment
-says so, and SWISS_TAX_DATA.md section 4a records the table above.
+  basel_landschaft_tariff_is_formulas_and_only_the_multiplier_is_missing
+    -> basel_landschaft_prices_from_a_formula_tariff
 
-Also fixed
+which now pins the whole chain end to end: imported formula tariff, legally-fixed
+multiplier, a figure at CHF 100,000, the married/single coincidence and its
+reason, the splitting factor being absent, and both multipliers' values.
 
-  - Means-tested scales now match for single low earners in FR and VS, which the
-    `"ohne Kind"` bug had disabled entirely.
-  - Totals are capped at gross income, with `uncapped_total()` exposing the
-    difference: Valais's phase-out table legitimately allows CHF 21,250, which
-    exceeds a CHF 15,000 income.
-  - `Schwellwert` rows classify into the means-tested family rather than counting
-    as unclassified, so the `unclassified()` list surfaces rows that genuinely
-    need attention instead of being filled with known parameters.
+Documentation
 
-Limitations, stated rather than hidden
-
-  - Property, Eigenmietwert and pensioner deductions are not applied and are
-    reported in `skipped()`; Eigenmietwert also has a matching income ADDITION
-    that is not modelled, so a homeowner's position is incomplete both ways.
-  - Within a mutually exclusive family the larger amount is taken when the
-    distinguishing fact is not held (a child's age, a tied pension solution), and
-    the alternative is reported as skipped so the uncertainty is visible.
-  - Means-tested scales are applied to income as given, not income net of the
-    other deductions; that circularity is unresolved.
-
-Tests (tests/deduction_engine.rs, 11 new)
-
-  marriage_allowance_requires_a_married_household
-  mutually_exclusive_child_brackets_are_not_summed
-  secondary_employment_expenses_need_a_secondary_income
-  pillar_3a_variants_are_alternatives_not_additions
-  means_tested_scales_match_child_conditions_as_conditions
-  means_tested_deductions_phase_down        deductions_never_exceed_income
-  unclassified_rules_are_reported_not_dropped
-  classification_handles_the_ambiguous_labels
-  unknown_jurisdiction_yields_nothing
-  sourced_deductions_differ_from_the_hand_entered_estimate
+SWISS_TAX_DATA.md: coverage corrected to 23/3, the refusing table cut to FR, GE
+and VS, and the BL section now records the structural reason for the blank
+workbook row, both sources with their differing strength, and the married-tariff
+finding.
 
 Verified: 186 tests pass, clippy at 9 warnings -- the same pre-existing set as
-HEAD, no new ones.
+HEAD, no new ones. `--canton FR` still refuses and now lists 23 priced cantons.

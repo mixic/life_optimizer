@@ -147,26 +147,25 @@ they imply. Two things worth noting:
 
 ---
 
-#### Coverage: 22 of 26 cantons priceable
+#### Coverage: 23 of 26 cantons priceable
 
-**Priceable (22):** AG AI AR BE BS GL GR JU LU NE NW OW SG SH SO SZ TG TI UR VD ZG ZH
+**Priceable (23):** AG AI AR BE BL BS GL GR JU LU NE NW OW SG SH SO SZ TG TI UR VD ZG ZH
 
-Bern is priced by its standalone Stadt Bern table; the other 21 use the imported
+Bern is priced by its standalone Stadt Bern table; the other 22 use the imported
 scale (or flat rate, or BL's formulas) multiplied by the Steuerfuss.
 
-**Refusing (4):** BL, FR, GE, VS — and all four now for the *same* reason: their
-cantonal Steuerfuss is not a plain number in the ESTV workbook. That is a single
-kind of missing input rather than four different pieces of engineering, which is
-the substantive change the formula import made.
-
-**Refusing (4):**
+**Refusing (3):**
 
 | Canton | Cause |
 |---|---|
-| `BL` | tariff imported, but its Steuerfuss cell is blank (see below) |
 | `GE` | scale imported, but its Steuerfuss cell reads `148.5%9)` with a 12% rebate footnote |
 | `VS` | scale imported, but its Steuerfuss cell is `3)` — *"Kein Vielfaches"* |
 | `FR` | scale imported, but its Steuerfuss cell is blank |
+
+All three refuse for the *same* reason: their cantonal Steuerfuss is not a plain
+number in the ESTV workbook. `BL` used to be on this list and left it when its
+legally-fixed 100% multiplier was sourced — not when its tariff was implemented,
+which had happened earlier and changed nothing.
 
 #### Four tariff shapes
 
@@ -215,12 +214,29 @@ tax:
    adds one segment the single table does not have: a `0.49 * $wert$ / 100` relief
    band from CHF 8,366.
 
-The tariff computes correctly today — but **BL is still not priceable**, because
-the Liestal row of the ESTV Steuerfuss workbook is *empty* for every year the
-workbook covers (2024, 2025 and 2026 alike). So BL is blocked on its multiplier,
-not its tariff, and `canton_tax_data(BL).missing_fields()` reports exactly those
-two multipliers. Supplying a sourced Steuerfuss is now the only thing between BL
-and a figure; nothing in the code needs to change.
+The tariff computes correctly — and **BL is now priceable**, since its multiplier
+turned out to be determinate even though the workbook is blank.
+
+The ESTV Steuerfuss workbook leaves the Liestal row **entirely empty for all 32
+years it covers** — both the cantonal and the municipal cell. The reason is
+structural rather than a gap: BL does not adjust its multiplier annually. The
+**Steuerfussdekret (SGS 331.2)** fixes the cantonal Steuerfuss at **100% of the
+normal state tax**, and when revenue has to change, the canton amends the *tariff
+brackets* instead. That fits BL being the only canton here whose tariff is
+published as formulas rather than a band table.
+
+The 100% figure is stated verbatim in a Landrat *Vorlage* restating the decree:
+*"Der kantonale Einkommenssteuerfuss für das Steuerjahr … beträgt 100 Prozent der
+normalen Staatsteuer vom Einkommen der natürlichen Personen"*. Liestal's municipal
+multiplier is **65%**.
+
+Source strength differs between the two figures and is recorded in the code as
+such: the cantonal 100% comes from the decree itself (SGS 331.2, in force
+01.01.2022), while the municipal 65% comes from a cantonal tax comparison rather
+than an ESTV publication — the weakest figure in the entry, and labelled that way
+so a better source can replace it without touching anything else.
+
+BL at CHF 100,000 taxable prices at **13.5%** effective (simple tax × 1.65).
 
 #### Steuerfuss vintage — resolved
 
@@ -249,7 +265,7 @@ Scales are imported from ESTV "Tarife" exports by
 `tools/import_estv_scales.py`, which reads **every canton present in a file**, so
 one workbook can add several. Current coverage:
 
-Priceable end to end today: the 22 cantons listed above.
+Priceable end to end today: the 23 cantons listed above.
 
 #### Marital treatment is expressed in two incompatible ways
 
