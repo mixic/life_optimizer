@@ -62,9 +62,12 @@ fn omitted_canton_uses_bern_and_says_so() {
 
 /// Naming a canton without a loaded scale must fail loudly. This is the
 /// objective's central requirement.
+///
+/// Ticino is used deliberately rather than Zürich: Zürich has since gained an
+/// imported scale and now prices, so it can no longer serve as the failing case.
 #[test]
 fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
-    let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", "ZH"]);
+    let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", "TI"]);
 
     assert_eq!(
         output.status.code(),
@@ -72,7 +75,7 @@ fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
         "an unpriced canton must exit non-zero rather than return numbers"
     );
     let err = stderr(&output);
-    assert!(err.contains("cannot price canton ZH"), "got: {err}");
+    assert!(err.contains("cannot price canton TI"), "got: {err}");
     assert!(
         err.contains("base tax scale"),
         "the message must name what is actually missing: {err}"
@@ -91,6 +94,38 @@ fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
         !stdout(&output).contains("OPTIMAL SOLUTION"),
         "no result may be printed when the canton cannot be priced"
     );
+}
+
+/// Cantons whose scales have been imported must now produce a real result, and
+/// disclose which basis was used.
+///
+/// This is the counterweight to the failing case above: an import that silently
+/// did nothing would leave these cantons refusing, so the two tests together
+/// pin that the data actually reached the calculation.
+#[test]
+fn imported_cantons_produce_a_result_and_disclose_the_basis() {
+    for code in ["ZH", "BS", "LU", "SH", "SO", "AG"] {
+        let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", code]);
+
+        assert!(
+            output.status.success(),
+            "{code} should be priceable from the imported scale: {}",
+            stderr(&output)
+        );
+        let out = stdout(&output);
+        assert!(
+            out.contains("ESTV imported scale x Steuerfuss"),
+            "{code} should disclose its tax basis: {out}"
+        );
+        assert!(
+            out.contains("Verify against your own tax assessment"),
+            "{code} should carry a verification reminder"
+        );
+        assert!(
+            out.contains("OPTIMAL SOLUTION") || out.contains("NO AFFORDABLE"),
+            "{code} should produce a projection"
+        );
+    }
 }
 
 /// The Bern path must remain fully functional — fixing the flag must not break

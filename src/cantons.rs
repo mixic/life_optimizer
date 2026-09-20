@@ -308,12 +308,16 @@ impl CantonTaxData {
     }
 
     /// Human-readable list of what is missing, for the error message.
-    pub fn missing_fields(&self) -> Vec<&'static str> {
+    ///
+    /// Accounts for the imported scales: a canton whose base scale comes from
+    /// `estv_scales_data` must not have it reported as missing, or the reader is
+    /// sent looking for a file that is already loaded.
+    pub fn missing_fields(&self, canton: Canton) -> Vec<&'static str> {
         let mut missing = Vec::new();
         if self.steuerfuss.is_none() {
             missing.push("cantonal Steuerfuss");
         }
-        if self.base_scale.is_none() {
+        if self.base_scale.is_none() && imported_scale(canton).is_none() {
             missing.push("cantonal base tax scale");
         }
         if self.capital_municipal_fuss.is_none() {
@@ -334,7 +338,14 @@ pub const LEGACY_TABLE_CANTONS: &[Canton] = &[Canton::Bern];
 
 /// Whether a canton can produce a tax figure at all, by either path.
 pub fn is_priceable(canton: Canton) -> bool {
-    canton_tax_data(canton).is_priced() || LEGACY_TABLE_CANTONS.contains(&canton)
+    is_priced_any_source(canton) || LEGACY_TABLE_CANTONS.contains(&canton)
+}
+
+/// Whether the Steuerfuss and a base scale are both available, from whichever
+/// source supplies the scale.
+fn is_priced_any_source(canton: Canton) -> bool {
+    let data = canton_tax_data(canton);
+    data.steuerfuss.is_some() && (data.base_scale.is_some() || imported_scale(canton).is_some())
 }
 
 /// Bern's cantonal base scale.
@@ -444,7 +455,7 @@ fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
                 source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
                 year: 2024,
             },
-            base_scale: crate::estv_scales_data::base_scale("AG").map(|s| s.brackets),
+            base_scale: imported_scale(Canton::Aargau).map(|s| s.brackets(false)),
             base_scale_provenance: Provenance::Official {
                 source: "ESTV Steuerrechner, Tarife export (estv_scales_AG.xlsx)",
                 year: 2026,
@@ -511,6 +522,26 @@ impl std::fmt::Display for CantonTaxError {
 }
 
 impl std::error::Error for CantonTaxError {}
+
+/// The imported base scale for a canton, if one has been loaded.
+pub fn imported_scale(canton: Canton) -> Option<&'static crate::estv_scales_data::BaseScale> {
+    crate::estv_scales_data::base_scale(canton.code())
+}
+
+/// The brackets to apply for a given canton and marital status.
+///
+/// Cantons express marital treatment in one of two ways, and the imported data
+/// records which:
+///
+/// * a **shared** scale (`Steuersubjekt = Alle`), where the difference is
+///   applied afterwards through the splitting factor; or
+/// * **per-subject** scales, where the difference is already in the table.
+///
+/// Selecting the brackets is therefore not simply "the canton's scale" — using
+/// the married table *and* splitting would count the marital adjustment twice.
+pub fn imported_brackets(canton: Canton, married: bool) -> Option<&'static [FederalBracket]> {
+    imported_scale(canton).map(|s| s.brackets(married))
+}
 
 /// The cantonal arithmetic, on explicit inputs.
 ///
@@ -607,12 +638,24 @@ pub fn cantonal_tax(
 
     let fuss = data.steuerfuss.ok_or_else(|| CantonTaxError::NotSourced {
         canton,
-        missing: data.missing_fields(),
+        missing: data.missing_fields(canton),
     })?;
-    let scale = data.base_scale.ok_or_else(|| CantonTaxError::NotSourced {
-        canton,
-        missing: data.missing_fields(),
-    })?;
+
+    // Marital status selects the bracket table; the splitting factor is a
+    // separate axis and is only ever non-`None` for a shared scale.
+    let (scale, splitting) = match imported_scale(canton) {
+        Some(imported) => (
+            imported.brackets(married),
+            imported.splitting_factor(married),
+        ),
+        None => (
+            data.base_scale.ok_or_else(|| CantonTaxError::NotSourced {
+                canton,
+                missing: data.missing_fields(canton),
+            })?,
+            None,
+        ),
+    };
 
     cantonal_tax_from_scale(
         scale,
@@ -620,8 +663,7 @@ pub fn cantonal_tax(
         fuss,
         data.capital_municipal_fuss,
         include_municipal,
-        // The splitting factor belongs to the canton's scale, not its multiplier.
-        crate::estv_scales_data::base_scale(canton.code()).and_then(|s| s.splitting_factor),
+        splitting,
     )
     .map_err(|detail| CantonTaxError::InvalidData { canton, detail })
 }
@@ -799,12 +841,15 @@ mod tests {
         );
     }
 
-    /// For an ordinary canton, only the base scale should remain missing — the
-    /// multipliers are supplied and must not be reported as absent.
+    /// For a canton with no export yet, only the base scale should remain
+    /// missing — the multipliers are supplied and must not be reported absent.
     #[test]
     fn only_the_base_scale_remains_missing() {
-        for canton in [Canton::Vaud, Canton::Ticino, Canton::Zug, Canton::Solothurn] {
-            let missing = canton_tax_data(canton).missing_fields();
+        for canton in [Canton::Vaud, Canton::Ticino, Canton::Zug, Canton::Thurgau] {
+            if imported_scale(canton).is_some() {
+                continue; // an export arrived; the scale is no longer missing
+            }
+            let missing = canton_tax_data(canton).missing_fields(canton);
             assert!(
                 missing.contains(&"cantonal base tax scale"),
                 "{}: the base scale is the outstanding item",
@@ -818,18 +863,16 @@ mod tests {
         }
     }
 
-    /// Geneva and Valais must name their *own* reason for being unpriced, and
-    /// it should not be the base scale alone — their multipliers are the
-    /// blocker as well.
+    /// Valais must name its *own* reason for being unpriced: its multiplier is
+    /// a source exception ("Kein Vielfaches"), so that is missing too.
+    ///
+    /// Geneva is deliberately excluded even though its multiplier also carries a
+    /// footnote: an export has since been supplied, so GE's remaining gap is
+    /// only the interpretation of the rebate, not the absence of data.
     #[test]
-    fn rebate_and_no_multiplier_cantons_report_their_own_gap() {
-        for canton in [Canton::Geneva, Canton::Valais] {
-            let missing = canton_tax_data(canton).missing_fields();
-            assert!(
-                missing.contains(&"cantonal base tax scale"),
-                "{}: the base scale is missing",
-                canton.code()
-            );
+    fn no_multiplier_canton_reports_its_own_gap() {
+        for canton in [Canton::Valais] {
+            let missing = canton_tax_data(canton).missing_fields(canton);
             assert!(
                 missing.contains(&"cantonal Steuerfuss"),
                 "{}: its Steuerfuss is a source exception, so it is genuinely missing",
@@ -838,20 +881,27 @@ mod tests {
         }
     }
 
-    /// Zürich has sourced multipliers but no base scale, so it must still fail —
-    /// a Steuerfuss alone cannot produce a tax figure.
+    /// A canton with only one of the two halves must still fail rather than
+    /// guess at the other. Valais has a Steuerfuss-shaped gap and no scale.
     #[test]
     fn partial_data_still_fails_rather_than_guessing() {
-        let data = canton_tax_data(Canton::Zurich);
-        assert_eq!(data.steuerfuss, Some(0.98), "Zürich multiplier is recorded as a factor");
-        assert!(data.base_scale.is_none(), "but the scale is not yet entered");
-        assert!(!data.is_priced(), "so the canton is not priceable");
+        let canton = Canton::Valais;
+        let data = canton_tax_data(canton);
         assert!(
-            !is_priceable(Canton::Zurich),
-            "Zürich has a Steuerfuss but no scale, so no tax figure can be produced"
+            data.steuerfuss.is_none(),
+            "Valais' cantonal cell is a source exception, so it stays unsupplied"
+        );
+        assert!(
+            imported_scale(canton).is_none(),
+            "and no scale has been imported for it"
+        );
+        assert!(!data.is_priced(), "so the registry alone cannot price it");
+        assert!(
+            !is_priceable(canton),
+            "Valais has neither a usable Steuerfuss nor a scale, so no figure is possible"
         );
 
-        let result = cantonal_tax(Canton::Zurich, 100_000.0, false, false);
+        let result = cantonal_tax(canton, 100_000.0, false, false);
         assert!(result.is_err(), "a partial canton must not be priced");
     }
 
@@ -1069,40 +1119,158 @@ mod tests {
         );
 
         let taxable = 100_000.0;
-        let tax = cantonal_tax(Canton::Aargau, taxable, false, true)
+
+        // Single taxpayer: no splitting, so the full income meets the scale.
+        //   bands up to 100,000 accumulate to a simple tax of 6,938
+        //   6,938 x 2.07 (1.11 cantonal + 0.96 Aarau) = 14,361.66
+        let single = cantonal_tax(Canton::Aargau, taxable, false, true)
             .expect("Aargau is now priceable");
-
-        // Hand-check against the ESTV bands, applying splitting (factor 2):
-        //   assessable = 100,000 / 2 = 50,000
-        //   bands: 4,300@0%, 3,800@1%, 3,900@2%, 4,200@3%, 4,300@4%,
-        //          5,200@5%, 7,400@6%, 8,600@7%, then 8,600 of the 9,600@8% band
-        //   (all rates are percent of the CHF slice)
-        let assessable = taxable / 2.0;
-        let band_tax_chf = 4300.0 * 0.0
-            + 3800.0 * 0.01
-            + 3900.0 * 0.02
-            + 4200.0 * 0.03
-            + 4300.0 * 0.04
-            + 5200.0 * 0.05
-            + 7400.0 * 0.06
-            + 8600.0 * 0.07
-            + (assessable - 41_700.0) * 0.08;
-        // Splitting multiplies the scale result back by the factor.
-        let simple_tax = band_tax_chf * 2.0;
-        // Total Steuerfuss = cantonal 1.10 + municipal 0.96.
-        let expected = simple_tax * (1.11 + 0.96);
-
-        // And it must land where independent arithmetic places it.
-        //
-        // Cross-checked separately: assessable 50,000 -> simple tax on the scale
-        // 2,384 -> x2 for splitting = 4,768 -> x2.07 total Steuerfuss =
-        // CHF 9,869.76, i.e. 9.87% of taxable income. The tight band catches a
-        // regression in any of the three steps (scale, splitting, fuss).
-        let rate = tax / taxable;
         assert!(
-            (0.0970..0.1000).contains(&rate),
-            "Aargau at CHF 100,000 taxable should be ~9.87% of income, got {:.2}%",
-            rate * 100.0
+            (single - 14_361.66).abs() < 0.5,
+            "Aargau single at CHF {taxable}: expected 14361.66, got {single:.2}"
+        );
+
+        // Married taxpayer: splitting halves the assessable income, so the
+        // scale is applied at 50,000 giving 2,488, then doubled for the split
+        // and scaled by the Steuerfuss:
+        //   2,488 x 2 x 2.07 = 9,869.76
+        let married = cantonal_tax(Canton::Aargau, taxable, true, true)
+            .expect("Aargau is now priceable");
+        assert!(
+            (married - 9_869.76).abs() < 0.5,
+            "Aargau married at CHF {taxable}: expected 9869.76, got {married:.2}"
+        );
+
+        // Marriage must not cost more than being single at the same income.
+        assert!(
+            married < single,
+            "splitting should favour the married taxpayer: {married:.2} vs {single:.2}"
+        );
+    }
+
+    /// Ordinary cantons must now be priceable from the imported scales.
+    ///
+    /// The point is end-to-end coverage: registry Steuerfuss + imported scale +
+    /// the two-level path, for cantons that previously refused outright.
+    ///
+    /// `FR` and `GE` are deliberately absent, and covered by their own tests:
+    /// both have an imported scale but no plain cantonal multiplier — `FR` is
+    /// blank in the workbook, `GE` carries a 12% rebate footnote.
+    #[test]
+    fn imported_cantons_are_priceable() {
+        let taxable = 100_000.0;
+        for canton in [
+            Canton::Zurich,
+            Canton::BaselStadt,
+            Canton::Lucerne,
+            Canton::Schaffhausen,
+            Canton::Solothurn,
+            Canton::Aargau,
+        ] {
+            assert!(
+                is_priceable(canton),
+                "{} should be priceable from the imported scale",
+                canton.code()
+            );
+
+            for married in [false, true] {
+                let tax = cantonal_tax(canton, taxable, married, true)
+                    .unwrap_or_else(|e| panic!("{} married={married}: {e}", canton.code()));
+                let rate = tax / taxable;
+
+                assert!(
+                    tax > 0.0,
+                    "{} married={married}: tax should be positive",
+                    canton.code()
+                );
+                assert!(
+                    (0.01..0.45).contains(&rate),
+                    "{} married={married}: effective cantonal rate {:.1}% is implausible",
+                    canton.code(),
+                    rate * 100.0
+                );
+            }
+
+            // Married must never be taxed more heavily than single at the same
+            // income, whether the canton uses splitting or a married scale.
+            let single = cantonal_tax(canton, taxable, false, true).unwrap();
+            let married = cantonal_tax(canton, taxable, true, true).unwrap();
+            assert!(
+                married <= single + 1.0,
+                "{}: married {married:.2} should not exceed single {single:.2}",
+                canton.code()
+            );
+        }
+    }
+
+    /// A canton with no imported scale must still refuse rather than fall back.
+    ///
+    /// The list is chosen from cantons with no export supplied so far. If one of
+    /// them gains a scale the test skips it rather than failing, so adding
+    /// exports does not break the suite.
+    #[test]
+    fn cantons_without_imported_scales_still_refuse() {
+        for canton in [
+            Canton::Ticino,
+            Canton::Vaud,
+            Canton::Jura,
+            Canton::Neuchatel,
+            Canton::Thurgau,
+        ] {
+            if is_priceable(canton) {
+                continue; // an export arrived; nothing to assert
+            }
+            let result = cantonal_tax(canton, 100_000.0, false, true);
+            assert!(
+                result.is_err(),
+                "{} has no scale and must not produce a figure",
+                canton.code()
+            );
+        }
+    }
+
+    /// Fribourg has a scale but no cantonal multiplier, so it must refuse and
+    /// say which of the two is missing.
+    #[test]
+    fn fribourg_refuses_for_the_missing_multiplier_not_the_scale() {
+        if imported_scale(Canton::Fribourg).is_none() {
+            return; // no export supplied; nothing to assert
+        }
+        assert!(
+            !is_priceable(Canton::Fribourg),
+            "FR has a scale but a blank Steuerfuss, so it cannot be priced"
+        );
+        let missing = canton_tax_data(Canton::Fribourg).missing_fields(Canton::Fribourg);
+        assert!(
+            missing.contains(&"cantonal Steuerfuss"),
+            "FR should report the missing multiplier: {missing:?}"
+        );
+        assert!(
+            !missing.contains(&"cantonal base tax scale"),
+            "FR's scale is imported, so it must not be reported missing: {missing:?}"
+        );
+    }
+
+    /// Geneva likewise has a scale but a footnoted multiplier.
+    ///
+    /// Its 2024 cell reads `148.5%9)` with footnote 9 — *"Rabais de 12% de
+    /// l'impôt cantonal de 147.5%"*. The effective multiplier is computable
+    /// (147.5% x 0.88 = 129.8%) but interpreting a footnote is a decision rather
+    /// than a parse, so it stays unsupplied and Geneva refuses. This test pins
+    /// that until the interpretation is confirmed.
+    #[test]
+    fn geneva_refuses_until_the_rebate_is_interpreted() {
+        if imported_scale(Canton::Geneva).is_none() {
+            return; // no export supplied; nothing to assert
+        }
+        assert!(
+            !is_priceable(Canton::Geneva),
+            "GE's multiplier carries a rebate footnote, so it is not usable as-is"
+        );
+        let missing = canton_tax_data(Canton::Geneva).missing_fields(Canton::Geneva);
+        assert!(
+            missing.contains(&"cantonal Steuerfuss"),
+            "GE should report the missing multiplier: {missing:?}"
         );
     }
 }

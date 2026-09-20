@@ -1,66 +1,105 @@
-Supply Steuerfuss for all cantons and make generators emit the licence header
+Import ESTV tax scales for seven more cantons
 
-Fixes a coverage gap and two generator defects. Test count rises from 141 to 145.
+Adds cantonal base scales for BS, FR, GE, LU, SH, SO and ZH from ESTV
+"Tarife" exports, and reworks the importer for the two marital structures
+those exports revealed. Six cantons now price end to end; test count rises
+from 145 to 150.
 
-Steuerfuss supplied for all cantons
+Coverage
 
-Only three cantons (Bern, Aargau, Zuerich) were hand-entered in the registry,
-so 23 cantons reported "missing: cantonal Steuerfuss, capital municipal
-Steuerfuss" for multipliers that were already in the repository -- the generated
-import holds them for all 26 cantons, from the official ESTV workbook.
+Priceable: AG, BS, LU, SH, SO, ZH (six), plus Bern via its legacy standalone
+table. Previously only Bern and Aargau could produce a figure.
 
-canton_tax_data now layers the import over the hand-entered entries via
-with_imported_steuerfuss, so a deliberately hand-checked value still wins. The
-error messages are correspondingly honest: Schwyz and Vaud now report only the
-base scale as missing, while Geneva still reports its Steuerfuss because it
-genuinely has none.
+Imported but deliberately not priceable, because the canton has no usable
+multiplier:
 
-Four cantons are documented source exceptions, asserted exactly by
-source_exception_set_is_exactly_as_documented so a change in the source data
-fails the test rather than silently altering which cantons are priceable:
+  GE  scale imported, but its Steuerfuss cell reads "148.5%9)" with footnote 9:
+      a 12% rebate applies, so the printed figure is not the effective rate
+  FR  scale imported, but its Steuerfuss cell is blank
 
-  GE  148.5%9)  footnote 9: a 12% rebate applies, so the printed figure is not
-                the effective multiplier
-  VS  3)        footnote 3: "Kein Vielfaches" -- no cantonal multiplier stated
-  BL  blank     nothing to read
-  FR  blank     Fribourg uses separate income and wealth rows
+Both refuse and name the multiplier, not the scale, as missing.
 
-These are a decision to be made, not a file to be dropped in: GE's effective
-rate is computable (147.5% x 0.88) but interpreting a footnote is not something
-to hard-code without confirmation.
+Marital treatment is expressed in two incompatible ways
 
-Generators emit the GPL-3.0 header
+The exports forced this distinction, which a single-shape model would have got
+wrong. A canton either:
 
-Both generate_steuerfuss.py and import_estv_scales.py now write the licence
-header themselves rather than relying on tools/add_license_header.py being run
-afterwards. The first regeneration of canton_steuerfuss_data.rs silently
-stripped the header added in the previous commit; emitting it in the generator
-makes the output stable under regeneration.
+  * publishes ONE shared scale (Steuersubjekt = Alle) and expresses the marital
+    difference through a splitting factor -- AG 2.0, SH 1.9, SO 1.9; or
+  * publishes SEPARATE scales per Steuersubjekt, where the difference is already
+    in the table and splitting is NOT applied -- BS, LU, ZH.
 
-canton_steuerfuss_data.rs also gains steuerfuss_for_code, a generated match with
-one arm per canton so callers select on the enum without a string lookup. An
-unrecognised code returns None rather than a neighbouring canton's row.
+Applying splitting on top of a married-specific scale would count the marital
+adjustment twice. BaseScale now carries both axes, and
+BaseScale::splitting_factor(married) returns a value only for a married taxpayer
+on a shared scale. Note SH and SO use 1.9, not 2.0: partial splitting, which a
+hard-coded 2.0 would have silently mishandled.
 
-Tests added
+Verified figures
 
-  steuerfuss_is_supplied_for_every_canton_except_source_exceptions
-  source_exception_set_is_exactly_as_documented
-  only_the_base_scale_remains_missing
-  rebate_and_no_multiplier_cantons_report_their_own_gap
+Aargau at CHF 100,000 taxable, hand-checked against the ESTV bands:
 
-The existing error_message_is_actionable was corrected: it asserted the message
-names "Steuerfuss" for Vaud, which is no longer missing. It now asserts the
-message names the base scale and explicitly does NOT report the Steuerfuss, so a
-reader is not sent looking in the wrong place.
+  single    assessable 100,000  simple 6,938  x 2.07 = 14,361.66  (14.36%)
+  married   assessable  50,000  simple 2,488  x 2.07 =  9,869.76  ( 9.87%)
 
-Also corrected in the error reporting itself: an earlier comment described the
-registry as intentionally sparse, which understated what was actually available.
+The married case applies splitting; the single case does not. Marriage must not
+cost more at the same income, which is asserted.
+
+Importer rework (tools/import_estv_scales.py)
+
+  - Accepts MULTIPLE files in one invocation, merging them first-wins, so a
+    batch of single-canton exports is one command and re-running is idempotent.
+  - Classifies Steuersubjekt values ("Alle", "Alleinstehend ohne Kinder",
+    "Verheiratet / Alleinstehend mit Kind") and detects the splitting factor.
+  - Emits separate single/married bracket tables plus the shared_scale flag.
+  - Locates columns by substring with a positional fallback: exact header
+    matching raised KeyError because the same field is emitted with different
+    accent handling between exports ("Fuer die naechsten CHF").
+  - Excludes "id" when matching the Kanton column. Without this, "Kanton" matches
+    "Kantons-Id" first and the numeric canton id (19, 12, 1) is returned where a
+    two-letter code is expected.
+
+New tools/survey_estv_scales.py prints each canton's treatment, splitting factor
+and band count before import. It is how the shared-vs-per-subject distinction
+was caught, and is the check to run on any new export.
+
+Removed: tools/decode_bern_tarif.py, decode_bern_numbers.py and
+characterise_bern_tokens.py. These were one-off investigation into the Bern
+tariff PDF; their findings are recorded in SWISS_TAX_DATA.md, so the scripts add
+nothing beyond what the document already states.
+
+Tests
+
+  imported_cantons_are_priceable
+  cantons_without_imported_scales_still_refuse
+  fribourg_refuses_for_the_missing_multiplier_not_the_scale
+  geneva_refuses_until_the_rebate_is_interpreted
+  imported_cantons_produce_a_result_and_disclose_the_basis
+
+Two existing tests were corrected:
+
+  - aargau_is_priceable_from_the_imported_scale asserted 9.87% for a SINGLE
+    taxpayer by hand-checking only the first eight bands (which stop at 41,700).
+    The scale continues to 100,000, so the correct figure is 14.36%. The
+    implementation was right and the expectation was wrong; both marital cases
+    are now pinned.
+  - unpriced_canton_fails_loudly_and_suggests_a_way_forward used Zuerich as the
+    failing case. Zuerich now prices, so it moved to Ticino, and a companion
+    test asserts that the imported cantons produce a result and disclose their
+    basis -- so an import that silently did nothing would fail the suite.
 
 Documentation
 
-SWISS_TAX_DATA.md section 3 now records which cantons are supplied, the four
-source exceptions with their footnotes, and that base scales -- not Steuerfuesse
--- are the sole remaining data blocker. Aargau remains the only canton whose
-scale has been imported; the other 25 need an ESTV "Tarife" export.
+SWISS_TAX_DATA.md records the coverage table, the two marital structures, the
+verified Aargau figures, and the four documented source exceptions.
 
-Verified: 145 tests pass, cargo doc --lib clean under -D warnings.
+Still open
+
+18 cantons have no scale. GE, VS, BL and FR additionally have no usable
+cantonal multiplier: GE's is computable from its rebate footnote (147.5% x 0.88
+= 129.8%) but interpreting a footnote is a decision rather than a parse, so it
+is left unsupplied pending confirmation. The federal tariff values remain
+unverified (FEDERAL_TARIFF_IS_VERIFIED = false).
+
+Verified: 150 tests pass across 11 targets, cargo doc --lib clean under
+-D warnings, no new clippy warnings (8 pre-existing remain).

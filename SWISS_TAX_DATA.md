@@ -147,20 +147,61 @@ they imply. Two things worth noting:
 
 ---
 
-### Cantonal simple-tax scales — **NOT SOURCED (the sole remaining blocker)**
+### Cantonal simple-tax scales — **8 of 26 imported**
 
-The Steuerfuss is only a multiplier. The **base scale it multiplies** is a
-separate publication, and it is not in the workbooks above. Without it,
-`cantonal_tax()` cannot return a figure.
+Scales are imported from ESTV "Tarife" exports by
+`tools/import_estv_scales.py`, which reads **every canton present in a file**, so
+one workbook can add several. Current coverage:
 
-Steuerfuss and capital-municipal multipliers are now **supplied for every canton
-whose source cell held a plain number** — they are backfilled from the generated
-ESTV import by `with_imported_steuerfuss`, rather than being hand-entered per
-canton. Before that, only three cantons were wired and 23 reported "missing:
-cantonal Steuerfuss" for data already in the repository.
+| Canton | Treatment | Top rate |
+|---|---|---|
+| `AG` | shared scale, splitting 2.0 | 11.0% |
+| `BS` | per-subject scales (married = 2x single) | 28.2% |
+| `LU` | per-subject scales | 5.8% |
+| `ZH` | per-subject scales | 13.0% |
+| `SH` | shared scale, splitting 1.9 | 12.0% |
+| `SO` | shared scale, splitting 1.9 | 11.5% |
 
-Four cantons are **documented source exceptions** and remain unsupplied, asserted
-exactly by `source_exception_set_is_exactly_as_documented`:
+Priceable end to end today: **AG, BS, LU, SH, SO, ZH** (six), plus **Bern** via
+its legacy standalone table.
+
+Imported but **not** priceable, because the canton has no usable multiplier:
+
+| Canton | Why |
+|---|---|
+| `GE` | scale imported, but its Steuerfuss cell reads `148.5%9)` with footnote 9: a 12% rebate applies |
+| `FR` | scale imported, but its Steuerfuss cell is blank |
+
+The remaining 18 cantons have neither a scale nor (for some) a multiplier, and
+refuse loudly.
+
+#### Marital treatment is expressed in two incompatible ways
+
+This is the subtlety most likely to cause a wrong answer, so it is worth stating
+plainly. Cantons do one of:
+
+* publish **one shared scale** (`Steuersubjekt = Alle`) and express the marital
+  difference through a **splitting factor** — AG (2.0), SH (1.9), SO (1.9); or
+* publish **separate scales per `Steuersubjekt`**, where the difference is
+  already in the table and splitting is **not** applied — BS, LU, ZH.
+
+Applying splitting on top of a married-specific scale would count the marital
+adjustment twice. `BaseScale` therefore carries both axes and
+`BaseScale::splitting_factor(married)` returns a value only for a married
+taxpayer on a shared scale. The imported data records which shape each canton
+uses rather than inferring it.
+
+#### Verified figures
+
+Aargau at CHF 100,000 taxable, hand-checked against the ESTV bands:
+
+| | Assessable | Simple tax | x Steuerfuss 2.07 | Effective |
+|---|---|---|---|---|
+| Single | 100,000 | 6,938 | 14,361.66 | 14.36% |
+| Married | 50,000 (split) | 2,488 | 9,869.76 | 9.87% |
+
+Four cantons are **documented source exceptions** with no plain multiplier,
+asserted exactly by `source_exception_set_is_exactly_as_documented`:
 
 | Canton | Source cell | Why no multiplier |
 |---|---|---|
@@ -171,10 +212,12 @@ exactly by `source_exception_set_is_exactly_as_documented`:
 
 So the outstanding data is:
 
-1. **`base_scale` for 25 cantons** (Aargau is done) — from an ESTV "Tarife"
-   export, the same `.xlsx` shape as `estv_scales_AG.xlsx`.
-2. **An effective multiplier for `GE`**, and a resolution for `VS`, `BL`, `FR` —
-   see the table above. This needs a decision, not just a file.
+1. **`base_scale` for 18 cantons** — from an ESTV "Tarife" export, the same
+   `.xlsx` shape as the eight already imported.
+2. **An effective multiplier for `GE`, `VS`, `BL`, `FR`** — see the table above.
+   For GE the arithmetic is determinate (147.5% x 0.88 = 129.8%) but
+   interpreting a rebate footnote is a decision, not a parse, so it is
+   deliberately left unsupplied.
 3. **The federal tariff values** — see the next section.
 
 Each canton requires:

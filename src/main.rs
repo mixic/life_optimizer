@@ -456,7 +456,7 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
             "error:".red().bold(),
             canton.code(),
             canton.name(),
-            data.missing_fields().join(", ")
+            data.missing_fields(canton).join(", ")
         );
         eprintln!();
         eprintln!(
