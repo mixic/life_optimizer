@@ -1,77 +1,119 @@
-Add flat-rate cantons and fix the tax-basis label
+Read Steuerfuesse from the tariff year and implement Basel-Landschaft's formula tariff
 
-Supports the two cantons that levy a uniform percentage rather than a
-progressive scale, bringing priceable cantons from 20 to 22, and fixes a display
-labelling bug. Test count rises from 154 to 158.
+Two closed open items and one new refusal reason. Test count rises from 158 to 164.
 
-Flat-rate cantons (Obwalden, Uri)
+Steuerfuss vintage: 2024 -> 2026
 
-OW and UR publish a single `Steuersatz %` (1.8% and 7.1%) instead of a band
-table, so a parser that requires a band column found nothing for them. Both are
-the cantons the finpension article identifies as having a uniform rate.
+Scales are imported from 2026 ESTV "Tarife" exports while the Steuerfuesse were
+read from the 2024 row of the Steuerfuss workbook. That is not a rounding
+difference: applying 2024 multipliers to a 2026 tariff prices a tax regime that
+never existed.
 
-BaseScale gains `flat_rate_percent` and `is_flat_rate()`. The imported table for
-these cantons is a single 0%-at-0 floor, so the band machinery contributes
-nothing and the percentage is applied as `income x rate x Steuerfuss`. Emitting
-the rate as a one-band schedule would have worked arithmetically but would
-misrepresent the tariff as progressive.
+  Aargau    1.12 (2024) -> 1.03 (2026)
+  Obwalden  3.35 (2024) -> 3.25 (2026)
+  Zuerich   0.98 (2024) -> 0.95 (2026)
 
-Verified: OW at CHF 100,000 gives 12,978 = 100000 x 1.8% x (3.35 + 3.86), and the
-effective cantonal rate does not change with income, which is what distinguishes
-a flat canton. The test also asserts that a band canton (ZH) IS progressive, so
-the two paths are contrasted rather than one merely exercised.
+cantons::SELF_ASSESSMENT_YEAR now names the year, and every workbook-filled
+multiplier carries it in its Provenance. Aargau and Zuerich were also
+hand-entered in the registry at 1.11 and 0.98 -- values matching neither year's
+workbook cell (Aargau's 2024 cell says 1.12). Those overrides are deleted, so the
+workbook is the single source and a figure cannot drift from the file it claims
+to come from. Obwalden at CHF 100,000 moves 12,978 -> 12,798, Aargau single
+14,361.66 -> 13,806.62.
 
-Display bug: the tax-rate line claimed Bern
+The married Aargau figure exposed a wrong comment as well as a wrong number: the
+old text read "2,488 x 2 x 2.07 = 9,869.76", which does not equal 9,869.76. The
+simple tax at 50,000 is 2,384, giving 9,488.32 -- and it is deliberately NOT half
+the single figure (13,806.62 / 2 = 6,903.31), because two halves at 50,000 cost
+less than one whole at 100,000. That gap is the entire point of splitting.
 
-`print_optimal_result` printed "Tax Rate: 13.0% (official Bern tax only)"
-unconditionally, which became false the moment the two-level model started
-pricing other cantons. It is now supplied by the caller:
+Basel-Landschaft: a tariff published as formulas
 
-  OW  Tax Rate: 13.0% (OW flat 1.8% x Steuerfuss)
-  ZH  Tax Rate:  9.9% (ZH ESTV scale x Steuerfuss)
-  BE  Tax Rate: 14.5% (official Bern table)
+BL's export has no band column and no rate column. Each segment is an algebraic
+expression giving the simple tax directly, e.g.
 
-This was nearly invisible: OW's correct 13.0% coincides with the hard-coded Bern
-figure, so the label looked right while describing the wrong canton. The CLI also
-now distinguishes a flat rate from a scale in the "Tax basis" line.
+  16731  -0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746
 
-Open item found while testing: Steuerfuss vintage lags the scale vintage
+Three decisions, each of which could silently produce a wrong tax:
 
-Scales are imported from 2026 exports while Steuerfuesse are read from the 2024
-row of the ESTV workbook. Sarnen's cantonal multiplier moved 3.35 (2024) to 3.25
-(2026), so OW is priced with the 2024 figure. That was discovered by a test
-failing on a 180 CHF discrepancy, and is now recorded by
-steuerfuss_vintage_is_recorded rather than papered over.
+1. The formulas are stored as SOURCE TEXT and evaluated by
+   federal_tax::eval_formula, not transcribed into Rust constants. Transcribing
+   is the obvious alternative and it introduces a step where one digit can be
+   lost -- in a file whose whole purpose is that numbers trace to a source.
 
-The same check showed Aargau's hand-entered Steuerfuss is 1.11 while the workbook
-carries 1.12 for 2024, so that value has its own provenance. The test asserts the
-figure in use, not a cross-check against the workbook, and says so.
+2. Segments are ALTERNATIVES, not increments: the last segment whose threshold
+   does not exceed the income supplies the whole tax. That is what makes the
+   expressions self-consistent, and the test asserts it -- evaluated at each
+   other's thresholds they agree to under 0.001 CHF. A progressive tariff cannot
+   jump when a band changes, so that continuity checks the SOURCE DATA.
 
-Remaining refusals (4)
+3. Splitting is NOT applied. BL publishes separate expressions per marital
+   status, so the difference is already in the tariff; the married table adds a
+   0.49 * $wert$ / 100 relief band from CHF 8,366 that the single table lacks.
 
-  BL  export uses logarithmic formulas rather than a band table
-  GE  scale imported, but its Steuerfuss cell carries a 12% rebate footnote
-  VS  scale imported, but its Steuerfuss cell is "Kein Vielfaches"
-  FR  scale imported, but its Steuerfuss cell is blank
+Two parser bugs were found and fixed while making this work, both worth naming
+because each produced a silent failure rather than an error:
+
+  - `a * b` was parsed as `a`, because the `*` arm called parse_unary and
+    discarded the result. Multiplication by nothing is invisible in a formula
+    whose leading coefficient happens to be tested alone.
+  - `log` was required to be followed by `(`, but the export writes it as a
+    space-separated PREFIX operator -- `log $wert$`. Every real BL expression was
+    therefore refused.
+
+Neither surfaced until the formulas were actually evaluated; before that, a parse
+failure was indistinguishable from "not implemented".
+
+BL is still not priceable, and the reason changed. The Liestal row of the ESTV
+Steuerfuss workbook is EMPTY for every year it covers (2024, 2025 and 2026
+alike), so BL is blocked on its multiplier, not its tariff.
+canton_tax_data(BL).missing_fields() now reports exactly those two multipliers,
+and a test pins that -- so supplying a sourced Steuerfuss needs no code change.
+
+Coverage is unchanged at 22 of 26, but the four refusals are now all ONE kind of
+missing input (a Steuerfuss cell that is not a plain number) rather than four
+different pieces of engineering.
+
+Also fixed while in the area
+
+  - `compare --canton ZH` accepted the flag and priced with Bern's table. It now
+    resolves the schedule through the same helper as `optimize`, so the flag
+    means the same thing in both commands.
+  - The comparison table's breakdown note claimed "official Stadt Bern rates"
+    unconditionally, including directly beneath a canton the caller had just
+    asked for. It now names the basis actually used.
+  - The refusal hint listed Bern as "the one canton with a complete table" and
+    said the scale "has not been supplied" for every refusal -- false for the
+    four cantons whose scale IS imported. It now names the priced cantons
+    (derived, not hard-coded: the count went 3 -> 22 in this repository's life)
+    and states only what is genuinely absent.
 
 Tests
 
-New:
-  flat_rate_cantons_apply_a_single_percentage
-  flat_rate_cantons_are_flagged
-  steuerfuss_vintage_is_recorded
-  flat_rate_cantons_are_labelled_honestly
+  New: formula_evaluator_handles_the_export_grammar
+       formula_evaluator_refuses_what_it_cannot_parse
+       basel_landschaft_segments_are_continuous_at_their_thresholds
+       basel_landschaft_formulas_evaluate_to_the_published_figures
+       formula_tax_selects_one_segment_not_a_sum
+       basel_landschaft_tariff_is_formulas_and_only_the_multiplier_is_missing
 
-Corrected: the two CLI canton tests hard-coded cantons that have since become
-priceable, and had already failed twice for that reason. They now assert
-behaviour, use VS as the refusing case, cover every priceable canton including
-the flat ones, and assert that no canton's rate line claims Bern.
+  Rewritten: steuerfuss_vintage_is_recorded -> steuerfuss_vintage_matches_the_scale_vintage,
+  which now asserts the two vintages agree and that Aargau's registry value equals
+  the workbook cell, instead of recording a mismatch as acceptable.
 
 Documentation
 
-SWISS_TAX_DATA.md records the three band shapes plus the formula shape, the
-flat-rate representation, the 22/4 coverage split, and the vintage mismatch as an
-open item.
+SWISS_TAX_DATA.md records the vintage correction, the four tariff shapes, and BL's
+formulas with the three interpretation decisions spelled out. The Aargau worked
+example is corrected to 13,806.62 / 9,488.32.
 
-Verified: 158 tests pass, cargo doc --lib clean under -D warnings, no new clippy
-warnings (8 pre-existing remain).
+Verified: 164 tests pass, cargo doc --lib clean under -D warnings, clippy at 8
+warnings -- no new ones (both new lints introduced here were fixed: an
+inconsistent digit grouping and an 8-argument function, the latter by giving
+`compare` a parameter struct like `optimize` already had).
+
+Known, not fixed: the repository is not `cargo fmt --check` clean. rustfmt
+1.9.0-stable (2026-07-14) reflows ~200 hunks across files untouched here, because
+the toolchain is newer than the code was formatted with. Running `cargo fmt`
+would bury these changes in a repository-wide reformat, so it is left as its own
+change.

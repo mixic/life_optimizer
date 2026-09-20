@@ -195,6 +195,250 @@ pub fn tax_with_scale(scale: &[FederalBracket], taxable_income: f64) -> f64 {
     tax
 }
 
+/// One segment of a tariff published as an algebraic **formula** rather than a
+/// band table.
+///
+/// Most cantons publish a table of bands. Basel-Landschaft publishes, in the
+/// ESTV "Tarife" export, a function of taxable income per segment — e.g.
+///
+/// ```text
+/// 16731   -0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746
+/// ```
+///
+/// where `$wert$` is the taxable income and the result is the **simple tax**
+/// directly, not a rate. Ignoring these exports is why BL was previously
+/// unpriceable; transcribing the coefficients into Rust would be the obvious
+/// alternative, but keeping the source text and evaluating it means there is no
+/// transcription step in which a digit can be lost.
+///
+/// The formula is a *function*, not a marginal slice, so a segment fully
+/// replaces the answer for incomes inside it — see [`formula_tax`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TaxFormula {
+    /// Taxable income at which this segment begins.
+    pub threshold: f64,
+    /// The source expression, with `$wert$` as the income variable. Evaluated by
+    /// [`eval_formula`].
+    pub expression: &'static str,
+}
+
+/// Evaluate an ESTV tariff expression at a given income.
+///
+/// Supports what the exports actually contain and nothing more: `+ - * /`,
+/// parentheses, decimal literals, the variable `$wert$`, and `log(x)` as the
+/// **natural** logarithm (the calculus form the ESTV formulas are derived in —
+/// `x*(log x - 1)` is the antiderivative of `log x`, which is why these
+/// expressions appear at all).
+///
+/// Returns `None` for an expression this parser does not understand rather than
+/// guessing or partially evaluating it. A silently wrong tax is worse than a
+/// missing one.
+pub fn eval_formula(expression: &str, wert: f64) -> Option<f64> {
+    let tokens = formula_eval::tokenize(expression)?;
+    let mut cursor = formula_eval::Cursor::new(&tokens, wert);
+    let value = cursor.sum()?;
+    // Trailing tokens mean the expression was not fully consumed, so the parse
+    // did not understand it.
+    if cursor.finished() && value.is_finite() {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+/// Compute the simple tax from a formula-published tariff.
+///
+/// The segments are ordered by threshold; the **last** segment whose threshold
+/// does not exceed the income supplies the whole tax. That is the semantics the
+/// export implies: each expression carries its own constant term and is written
+/// to be exact at its own threshold — the BL coefficients reproduce the running
+/// total continuously, which this module's tests assert — so the segments are
+/// alternatives rather than increments.
+pub fn formula_tax(segments: &[TaxFormula], taxable_income: f64) -> f64 {
+    if taxable_income <= 0.0 {
+        return 0.0;
+    }
+    let mut tax = 0.0;
+    for segment in segments {
+        if taxable_income < segment.threshold {
+            break;
+        }
+        match eval_formula(segment.expression, taxable_income) {
+            Some(value) => tax = value,
+            // A segment we cannot evaluate must not silently contribute zero to
+            // an otherwise valid total, so the whole computation is abandoned.
+            None => return f64::NAN,
+        }
+    }
+    tax.max(0.0)
+}
+
+/// Arithmetic evaluator for the ESTV tariff formulas.
+///
+/// A tiny precedence-climbing parser over a flat token vector. Deliberately
+/// written as free functions over a cursor rather than methods on a struct: the
+/// grammar is four productions, and keeping the state explicit is what makes it
+/// auditable.
+mod formula_eval {
+    /// Split an expression into tokens. `None` on an unexpected character, which
+    /// makes the whole parse fail rather than silently skipping it.
+    pub fn tokenize(expression: &str) -> Option<Vec<String>> {
+        let chars: Vec<char> = expression.chars().collect();
+        let mut tokens = Vec::new();
+        let mut i = 0;
+        while i < chars.len() {
+            let c = chars[i];
+            if c.is_whitespace() {
+                i += 1;
+            } else if c.is_ascii_digit() || c == '.' {
+                let start = i;
+                while i < chars.len()
+                    && (chars[i].is_ascii_digit() || chars[i] == '.' || chars[i] == '\'' || chars[i] == ',')
+                {
+                    i += 1;
+                }
+                let number: String = chars[start..i].iter().filter(|ch| **ch != '\'' && **ch != ',').collect();
+                tokens.push(number);
+            } else if chars[i..].starts_with(&['$', 'w', 'e', 'r', 't', '$']) {
+                tokens.push("$wert$".to_string());
+                i += 6;
+            } else if c.is_alphabetic() {
+                let start = i;
+                while i < chars.len() && chars[i].is_alphabetic() {
+                    i += 1;
+                }
+                tokens.push(chars[start..i].iter().collect::<String>().to_lowercase());
+            } else if "+-*/()".contains(c) {
+                tokens.push(c.to_string());
+                i += 1;
+            } else {
+                return None;
+            }
+        }
+        Some(tokens)
+    }
+
+    pub struct Cursor<'a> {
+        tokens: &'a [String],
+        pos: usize,
+        wert: f64,
+    }
+
+    impl<'a> Cursor<'a> {
+        pub fn new(tokens: &'a [String], wert: f64) -> Self {
+            Cursor { tokens, pos: 0, wert }
+        }
+
+        fn peek(&self) -> Option<&'a str> {
+            self.tokens.get(self.pos).map(|s| s.as_str())
+        }
+
+        fn advance(&mut self) {
+            self.pos += 1;
+        }
+
+        pub fn finished(&self) -> bool {
+            self.pos == self.tokens.len()
+        }
+
+        pub fn sum(&mut self) -> Option<f64> {
+            let mut value = self.product()?;
+            loop {
+                match self.peek() {
+                    Some("+") => {
+                        self.advance();
+                        value += self.product()?;
+                    }
+                    Some("-") => {
+                        self.advance();
+                        value -= self.product()?;
+                    }
+                    _ => return Some(value),
+                }
+            }
+        }
+
+        fn product(&mut self) -> Option<f64> {
+            let mut value = self.unary()?;
+            loop {
+                match self.peek() {
+                    Some("*") => {
+                        self.advance();
+                        value *= self.unary()?;
+                    }
+                    Some("/") => {
+                        self.advance();
+                        let divisor = self.unary()?;
+                        if divisor == 0.0 {
+                            return None;
+                        }
+                        value /= divisor;
+                    }
+                    _ => return Some(value),
+                }
+            }
+        }
+
+        fn unary(&mut self) -> Option<f64> {
+            if self.peek() == Some("-") {
+                self.advance();
+                return Some(-self.unary()?);
+            }
+            if self.peek() == Some("+") {
+                self.advance();
+                return self.unary();
+            }
+            self.atom()
+        }
+
+        fn atom(&mut self) -> Option<f64> {
+            let token = self.peek()?.to_string();
+            match token.as_str() {
+                "(" => {
+                    self.advance();
+                    let value = self.sum()?;
+                    if self.peek() != Some(")") {
+                        return None;
+                    }
+                    self.advance();
+                    Some(value)
+                }
+                "log" => {
+                    // The ESTV export writes the logarithm as a **prefix
+                    // operator applied to the following atom**, with no
+                    // parentheses and no separator:
+                    //
+                    //     0.089722 * $wert$ * (log $wert$ - 1)
+                    //
+                    // Here `log` takes `$wert$` — the `(` two tokens later opens
+                    // an unrelated group. Requiring `log(` (as an earlier version
+                    // did) makes every real export fail to parse, which is
+                    // exactly what happened.
+                    //
+                    // Taking a single atom is the standard convention and the
+                    // only reading under which the source's own coefficients are
+                    // self-consistent, so `log $wert$ - 1` is `(log $wert$) - 1`.
+                    self.advance();
+                    let argument = self.atom()?;
+                    if argument <= 0.0 {
+                        return None;
+                    }
+                    Some(argument.ln())
+                }
+                "$wert$" => {
+                    self.advance();
+                    Some(self.wert)
+                }
+                number => {
+                    let value: f64 = number.parse().ok()?;
+                    self.advance();
+                    Some(value)
+                }
+            }
+        }
+    }
+}
+
 /// The rate on the next franc of taxable income — the marginal federal rate.
 ///
 /// Exposed separately because the marginal rate, not the average, is what makes
@@ -243,6 +487,167 @@ pub fn monotonicity_violations(married: bool) -> Vec<(f64, f64)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The evaluator handles the arithmetic actually present in an ESTV export.
+    ///
+    /// The `log` case is worth spelling out. The ESTV export writes the logarithm
+    /// as a **space-separated prefix operator**: `log $wert$`, with no
+    /// parentheses. An earlier version of this parser required `log(`, which
+    /// refused every real Basel-Landschaft expression — the bug was invisible
+    /// until the BL formulas were evaluated at all, because a parse failure is
+    /// indistinguishable from "not implemented" until something depends on it.
+    #[test]
+    fn formula_evaluator_handles_the_export_grammar() {
+        assert_eq!(eval_formula("42", 1.0), Some(42.0));
+        assert_eq!(eval_formula("2 + 3 * 4", 1.0), Some(14.0));
+        assert_eq!(eval_formula("(2 + 3) * 4", 1.0), Some(20.0));
+        assert_eq!(eval_formula("10 / 4", 1.0), Some(2.5));
+        assert_eq!(eval_formula("-7 + 10", 1.0), Some(3.0));
+        assert_eq!(eval_formula("$wert$", 5.0), Some(5.0));
+        assert_eq!(eval_formula("0.5 * $wert$", 10.0), Some(5.0));
+        assert_eq!(eval_formula("2 - 3 - 4", 1.0), Some(-5.0));
+        assert_eq!(eval_formula("2 * 3 + 4", 1.0), Some(10.0));
+
+        // Both spellings of the logarithm must work, and `log x - 1` must bind
+        // as `(log x) - 1` rather than `log(x - 1)`.
+        let e = std::f64::consts::E;
+        assert_eq!(eval_formula("log $wert$", e), Some(1.0));
+        assert_eq!(eval_formula("log($wert$)", e), Some(1.0));
+        assert_eq!(eval_formula("log $wert$ - 1", e), Some(0.0));
+        assert_eq!(eval_formula("2 * (log $wert$ - 1)", e), Some(0.0));
+        // `x*(log x - 1)` is the antiderivative of `log x`, so at x = e it is 0.
+        let value = eval_formula("$wert$ * (log $wert$ - 1)", e).unwrap();
+        assert!(value.abs() < 1e-12, "expected 0, got {value}");
+    }
+
+    /// The BL expressions must evaluate to the source's own values.
+    ///
+    /// These are hand-computed from the export text and the arithmetic is
+    /// self-checking: at the first segment threshold both BL's own expression and
+    /// the married 0.49% starting band give the same figure, which only holds if
+    /// `log` really is the natural logarithm applied to the whole income.
+    #[test]
+    fn basel_landschaft_formulas_evaluate_to_the_published_figures() {
+        let segments = crate::estv_scales_data::BL_SINGLE_FORMULAS;
+        // At 16,731 the first segment applies: the law's own continuity is
+        // visible in that 0.49% x 16,731 = 81.98.
+        let first = eval_formula(segments[0].expression, 16_731.0).unwrap();
+        assert!(
+            (first - 81.9819).abs() < 0.001,
+            "BL at 16731: expected 81.9819, got {first}"
+        );
+        // The linear top segment is exactly reproducible by hand:
+        //   235687.5410 + 0.1862 * (2000000 - 1282692)
+        let top = eval_formula(segments[3].expression, 2_000_000.0).unwrap();
+        let expected = 235_687.541_0 + 0.186_2 * (2_000_000.0 - 1_282_692.0);
+        assert!(
+            (top - expected).abs() < 0.001,
+            "BL top segment: expected {expected}, got {top}"
+        );
+        assert!(top > first);
+    }
+
+    /// An expression the parser does not understand must return `None`, not a
+    /// partial or zero result.
+    ///
+    /// This is the behaviour that matters: a silently wrong tax is worse than an
+    /// absent one, and the caller turns `None` into a refusal.
+    #[test]
+    fn formula_evaluator_refuses_what_it_cannot_parse() {
+        assert_eq!(eval_formula("", 1000.0), None);
+        assert_eq!(eval_formula("2 +", 1000.0), None);
+        assert_eq!(eval_formula("(2 + 3", 1000.0), None);
+        // A trailing token means part of the expression was never consumed, so
+        // evaluating the prefix would understate the tax.
+        assert_eq!(eval_formula("2 3", 1000.0), None);
+        // An unknown character invalidates the whole expression.
+        assert_eq!(eval_formula("2 ^ 3", 1000.0), None);
+        // `log` needs an operand.
+        assert_eq!(eval_formula("log", 1000.0), None);
+        assert_eq!(eval_formula("log + 1", 1000.0), None);
+        // The domain of the logarithm starts above zero.
+        assert_eq!(eval_formula("log(0)", 1000.0), None);
+        assert_eq!(eval_formula("log $wert$", 0.0), None);
+        assert_eq!(eval_formula("1 / 0", 1000.0), None);
+    }
+
+    /// Evaluated at all the shared thresholds, the BL expressions must agree with
+    /// each other to within rounding.
+    ///
+    /// The export supplies one expression per income range, each carrying its own
+    /// constant term. If a coefficient were mistyped, the law's continuity — a
+    /// progressive tariff cannot jump when a band changes — would break, so this
+    /// is a genuine check on the *source data* rather than on the parser.
+    ///
+    /// The married tariff's leading `0.49 * $wert$ / 100` is deliberately **not**
+    /// part of that chain: it is a relief band covering [8,366, 16,731], which the
+    /// last-threshold rule gives the whole income below the shared schedule. It is
+    /// checked against its own threshold instead.
+    #[test]
+    fn basel_landschaft_segments_are_continuous_at_their_thresholds() {
+        let segments = &crate::estv_scales_data::BL_SINGLE_FORMULAS;
+        assert!(
+            segments.len() >= 4,
+            "BL publishes four single segments, got {}",
+            segments.len()
+        );
+
+        for pair in segments.windows(2) {
+            let (first, second) = (&pair[0], &pair[1]);
+            let at_threshold = eval_formula(first.expression, second.threshold).unwrap();
+            let next_starts_at = eval_formula(second.expression, second.threshold).unwrap();
+            assert!(
+                (at_threshold - next_starts_at).abs() < 0.01,
+                "BL is discontinuous at {threshold}: {at_threshold} then {next_starts_at}",
+                threshold = second.threshold
+            );
+        }
+
+        // The 0.49% band is exact and is the whole tax at its own threshold.
+        let married = &crate::estv_scales_data::BL_MARRIED_FORMULAS;
+        let at_first = formula_tax(married, married[0].threshold);
+        let expected = married[0].threshold * 0.0049;
+        assert!(
+            (at_first - expected).abs() < 0.01,
+            "the married 0.49% band should give {expected} at {}, got {at_first}",
+            married[0].threshold
+        );
+        // And the shared schedule takes over above it.
+        assert_eq!(
+            formula_tax(married, married[1].threshold),
+            formula_tax(segments, segments[0].threshold)
+        );
+    }
+
+    /// `formula_tax` uses the last segment the income has reached, and reports a
+    /// non-finite value rather than a partial total if one cannot be evaluated.
+    #[test]
+    fn formula_tax_selects_one_segment_not_a_sum() {
+        let segments = crate::estv_scales_data::BL_SINGLE_FORMULAS;
+
+        // Below the first segment's threshold there is no tariff yet.
+        assert_eq!(formula_tax(segments, 0.0), 0.0);
+        assert_eq!(formula_tax(segments, 10_000.0), 0.0);
+
+        // At 20,000 the second segment applies, and its result must be the whole
+        // tax — not the first segment plus the second, which would double it.
+        let expected = eval_formula(segments[0].expression, 20_000.0).unwrap();
+        assert!((formula_tax(segments, 20_000.0) - expected).abs() < 1e-9);
+
+        // Across the whole range the tax must stay positive and rise, which a
+        // wrongly summed tariff would not.
+        let mut previous = 0.0;
+        for income in (20_000..=400_000).step_by(5_000) {
+            let tax = formula_tax(segments, income as f64);
+            assert!(tax > previous, "tax should rise at {income}: {previous} -> {tax}");
+            previous = tax;
+        }
+
+        // An unevaluable expression yields NaN so the caller refuses, rather
+        // than a total that silently omits a segment.
+        let broken = [TaxFormula { threshold: 0.0, expression: "2 ^ 3" }];
+        assert!(formula_tax(&broken, 1000.0).is_nan());
+    }
 
     /// The tariff's shape: a zero-rate allowance band, then progressively higher
     /// marginal rates.

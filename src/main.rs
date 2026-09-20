@@ -56,9 +56,10 @@ enum Commands {
         #[arg(long)]
         youngest_child_age: Option<u32>,
 
-        /// Canton code (e.g. ZH, BE, GE). Only cantons whose tax scale has been
-        /// loaded can be priced; see SWISS_TAX_DATA.md. Omitting it uses Bern,
-        /// the one canton with a complete table today.
+        /// Canton code (e.g. ZH, BE, AG). 22 of the 26 cantons are priced; the
+        /// rest fail with exactly what is missing rather than falling back to
+        /// another canton. See SWISS_TAX_DATA.md. Omitting it uses Bern, and
+        /// the output says so.
         #[arg(long)]
         canton: Option<String>,
 
@@ -162,6 +163,10 @@ enum Commands {
         /// Use enhanced family/childcare deductions for married parents with children.
         #[arg(long, default_value_t = false)]
         family_tax_mode: bool,
+
+        /// Canton code (e.g. ZH, BE, AG). Omit for Bern, and the output says so.
+        #[arg(long)]
+        canton: Option<String>,
     },
 
     /// Calculate lifetime strategy (work % by age)
@@ -299,8 +304,18 @@ fn main() {
             percentages,
             custom_tax_rate,
             family_tax_mode,
+            canton,
         } => {
-            run_comparison(salary, age, married, children, &percentages, custom_tax_rate, family_tax_mode);
+            run_comparison(CompareParams {
+                salary,
+                age,
+                married,
+                children,
+                percentages: &percentages,
+                custom_tax_rate,
+                family_tax_mode,
+                canton: canton.as_deref(),
+            });
         }
         Commands::Lifetime {
             salary,
@@ -420,8 +435,9 @@ fn resolve_conversion(
 /// changes the answer but does not is worse than an absent one, so it now
 /// behaves in one of three explicit ways:
 ///
-/// * **not supplied** → Bern, the one canton with a complete loaded table,
-///   and say so.
+/// * **not supplied** → Bern, and say so. Bern is no longer the only priceable
+///   canton, but it is the default for backward compatibility with earlier
+///   output, and the message makes the choice visible rather than implicit.
 /// * **supplied and priceable** → use it.
 /// * **supplied but not priceable** → fail with exactly what is missing. This
 ///   is the objective's "fail loudly rather than silently falling back to
@@ -430,7 +446,7 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
     let Some(code) = requested else {
         println!(
             "{}",
-            "No --canton given; using Bern, the only canton with a complete tax table."
+            "No --canton given; using Bern."
                 .dimmed()
         );
         return Some(cantons::Canton::Bern);
@@ -451,26 +467,57 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
     // (base scale x Steuerfuss) has not been done for it.
     if !cantons::is_priceable(canton) {
         let data = cantons::canton_tax_data(canton);
+        let missing = data.missing_fields(canton);
         eprintln!(
             "{} cannot price canton {} ({}). Missing: {}.",
             "error:".red().bold(),
             canton.code(),
             canton.name(),
-            data.missing_fields(canton).join(", ")
+            missing.join(", ")
         );
         eprintln!();
+        // Name only what is actually absent. Four cantons (BL, FR, GE, VS) have
+        // an imported scale and are blocked by their *multiplier* instead, so a
+        // fixed "the scale has not been supplied" sentence would be false for
+        // them — and would send the reader looking for a file already present.
+        eprintln!("  Cantonal tax = simple_tax(income) x Steuerfuss, where both sides");
         eprintln!(
-            "  Cantonal tax = simple_tax(income) x Steuerfuss. The Steuerfuss is \
-             loaded from the ESTV workbook,"
+            "  must come from the same year. For {}: {}",
+            canton.code(),
+            missing.join(", ")
         );
-        eprintln!(
-            "  but the {} cantonal simple-tax scale has not been supplied yet.",
-            canton.code()
-        );
+        if missing.contains(&"cantonal base tax scale") {
+            eprintln!(
+                "  The scale is imported from an ESTV \"Tarife\" export; this canton's \
+                 export is"
+            );
+            eprintln!("  not in the repository yet.");
+        }
+        if missing.contains(&"cantonal Steuerfuss") {
+            eprintln!(
+                "  The multiplier is read from the ESTV Steuerfuss workbook, whose \
+                 {} cell is",
+                cantons::SELF_ASSESSMENT_YEAR
+            );
+            eprintln!("  not a plain number (blank, or a footnote this project will not guess at).");
+        }
+        if missing.contains(&"capital municipal Steuerfuss") {
+            eprintln!("  The capital city's multiplier is missing from the same workbook.");
+        }
         eprintln!();
+        // List the cantons that *are* priced, derived rather than hard-coded:
+        // the count has climbed from 3 to 22 in this repository's lifetime, and
+        // a stale hint would send the user away from a canton that works.
+        let priced: Vec<&str> = cantons::ALL_CANTONS
+            .iter()
+            .filter(|c| cantons::is_priceable(**c))
+            .map(|c| c.code())
+            .collect();
         eprintln!("  Two ways forward:");
         eprintln!(
-            "    - omit --canton to use Bern, the one canton with a complete table"
+            "    - use a canton that is priced ({}): {}",
+            priced.len(),
+            priced.join(", ")
         );
         eprintln!(
             "    - pass --custom-tax-rate with your observed rate from your tax \
@@ -589,76 +636,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     // Resolve the schedule together with a short label for its basis, so the
     // "Tax Rate" line reports what actually produced the figure.
-    let (mut tax_schedule, tax_basis): (TaxSchedule, String) = if let Some(rate) = custom_tax_rate {
-        // An observed personal rate supersedes any canton table, so the canton
-        // is not resolved in this branch -- resolving it would reject a run
-        // that does not need cantonal data at all.
-        println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
-        (TaxSchedule::custom_rate(rate), "your observed rate".to_string())
-    } else {
-        // Resolve the canton explicitly. This fails loudly for cantons whose
-        // tax scale has not been loaded, rather than quietly returning Bern
-        // numbers for a Zürich household.
-        let canton = resolve_canton(canton).expect("resolve_canton exits on failure");
-        match canton {
-            cantons::Canton::Bern => {
-                // Bern's standalone Stadt Bern table is complete and in use.
-                println!(
-                    "{}",
-                    "  Tax basis: Bern — official Stadt Bern rate table (2024).".dimmed()
-                );
-                (
-                    TaxSchedule::bern_city_default(married, children),
-                    "official Bern table".to_string(),
-                )
-            }
-            priced => match TaxSchedule::from_canton_scale(priced, married, children) {
-                Some(schedule) => {
-                    // A flat-rate canton has no band schedule, so say so rather
-                    // than implying a scale was applied.
-                    let flat = cantons::imported_scale(priced)
-                        .and_then(|s| s.flat_rate_percent);
-                    let detail = match flat {
-                        Some(rate) => format!("flat {rate}% x Steuerfuss"),
-                        None => "ESTV scale x Steuerfuss".to_string(),
-                    };
-                    println!(
-                        "{}",
-                        format!(
-                            "  Tax basis: {} — {} ({}).",
-                            priced.name(),
-                            detail,
-                            priced.capital()
-                        )
-                        .dimmed()
-                    );
-                    println!(
-                        "  {}",
-                        "  Verify against your own tax assessment before relying on it."
-                            .yellow()
-                    );
-                    (
-                        schedule,
-                        format!("{} {}", priced.code(), detail),
-                    )
-                }
-                None => {
-                    // `resolve_canton` only lets priceable cantons through, so
-                    // reaching here is an inconsistency in the registry rather
-                    // than bad user input.
-                    eprintln!(
-                        "{} canton {} ({}) passed the priceability check but produced \
-                         no schedule. This is a bug in the canton registry, not your input.",
-                        "error:".red().bold(),
-                        priced.code(),
-                        priced.name()
-                    );
-                    eprintln!("  Use --custom-tax-rate, or omit --canton to use Bern.");
-                    std::process::exit(2);
-                }
-            },
-        }
-    };
+    let (mut tax_schedule, tax_basis): (TaxSchedule, String) =
+        resolve_tax_schedule(canton, custom_tax_rate, married, children);
     tax_schedule.family_tax_mode = family_tax_mode || (married && children > 0);
 
     let requirements = PersonalRequirements::bern_family_default(children);
@@ -773,7 +752,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
     );
     mc_display::print_work_pct_pension_comparison(&comparisons, monthly_needs);
 
-    display::print_comparison_table(&all_scenarios);
+    display::print_comparison_table_for(&all_scenarios, Some(&tax_basis));
     display::print_recommendations(&optimal, age);
 
     // ── Family Support & Education Planning ─────────────────────────────────
@@ -820,15 +799,112 @@ fn run_optimization(p: OptimizeParams<'_>) {
     }
 }
 
-fn run_comparison(
+/// Build the tax schedule for a run, and announce which basis produced it.
+///
+/// Returns the schedule alongside a short label naming its source, because the
+/// figure is meaningless without it: "10.7%" is a different claim in Aargau than
+/// in Bern, and the label is what makes the number checkable. Both the optimize
+/// and comparison commands go through here so they cannot drift apart — the
+/// comparison command previously always used Bern's table while printing a
+/// `--canton` it had accepted.
+fn resolve_tax_schedule(
+    canton: Option<&str>,
+    custom_tax_rate: Option<f64>,
+    married: bool,
+    children: u32,
+) -> (TaxSchedule, String) {
+    let Some(rate) = custom_tax_rate else {
+        // Resolve the canton explicitly. This fails loudly for cantons whose tax
+        // scale has not been loaded, rather than quietly returning Bern numbers
+        // for a Zürich household.
+        let canton = resolve_canton(canton).expect("resolve_canton exits on failure");
+        if canton == cantons::Canton::Bern {
+            // Bern's standalone Stadt Bern table is complete and in use.
+            println!(
+                "{}",
+                "  Tax basis: Bern — official Stadt Bern rate table (2024).".dimmed()
+            );
+            return (
+                TaxSchedule::bern_city_default(married, children),
+                "official Bern table".to_string(),
+            );
+        }
+        let Some(schedule) = TaxSchedule::from_canton_scale(canton, married, children) else {
+            // `resolve_canton` only lets priceable cantons through, so reaching
+            // here is an inconsistency in the registry rather than bad input.
+            eprintln!(
+                "{} canton {} ({}) passed the priceability check but produced \
+                 no schedule. This is a bug in the canton registry, not your input.",
+                "error:".red().bold(),
+                canton.code(),
+                canton.name()
+            );
+            eprintln!("  Use --custom-tax-rate, or omit --canton to use Bern.");
+            std::process::exit(2);
+        };
+
+        // Name the tariff shape, rather than implying a band table was applied:
+        // a flat-rate canton has no bands, and a formula canton (BL) publishes
+        // algebraic expressions instead.
+        let detail = match cantons::imported_scale(canton) {
+            Some(scale) if scale.is_formula() => "ESTV formula tariff x Steuerfuss".to_string(),
+            Some(scale) if scale.is_flat_rate() => match scale.flat_rate_percent {
+                Some(rate) => format!("flat {rate}% x Steuerfuss"),
+                None => "flat rate x Steuerfuss".to_string(),
+            },
+            _ => "ESTV scale x Steuerfuss".to_string(),
+        };
+        println!(
+            "{}",
+            format!(
+                "  Tax basis: {} — {} ({}).",
+                canton.name(),
+                detail,
+                canton.capital()
+            )
+            .dimmed()
+        );
+        println!(
+            "  {}",
+            "  Verify against your own tax assessment before relying on it.".yellow()
+        );
+        return (schedule, format!("{} {}", canton.code(), detail));
+    };
+
+    // An observed personal rate supersedes any canton table, so the canton is
+    // not resolved in this branch -- resolving it would reject a run that does
+    // not need cantonal data at all.
+    println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
+    (
+        TaxSchedule::custom_rate(rate),
+        "your observed rate".to_string(),
+    )
+}
+
+/// Everything `compare` needs. A struct rather than eight positional arguments,
+/// which is what the equivalent `optimize` parameters already use.
+struct CompareParams<'a> {
     salary: f64,
     age: u32,
     married: bool,
     children: u32,
-    percentages_str: &str,
+    percentages: &'a str,
     custom_tax_rate: Option<f64>,
     family_tax_mode: bool,
-) {
+    canton: Option<&'a str>,
+}
+
+fn run_comparison(p: CompareParams<'_>) {
+    let CompareParams {
+        salary,
+        age,
+        married,
+        children,
+        percentages: percentages_str,
+        custom_tax_rate,
+        family_tax_mode,
+        canton,
+    } = p;
     println!("\n{}", "=== SCENARIO COMPARISON ===".bold().cyan());
     
     let percentages: Vec<f64> = percentages_str
@@ -836,12 +912,11 @@ fn run_comparison(
         .filter_map(|s| s.trim().parse().ok())
         .collect();
 
-    let mut tax_schedule = if let Some(rate) = custom_tax_rate {
-        println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
-        TaxSchedule::custom_rate(rate)
-    } else {
-        TaxSchedule::bern_city_default(married, children)
-    };
+    // Same resolution path as `optimize`, so `--canton` means the same thing in
+    // both commands. It used to be accepted here and ignored, which meant a
+    // comparison for Zürich was silently priced with Bern's table.
+    let (mut tax_schedule, tax_basis) =
+        resolve_tax_schedule(canton, custom_tax_rate, married, children);
     tax_schedule.family_tax_mode = family_tax_mode || (married && children > 0);
 
     let requirements = PersonalRequirements::bern_family_default(children);
@@ -866,7 +941,7 @@ fn run_comparison(
     for scenario in &scenarios {
         display::print_tax_deduction_breakdown(&tax_schedule, scenario.gross_income);
     }
-    display::print_comparison_table(&scenarios);
+    display::print_comparison_table_for(&scenarios, Some(&tax_basis));
 }
 
 fn run_lifetime_strategy(

@@ -198,6 +198,15 @@ pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f
 }
 
 pub fn print_comparison_table(scenarios: &[WorkScenario]) {
+    print_comparison_table_for(scenarios, None)
+}
+
+/// As [`print_comparison_table`], but naming the basis the tax figures came from.
+///
+/// The breakdown note used to claim "official Stadt Bern rates" unconditionally,
+/// which was wrong for every other canton and — worse — was printed next to a
+/// `--canton` the caller had just asked for.
+pub fn print_comparison_table_for(scenarios: &[WorkScenario], tax_basis: Option<&str>) {
     println!("\n{}", "📊 SCENARIO COMPARISON".bold().blue());
     println!("{}", "=".repeat(60));
 
@@ -235,9 +244,13 @@ pub fn print_comparison_table(scenarios: &[WorkScenario]) {
     println!("\n{}", table);
     
     // Add explanation
+    let tax_line = match tax_basis {
+        Some(basis) => format!("  • Kantons-, Gemeinde- und Kirchensteuer ({basis})"),
+        None => "  • Kantons-, Gemeinde- und Kirchensteuer".to_string(),
+    };
     println!("\n{}", "ℹ️  Tax Rate Breakdown:".bold().cyan());
     println!("The 'Tax Rate' column shows TOTAL deductions including:");
-    println!("  • Kantons-, Gemeinde- und Kirchensteuer (official Stadt Bern rates)");
+    println!("{tax_line}");
     println!("  • Social Security: AHV/IV/EO (5.3%) + ALV (1.1%) + BVG (~6.5%) = ~12.9%");
     println!("\nExample: 33% total = ~20% Steuer + ~13% Sozialversicherung");
 

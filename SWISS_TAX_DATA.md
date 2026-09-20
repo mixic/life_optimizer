@@ -85,9 +85,9 @@ a future regeneration silently turns one of them into a value.
 
 ### Notable anchors
 
-| Canton | Cantonal Steuerfuss (2024) | Note |
+| Canton | Cantonal Steuerfuss (2026) | Note |
 |---|---|---|
-| Zürich | 0.98 (98%) | Plus 119% from the city of Zürich |
+| Zürich | 0.95 (95%) | Plus 119% from the city of Zürich |
 | Bern | 2.975 (297.5%) | A high-tax canton — nearly three times the simple tax |
 | Zug | 0.78 (78%) | Among the lowest |
 
@@ -152,39 +152,96 @@ they imply. Two things worth noting:
 **Priceable (22):** AG AI AR BE BS GL GR JU LU NE NW OW SG SH SO SZ TG TI UR VD ZG ZH
 
 Bern is priced by its standalone Stadt Bern table; the other 21 use the imported
-scale (or flat rate) multiplied by the Steuerfuss.
+scale (or flat rate, or BL's formulas) multiplied by the Steuerfuss.
+
+**Refusing (4):** BL, FR, GE, VS — and all four now for the *same* reason: their
+cantonal Steuerfuss is not a plain number in the ESTV workbook. That is a single
+kind of missing input rather than four different pieces of engineering, which is
+the substantive change the formula import made.
 
 **Refusing (4):**
 
 | Canton | Cause |
 |---|---|
-| `BL` | its export uses **logarithmic formulas** rather than a band table |
+| `BL` | tariff imported, but its Steuerfuss cell is blank (see below) |
 | `GE` | scale imported, but its Steuerfuss cell reads `148.5%9)` with a 12% rebate footnote |
 | `VS` | scale imported, but its Steuerfuss cell is `3)` — *"Kein Vielfaches"* |
 | `FR` | scale imported, but its Steuerfuss cell is blank |
 
-#### Three band shapes, and two cantons with no bands at all
+#### Four tariff shapes
 
 | Shape | Cantons | Representation |
 |---|---|---|
 | band **widths** (`Für die nächsten CHF`) | most | thresholds accumulated from widths |
 | absolute **thresholds** (`Steuerbares Einkommen CHF` + `Grundbetrag CHF`) | Bund | thresholds taken directly |
 | **flat percentage** (`Steuersatz %`) | OW, UR | `BaseScale::flat_rate_percent`, no bands |
-| **formulas** (`Formel`) | BL | not implemented |
+| **formulas** (`Formel`) | BL | `BaseScale::formula_single` / `formula_married`, no bands |
 
 Obwalden and Uri are the two cantons that levy a single uniform rate rather than
 a progressive scale, and they need a separate multiplication rather than a band
 walk. Their table is emitted as a single 0%-at-0 floor so the band machinery does
 not double-count, with the percentage applied separately.
 
-#### Open item: Steuerfuss vintage lags the scale vintage
+#### Basel-Landschaft: a tariff published as formulas
 
-Scales come from **2026** exports; Steuerfüsse are read from the **2024** row of
-the ESTV workbook. Two cantons have already been observed to differ between those
-years — **Sarnen's cantonal multiplier moved 3.35 (2024) to 3.25 (2026)** — so a
-canton whose multiplier changed is priced with slightly stale figures.
-`steuerfuss_vintage_is_recorded` pins the current state so changing it is
-deliberate.
+BL's export has no band column and no rate column. Each segment is an algebraic
+expression in the taxable income, giving the **simple tax** directly:
+
+```text
+16731    -0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746
+44615    -0.328507* $wert$ + 0.043108 * $wert$ * (log $wert$ - 1) + (-1249.444454)
+111538    0.051153* $wert$ + 0.010441 * $wert$ * (log $wert$ - 1) + (-4893.077017)
+1282692   235687.5410 + 0.1862 * ($wert$ - 1282692)
+```
+
+Three decisions are worth recording, because each could silently produce a wrong
+tax:
+
+1. **The formulas are stored as source text, not transcribed coefficients.** The
+   generator emits the expression into `estv_scales_data.rs` and
+   `federal_tax::eval_formula` evaluates it, so there is no transcription step in
+   which a digit can be lost. The evaluator understands `+ - * /`, parentheses,
+   decimals, `$wert$`, and `log` — **the natural logarithm**, applied as a prefix
+   operator: `log $wert$`, with no parentheses. An earlier attempt required
+   `log(`, which refused every real expression.
+2. **Segments are alternatives, not increments.** The last segment whose threshold
+   does not exceed the income supplies the *whole* tax. That is what makes the
+   expressions self-consistent: evaluated at each other's thresholds they agree to
+   under 0.001 CHF, which `basel_landschaft_segments_are_continuous_at_their_thresholds`
+   asserts. A progressive tariff cannot jump when a band changes, so that
+   continuity is a check on the *source data*.
+3. **Splitting is not applied.** BL publishes separate expressions per marital
+   status, so the marital difference is already in the tariff. The married table
+   adds one segment the single table does not have: a `0.49 * $wert$ / 100` relief
+   band from CHF 8,366.
+
+The tariff computes correctly today — but **BL is still not priceable**, because
+the Liestal row of the ESTV Steuerfuss workbook is *empty* for every year the
+workbook covers (2024, 2025 and 2026 alike). So BL is blocked on its multiplier,
+not its tariff, and `canton_tax_data(BL).missing_fields()` reports exactly those
+two multipliers. Supplying a sourced Steuerfuss is now the only thing between BL
+and a figure; nothing in the code needs to change.
+
+#### Steuerfuss vintage — resolved
+
+Scales come from **2026** exports, and the Steuerfüsse are now read from the
+**2026** row of the ESTV workbook, so the two halves of the product describe the
+same tax regime. `cantons::SELF_ASSESSMENT_YEAR` holds the year, and every
+workbook-filled multiplier carries it in its `Provenance`; a mismatch would fail
+`steuerfuss_vintage_matches_the_scale_vintage`.
+
+This corrected three cantons whose multipliers had moved between the years:
+
+| Canton | 2024 | 2026 |
+|---|---|---|
+| Aargau | 1.12 | 1.03 |
+| Obwalden (Sarnen) | 3.35 | 3.25 |
+| Zürich | 0.98 | 0.95 |
+
+Aargau and Zürich were previously *hand-entered* in the registry at 1.11 and
+0.98 — values that matched neither year's workbook cell exactly (Aargau's 2024
+cell says 1.12). Those overrides are gone: the workbook is now the single source,
+so a figure cannot drift away from the file it claims to come from.
 
 ### Cantonal simple-tax scales — imported
 
@@ -214,10 +271,15 @@ uses rather than inferring it.
 
 Aargau at CHF 100,000 taxable, hand-checked against the ESTV bands:
 
-| | Assessable | Simple tax | x Steuerfuss 2.07 | Effective |
+| | Assessable | Simple tax | x Steuerfuss 1.99 | Effective |
 |---|---|---|---|---|
-| Single | 100,000 | 6,938 | 14,361.66 | 14.36% |
-| Married | 50,000 (split) | 2,488 | 9,869.76 | 9.87% |
+| Single | 100,000 | 6,938 | 13,806.62 | 13.81% |
+| Married | 50,000 (split) | 2,384 | 9,488.32 | 9.49% |
+
+The married figure is **not** half the single one (6,903.31). The scale is
+progressive, so two halves at 50,000 cost less than one whole at 100,000 — that
+difference is exactly what income splitting grants, and it is why the split
+cannot be approximated by halving the result.
 
 Four cantons are **documented source exceptions** with no plain multiplier,
 asserted exactly by `source_exception_set_is_exactly_as_documented`:

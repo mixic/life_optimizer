@@ -41,7 +41,7 @@
 //!
 //! To complete the model each canton needs:
 //!
-//! 1. `steuerfuss_2024` — the cantonal multiplier, in percent (e.g. `98.0`).
+//! 1. `steuerfuss` — the cantonal multiplier, in percent (e.g. `0.98`).
 //!    Published annually in each canton's budget or tax decree.
 //! 2. `base_scale` — the canton's simple-tax tariff: the rate schedule the
 //!    multiplier is applied to. Published in the canton's Steuergesetz.
@@ -53,6 +53,19 @@
 
 use crate::federal_tax::{federal_tax, FederalBracket};
 use serde::{Deserialize, Serialize};
+
+/// The assessment year every imported figure is drawn from.
+///
+/// Scales and Steuerfüsse must come from the **same** year or the product is
+/// meaningless: the multiplier is a percentage of a *specific* tariff, so
+/// applying 2024 multipliers to a 2026 scale (or the reverse) silently mixes two
+/// tax regimes. The ESTV "Tarife" exports are 2026, so the Steuerfüsse are read
+/// from the 2026 row of the Steuerfuss workbook.
+///
+/// The one exception is Bern, which is priced from a standalone Stadt Bern rate
+/// table rather than a scale-plus-multiplier decomposition; its vintage is noted
+/// on that entry.
+pub const SELF_ASSESSMENT_YEAR: u16 = 2026;
 
 /// All 26 Swiss cantons, in official order.
 ///
@@ -346,12 +359,15 @@ pub fn is_priceable(canton: Canton) -> bool {
 ///
 /// A flat-rate canton has no band schedule but does have a rate, so it counts as
 /// priced: an imported scale carrying `flat_rate_percent` supplies the tariff on
-/// its own.
+/// its own. The same is true of a formula-published tariff, which supplies the
+/// tax through expressions rather than bands.
 fn is_priced_any_source(canton: Canton) -> bool {
     let data = canton_tax_data(canton);
     let scale_available = data.base_scale.is_some()
         || imported_scale(canton).is_some_and(|s| {
-            s.flat_rate_percent.is_some() || s.single.iter().any(|b| b.rate > 0.0)
+            s.flat_rate_percent.is_some()
+                || s.is_formula()
+                || s.single.iter().any(|b| b.rate > 0.0)
         });
     data.steuerfuss.is_some() && scale_available
 }
@@ -385,27 +401,26 @@ pub const BERN_BASE_SCALE_PLACEHOLDER: &[FederalBracket] = &[
 /// The provenance of each filled figure names the workbook and year, so a
 /// supplied number is never anonymous.
 fn with_imported_steuerfuss(canton: Canton, mut data: CantonTaxData) -> CantonTaxData {
+    let row =
+        crate::canton_steuerfuss_data::steuerfuss_for_code(canton.code(), SELF_ASSESSMENT_YEAR);
+
     // A deliberately hand-entered value always wins over the bulk import.
     if data.steuerfuss.is_none() {
-        if let Some(row) = crate::canton_steuerfuss_data::steuerfuss_for_code(canton.code(), 2024) {
-            if let Some(fuss) = row.cantonal {
-                data.steuerfuss = Some(fuss);
-                data.steuerfuss_provenance = Provenance::Official {
-                    source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
-                    year: 2024,
-                };
-            }
+        if let Some(fuss) = row.and_then(|r| r.cantonal) {
+            data.steuerfuss = Some(fuss);
+            data.steuerfuss_provenance = Provenance::Official {
+                source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
+                year: SELF_ASSESSMENT_YEAR,
+            };
         }
     }
     if data.capital_municipal_fuss.is_none() {
-        if let Some(row) = crate::canton_steuerfuss_data::steuerfuss_for_code(canton.code(), 2024) {
-            if let Some(fuss) = row.municipal {
-                data.capital_municipal_fuss = Some(fuss);
-                data.municipal_provenance = Provenance::Official {
-                    source: "ESTV, Steuerfüsse in den Kantonshauptorten (cantonal capital)",
-                    year: 2024,
-                };
-            }
+        if let Some(fuss) = row.and_then(|r| r.municipal) {
+            data.capital_municipal_fuss = Some(fuss);
+            data.municipal_provenance = Provenance::Official {
+                source: "ESTV, Steuerfüsse in den Kantonshauptorten (cantonal capital)",
+                year: SELF_ASSESSMENT_YEAR,
+            };
         }
     }
     data
@@ -452,49 +467,12 @@ fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
             },
         },
 
-        // Aargau: scale imported from the ESTV "Tarife" export
-        // (`estv_scales_AG.xlsx`); Steuerfuss from the ESTV Steuerfuss workbook.
-        //
-        // Aargau uses income splitting (`Splittingfaktor 2.0`): taxable income
-        // is divided by 2, the scale applied, and the result multiplied by 2.
-        Canton::Aargau => CantonTaxData {
-            steuerfuss: Some(1.11),
-            steuerfuss_provenance: Provenance::Official {
-                source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
-                year: 2024,
-            },
-            base_scale: imported_scale(Canton::Aargau).map(|s| s.brackets(false)),
-            base_scale_provenance: Provenance::Official {
-                source: "ESTV Steuerrechner, Tarife export (estv_scales_AG.xlsx)",
-                year: 2026,
-            },
-            capital_municipal_fuss: Some(0.96),
-            municipal_provenance: Provenance::Official {
-                source: "ESTV, Steuerfüsse in den Kantonshauptorten (Aarau)",
-                year: 2024,
-            },
-        },
-
-        // Zürich's cantonal Steuerfuss is 98% of the simple tax, and the city
-        // of Zürich adds 119%. Both are in the ESTV workbook. The canton's
-        // *base scale* is not yet entered, so the canton is not priceable —
-        // but the multipliers are recorded with their provenance so the
-        // remaining work is only the tariff.
-        Canton::Zurich => CantonTaxData {
-            steuerfuss: Some(0.98),
-            steuerfuss_provenance: Provenance::Official {
-                source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
-                year: 2024,
-            },
-            base_scale: None,
-            base_scale_provenance: Provenance::NotSourced,
-            capital_municipal_fuss: Some(1.19),
-            municipal_provenance: Provenance::Official {
-                source: "ESTV, Steuerfüsse in den Kantonshauptorten (Stadt Zürich)",
-                year: 2024,
-            },
-        },
-
+        // Aargau and Zürich are priced entirely from the bulk import below:
+        // scale from the ESTV "Tarife" export, Steuerfuss and capital-municipal
+        // multiplier from the ESTV Steuerfuss workbook, both at
+        // [`SELF_ASSESSMENT_YEAR`]. They were previously hand-entered, which
+        // pinned them to a stale vintage for no benefit — the workbook carries
+        // the same cells.
         _ => CantonTaxData::unsourced(),
     }
 }
@@ -577,12 +555,6 @@ pub fn cantonal_tax_from_scale(
     include_municipal: bool,
     splitting_factor: Option<f64>,
 ) -> Result<f64, String> {
-    if !(0.0..=4.0).contains(&cantonal_fuss) {
-        return Err(format!(
-            "cantonal Steuerfuss factor {cantonal_fuss} is outside the plausible range 0-4.0"
-        ));
-    }
-
     let (income_for_scale, split_multiplier) = match splitting_factor {
         Some(factor) => {
             if !(1.0..=3.0).contains(&factor) {
@@ -596,7 +568,49 @@ pub fn cantonal_tax_from_scale(
     };
 
     let base = crate::federal_tax::tax_with_scale(scale, income_for_scale) * split_multiplier;
+    apply_steuerfuss(base, cantonal_fuss, municipal_fuss, include_municipal)
+}
 
+/// The same two-level multiplication for a tariff published as **formulas**
+/// rather than bands (Basel-Landschaft).
+///
+/// The only difference from [`cantonal_tax_from_scale`] is where the simple tax
+/// comes from, so the Steuerfuss arithmetic is shared rather than repeated.
+/// Splitting is not offered: a formula canton publishes separate expressions per
+/// marital status, and each expression carries its own constant term so that it
+/// is exact at its threshold — which is only consistent with evaluating the whole
+/// income at once.
+pub fn cantonal_tax_from_formulas(
+    segments: &[crate::federal_tax::TaxFormula],
+    taxable_income: f64,
+    cantonal_fuss: f64,
+    municipal_fuss: Option<f64>,
+    include_municipal: bool,
+) -> Result<f64, String> {
+    let base = crate::federal_tax::formula_tax(segments, taxable_income);
+    if base.is_nan() {
+        return Err(
+            "a tariff formula could not be evaluated; refusing to report a tax \
+             rather than reporting a partial one"
+                .to_string(),
+        );
+    }
+    apply_steuerfuss(base, cantonal_fuss, municipal_fuss, include_municipal)
+}
+
+/// Multiply a simple-tax base amount by the cantonal and (optionally) municipal
+/// Steuerfüsse, validating both against plausible ranges.
+fn apply_steuerfuss(
+    base: f64,
+    cantonal_fuss: f64,
+    municipal_fuss: Option<f64>,
+    include_municipal: bool,
+) -> Result<f64, String> {
+    if !(0.0..=4.0).contains(&cantonal_fuss) {
+        return Err(format!(
+            "cantonal Steuerfuss factor {cantonal_fuss} is outside the plausible range 0-4.0"
+        ));
+    }
     let mut total_fuss = cantonal_fuss;
     if include_municipal {
         if let Some(municipal) = municipal_fuss {
@@ -608,7 +622,6 @@ pub fn cantonal_tax_from_scale(
             total_fuss += municipal;
         }
     }
-
     Ok(base * total_fuss)
 }
 
@@ -648,6 +661,22 @@ pub fn cantonal_tax(
         canton,
         missing: data.missing_fields(canton),
     })?;
+
+    // A formula-published tariff (Basel-Landschaft) has no band table at all, so
+    // it is handled before the brackets are consulted. Its expressions give the
+    // simple tax directly, and the Steuerfuss multiplies that.
+    if let Some(imported) = imported_scale(canton) {
+        if imported.is_formula() {
+            return cantonal_tax_from_formulas(
+                imported.formulas(married),
+                taxable_income,
+                fuss,
+                data.capital_municipal_fuss,
+                include_municipal,
+            )
+            .map_err(|detail| CantonTaxError::InvalidData { canton, detail });
+        }
+    }
 
     // Marital status selects the bracket table; the splitting factor is a
     // separate axis and is only ever non-`None` for a shared scale.
@@ -1209,8 +1238,8 @@ mod tests {
     /// Aargau must now be priceable end to end: the ESTV-imported scale, the
     /// ESTV Steuerfuss, and the splitting factor all present.
     ///
-    /// Aargau's capital is Aarau, with cantonal Steuerfuss 110% and municipal
-    /// 96% (ESTV workbook, 2024).
+    /// Aargau's capital is Aarau, with cantonal Steuerfuss 103% and municipal
+    /// 96% (ESTV workbook, 2026 — the same year as the imported tariff).
     #[test]
     fn aargau_is_priceable_from_the_imported_scale() {
         assert!(
@@ -1222,23 +1251,28 @@ mod tests {
 
         // Single taxpayer: no splitting, so the full income meets the scale.
         //   bands up to 100,000 accumulate to a simple tax of 6,938
-        //   6,938 x 2.07 (1.11 cantonal + 0.96 Aarau) = 14,361.66
+        //   6,938 x 1.99 (1.03 cantonal + 0.96 Aarau) = 13,806.62
         let single = cantonal_tax(Canton::Aargau, taxable, false, true)
             .expect("Aargau is now priceable");
         assert!(
-            (single - 14_361.66).abs() < 0.5,
-            "Aargau single at CHF {taxable}: expected 14361.66, got {single:.2}"
+            (single - 13_806.62).abs() < 0.5,
+            "Aargau single at CHF {taxable}: expected 13806.62, got {single:.2}"
         );
 
         // Married taxpayer: splitting halves the assessable income, so the
-        // scale is applied at 50,000 giving 2,488, then doubled for the split
-        // and scaled by the Steuerfuss:
-        //   2,488 x 2 x 2.07 = 9,869.76
+        // scale is applied at 50,000 giving a simple tax of 2,384, then doubled
+        // for the split and scaled by the Steuerfuss:
+        //   2,384 x 2 x 1.99 = 9,488.32
+        //
+        // Note this is *not* half the single figure (13,806.62 / 2 = 6,903.31):
+        // the scale is progressive, so taxing two halves at 50,000 costs less
+        // than taxing one whole at 100,000. That gap is the whole point of
+        // splitting, and the assertion below depends on it being real.
         let married = cantonal_tax(Canton::Aargau, taxable, true, true)
             .expect("Aargau is now priceable");
         assert!(
-            (married - 9_869.76).abs() < 0.5,
-            "Aargau married at CHF {taxable}: expected 9869.76, got {married:.2}"
+            (married - 9_488.32).abs() < 0.5,
+            "Aargau married at CHF {taxable}: expected 9488.32, got {married:.2}"
         );
 
         // Marriage must not cost more than being single at the same income.
@@ -1251,22 +1285,20 @@ mod tests {
     /// Obwalden and Uri levy a **flat** percentage of income rather than a band
     /// schedule, so they exercise a code path no other canton uses.
     ///
-    /// Hand-checkable, but note the **vintage mismatch** it exposes: the
-    /// Steuerfuss data is 2024 while the imported scales are 2026, so the
-    /// multipliers here are the 2024 ones. Sarnen's cantonal Steuerfuss moved
-    /// from 3.35 (2024) to 3.25 (2026), so the 2024 figure is what this asserts.
-    /// That mismatch is recorded as an open item rather than papered over.
+    /// Hand-checkable, and now internally consistent: the multipliers are read
+    /// from the same year as the imported tariffs, so Sarnen's cantonal
+    /// Steuerfuss is the 2026 figure of 3.25 rather than the 2024 figure of 3.35.
     #[test]
     fn flat_rate_cantons_apply_a_single_percentage() {
         let income = 100_000.0;
 
         let ow = cantonal_tax(Canton::Obwalden, income, false, true)
             .expect("Obwalden should be priceable from the flat rate");
-        // 2024 rates: cantonal 3.35 + Sarnen 3.86.
-        let expected_ow = income * 0.018 * (3.35 + 3.86);
+        // 2026 rates: cantonal 3.25 + Sarnen 3.86.
+        let expected_ow = income * 0.018 * (3.25 + 3.86);
         assert!(
             (ow - expected_ow).abs() < 1.0,
-            "OW: expected {expected_ow:.2} at 2024 Steuerfuesse, got {ow:.2}"
+            "OW: expected {expected_ow:.2} at 2026 Steuerfuesse, got {ow:.2}"
         );
 
         let ur = cantonal_tax(Canton::Uri, income, false, true)
@@ -1296,40 +1328,56 @@ mod tests {
         );
     }
 
-    /// The Steuerfuss vintage is behind the scale vintage, and that should be
-    /// visible rather than silent.
+    /// The Steuerfuss vintage must match the scale vintage.
     ///
-    /// Scales are imported from **2026** exports while Steuerfüsse are read from
-    /// the **2024** row of the ESTV workbook. Two cantons have already been
-    /// observed to differ between those years — Sarnen's cantonal multiplier
-    /// moved 3.35 (2024) to 3.25 (2026) — so a canton whose multiplier changed
-    /// will be priced with slightly stale figures.
-    ///
-    /// This test records the current state rather than asserting a year, so that
-    /// updating the Steuerfüsse is a deliberate act that must also re-verify the
-    /// affected cantons.
+    /// Scales are imported from **2026** exports, so the Steuerfüsse must be read
+    /// from the **2026** row. Mixing years is not a rounding difference: Sarnen's
+    /// cantonal multiplier alone moved 3.35 (2024) to 3.25 (2026), and Aargau's
+    /// moved 1.12 (2024) to 1.03 (2026) — applying a 2024 multiplier to a 2026
+    /// tariff prices a tax regime that never existed.
     #[test]
-    fn steuerfuss_vintage_is_recorded() {
-        let ag_2024 = crate::canton_steuerfuss_data::steuerfuss_for_code("AG", 2024)
-            .and_then(|r| r.cantonal);
-        let ag_2026 = crate::canton_steuerfuss_data::steuerfuss_for_code("AG", 2026)
-            .and_then(|r| r.cantonal);
+    fn steuerfuss_vintage_matches_the_scale_vintage() {
+        // Every canton whose figures were filled from the workbook must carry
+        // that vintage, and it must be the year the scales are from.
+        for canton in ALL_CANTONS {
+            let data = canton_tax_data(*canton);
+            if let Provenance::Official { year, .. } = data.steuerfuss_provenance {
+                // Bern's entry records its standalone table's vintage, which is
+                // a different publication; it is checked by its own tests.
+                if *canton == Canton::Bern {
+                    continue;
+                }
+                assert_eq!(
+                    year, SELF_ASSESSMENT_YEAR,
+                    "{}: Steuerfuss is from {year}, scales are from {SELF_ASSESSMENT_YEAR}",
+                    canton.code()
+                );
+            }
+        }
 
-        assert!(
-            ag_2024.is_some() && ag_2026.is_some(),
-            "the workbook should carry both vintages, which is what makes the \
-             mismatch correctable"
-        );
+        // And the year really is present in the workbook, so the read is not
+        // silently falling back to an older row.
+        for canton in ALL_CANTONS {
+            assert!(
+                crate::canton_steuerfuss_data::steuerfuss_for_code(
+                    canton.code(),
+                    SELF_ASSESSMENT_YEAR
+                )
+                .is_some(),
+                "{}: no {SELF_ASSESSMENT_YEAR} row in the Steuerfuss workbook",
+                canton.code()
+            );
+        }
 
-        // Aargau's value is hand-entered in the registry, so it is asserted here
-        // only as the figure currently in use — not as a cross-check against the
-        // workbook, which differs (1.11 against 1.12 for 2024).
-        let in_use = canton_tax_data(Canton::Aargau).steuerfuss.expect("AG fuss");
+        // Aargau is no longer hand-entered, so the registry value must equal the
+        // workbook cell rather than a stale duplicate of it.
+        let ag_row = crate::canton_steuerfuss_data::steuerfuss_for_code("AG", SELF_ASSESSMENT_YEAR)
+            .and_then(|r| r.cantonal)
+            .expect("AG row");
+        let ag_in_use = canton_tax_data(Canton::Aargau).steuerfuss.expect("AG fuss");
         assert!(
-            (in_use - 1.11).abs() < 1e-9,
-            "Aargau's hand-entered Steuerfuss changed to {in_use}; if the \
-             workbook value is now preferred, update this test and re-verify the \
-             Aargau figures in the docs"
+            (ag_in_use - ag_row).abs() < 1e-9,
+            "Aargau in use is {ag_in_use} but the {SELF_ASSESSMENT_YEAR} workbook says {ag_row}"
         );
     }
 
@@ -1409,6 +1457,71 @@ mod tests {
                 canton.code()
             );
         }
+    }
+
+    /// Basel-Landschaft publishes its tariff as algebraic expressions rather
+    /// than a band table, so it exercises the formula path.
+    ///
+    /// Its *multiplier* is blank in the 2026 ESTV workbook (the Liestal row is
+    /// empty for every year the workbook covers), so the canton still refuses —
+    /// but it must refuse for the multiplier, not for the tariff. This test pins
+    /// that distinction so "BL is unimplemented" can never again be true of the
+    /// formula machinery, and so the day a sourced multiplier arrives nothing
+    /// else has to change.
+    #[test]
+    fn basel_landschaft_tariff_is_formulas_and_only_the_multiplier_is_missing() {
+        let scale = imported_scale(Canton::BaselLandschaft)
+            .expect("BL's Tarife export must be imported");
+        assert!(
+            scale.is_formula(),
+            "BL publishes formulas; the band table is empty by construction"
+        );
+        assert!(
+            !scale.brackets(false).iter().any(|b| b.rate > 0.0),
+            "a formula canton must not also carry a band schedule"
+        );
+        assert_eq!(
+            scale.formulas(false).len(),
+            4,
+            "BL publishes four single segments"
+        );
+        assert_eq!(
+            scale.formulas(true).len(),
+            5,
+            "BL publishes five married segments (the 0.49% relief band is extra)"
+        );
+        assert_eq!(
+            scale.splitting_factor(true),
+            None,
+            "BL's marital difference is in the formulas, so splitting must not be \
+             applied on top of it"
+        );
+
+        // The tariff itself computes: CHF 100,000 taxable, with a fictitious
+        // multiplier of 1.0, gives the raw formula result times 1.
+        let simple = crate::federal_tax::formula_tax(scale.formulas(false), 100_000.0);
+        assert!(
+            simple > 0.0 && simple < 20_000.0,
+            "BL simple tax at 100k should be a plausible figure, got {simple}"
+        );
+        let with_fuss = cantonal_tax_from_formulas(
+            scale.formulas(false),
+            100_000.0,
+            1.0,
+            None,
+            false,
+        )
+        .expect("the formula path must produce a figure");
+        assert!((with_fuss - simple).abs() < 1e-9);
+
+        // Only the two multipliers are unsourced.
+        let missing = canton_tax_data(Canton::BaselLandschaft).missing_fields(Canton::BaselLandschaft);
+        assert_eq!(
+            missing,
+            vec!["cantonal Steuerfuss", "capital municipal Steuerfuss"],
+            "BL should now be blocked on its multipliers alone"
+        );
+        assert!(!is_priceable(Canton::BaselLandschaft));
     }
 
     /// A canton with no imported scale must still refuse rather than fall back.

@@ -31,6 +31,7 @@ accumulation loop — asserted by the generated tests.
 """
 
 import os
+import json
 import re
 import sys
 import importlib.util
@@ -198,6 +199,10 @@ def find_columns(header_row):
         # Threshold form (federation).
         "Steuerbares Einkommen CHF": find("steuerbares", "einkommen", fallback=None),
         "Grundbetrag CHF": find("grundbetrag", fallback=None),
+        # Formula form: Basel-Landschaft publishes an algebraic expression per
+        # segment ("Formel") instead of any band or rate column, so a parser
+        # that requires a rate finds nothing at all for it.
+        "Formel": find("formel", fallback=None),
         # Flat-rate form: two cantons levy a single percentage rather than a band
         # table. Obwalden and Uri both publish this shape, so a parser that only
         # knows band widths finds nothing for them.
@@ -239,6 +244,15 @@ def parse_cantons(src):
             and width_col is None
             and threshold_col is None
         )
+
+        # A fourth shape, used by Basel-Landschaft: one algebraic expression per
+        # segment, giving the simple tax directly. No rate column exists, so the
+        # `rate is None` filter below would discard every row. The thresholds live
+        # in the same `Steuerbares Einkommen CHF` column the federal export uses,
+        # so the presence of a `Formel` column is what distinguishes the two
+        # shapes rather than the absence of a band-width column.
+        formula_col = columns.get("Formel")
+        formula_grid = formula_col is not None and not flat_rate
 
         # A canton publishes EITHER one "Alle" scale (marital difference is then
         # expressed through the splitting factor) OR separate scales per
@@ -298,6 +312,27 @@ def parse_cantons(src):
                 grids[code] = "flat"
                 continue
 
+            if formula_grid:
+                # The expression itself is the tariff. Rows without one hold the
+                # segment's threshold only (BL's first single segment is the bare
+                # threshold 0 with an empty formula), so they are skipped here and
+                # reconstructed as a zero floor below.
+                expression = clean(row[formula_col])
+                if expression == "":
+                    continue
+                threshold = to_float(row[threshold_col]) if threshold_col is not None else None
+                if threshold is None:
+                    continue
+                kind = classify_subject(subject)
+                if kind == "unknown":
+                    continue
+                out.setdefault(code, {}).setdefault((kind, subject), []).append(
+                    (threshold, expression, subject)
+                )
+                factors[code] = factor
+                grids[code] = "formula"
+                continue
+
             rate = to_float(row[rate_col])
             if rate is None:
                 continue
@@ -333,6 +368,20 @@ def parse_cantons(src):
     return out, factors, grids
 
 
+def formulas_to_segments(rows):
+    """Extract (threshold, expression) pairs from a formula-shaped export.
+
+    The export also carries a bare threshold row with an empty formula (BL's
+    first single segment, 0 CHF with nothing to add). It is dropped rather than
+    emitted as a zero segment, because a segment whose expression evaluates to
+    nothing has no defensible value: below the first real threshold the simple
+    tax is simply zero, which `formula_tax` already returns.
+    """
+    segments = [(threshold, expression) for threshold, expression, _s in rows if expression]
+    segments.sort(key=lambda s: s[0])
+    return segments
+
+
 def bands_to_thresholds(bands, absolute_grid=False):
     """Convert an export's band column into (threshold, rate_fraction) pairs.
 
@@ -356,6 +405,12 @@ def bands_to_thresholds(bands, absolute_grid=False):
     """
     if absolute_grid == "flat":
         return [(0.0, 0.0)]
+
+    if absolute_grid == "formula":
+        # The tariff is an expression, not a rate, so there is no bracket table.
+        # Emitting an empty one makes that explicit; `formula_tax` is used
+        # instead of `tax_with_scale`.
+        return []
 
     if absolute_grid:
         return [(value, rate_percent / 100.0) for value, rate_percent, _s in bands]
@@ -446,6 +501,14 @@ def main():
             # tariff.
             applies_for_married = None
 
+        # A formula canton (Basel-Landschaft) publishes per-subject expressions,
+        # so splitting must not be applied on top: the marital difference is
+        # already in the formulas. Every segment is also written to be
+        # self-contained (it carries its own constant term), which is only
+        # consistent with evaluating the whole income.
+        if grid_kind == "formula":
+            applies_for_married = None
+
         subjects = sorted({s for bands in by_kind.values() for _w, _r, s in bands})
         results.append(
             {
@@ -457,9 +520,9 @@ def main():
                 "absolute_grid": grid_kind,
                 "shared_scale": bool(shared and not (single or married)),
                 "flat_rate_percent": flat_rate_percent,
+                "formula_grid": grid_kind == "formula",
             }
         )
-
     if not results:
         raise SystemExit(f"no cantonal income bands found in {src}")
 
@@ -506,7 +569,7 @@ def main():
     lines.append("//!   encoded the difference in the scale, so the splitting factor is")
     lines.append("//!   `None` here and must not be applied on top.")
     lines.append("")
-    lines.append("use crate::federal_tax::FederalBracket;")
+    lines.append("use crate::federal_tax::{FederalBracket, TaxFormula};")
     lines.append("")
     lines.append("/// One canton's imported simple-tax scale.")
     lines.append("#[derive(Debug, Clone, Copy)]")
@@ -527,6 +590,13 @@ def main():
     lines.append("    /// and `married` are a zero floor and the rate below is the whole")
     lines.append("    /// tariff, so `base_tax = income * flat_rate_percent / 100`.")
     lines.append("    pub flat_rate_percent: Option<f64>,")
+    lines.append("    /// Set for a canton that publishes its tariff as algebraic")
+    lines.append("    /// expressions rather than a band table (Basel-Landschaft). When")
+    lines.append("    /// present, `single` and `married` are empty and the tax comes from")
+    lines.append("    /// `federal_tax::formula_tax` instead of `tax_with_scale`.")
+    lines.append("    pub formula_single: &'static [TaxFormula],")
+    lines.append("    /// See [`BaseScale::formula_single`].")
+    lines.append("    pub formula_married: &'static [TaxFormula],")
     lines.append("    /// The `Steuersubjekt` values present in the export, so an unexpected")
     lines.append("    /// subject split is visible rather than silently merged.")
     lines.append("    pub subjects: &'static [&'static str],")
@@ -536,6 +606,16 @@ def main():
     lines.append("    /// The bands that apply to the given marital status.")
     lines.append("    pub fn brackets(&self, married: bool) -> &'static [FederalBracket] {")
     lines.append("        if married { self.married } else { self.single }")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    /// The formula segments that apply to the given marital status.")
+    lines.append("    pub fn formulas(&self, married: bool) -> &'static [TaxFormula] {")
+    lines.append("        if married { self.formula_married } else { self.formula_single }")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    /// Whether this canton publishes its tariff as formulas.")
+    lines.append("    pub fn is_formula(&self) -> bool {")
+    lines.append("        !self.formula_single.is_empty() || !self.formula_married.is_empty()")
     lines.append("    }")
     lines.append("")
     lines.append("    /// The splitting factor to apply, which is only ever non-`None` for a")
@@ -556,6 +636,34 @@ def main():
         # identifier segment as-is; canton codes are already uppercase.
         ident_code = r["code"].upper()
         for kind in ("single", "married"):
+            if r["formula_grid"]:
+                # A formula canton has no band table; its tariff is emitted below
+                # as expressions. An empty band list here is deliberate and
+                # `BaseScale::is_formula` is what callers branch on.
+                ident = f"{ident_code}_{kind.upper()}_FORMULAS"
+                lines.append(
+                    f"/// Simple-tax tariff for canton {r['code']}, {kind} taxpayer,"
+                )
+                lines.append("/// published as algebraic expressions rather than bands.")
+                segments = formulas_to_segments(r[kind])
+                if not segments:
+                    lines.append(f"pub const {ident}: &[TaxFormula] = &[];")
+                    lines.append("")
+                    continue
+                lines.append(f"pub const {ident}: &[TaxFormula] = &[")
+                for threshold, expression in segments:
+                    # The expression is stored verbatim, with Rust string escapes
+                    # applied by `repr`-like quoting. Keeping the source text
+                    # rather than transcribed coefficients means there is no step
+                    # at which a digit can be mistyped.
+                    quoted = json.dumps(expression)
+                    lines.append(
+                        f"    TaxFormula {{ threshold: {threshold!r}, expression: {quoted} }},"
+                    )
+                lines.append("];")
+                lines.append("")
+                continue
+
             ident = f"{ident_code}_{kind.upper()}_BRACKETS"
             lines.append(
                 f"/// Simple-tax scale for canton {r['code']}, {kind} taxpayer."
@@ -583,17 +691,30 @@ def main():
         factor = r["splitting_for_married"]
         splitting = "None" if factor is None else f"Some({factor!r})"
         subjects = ", ".join(f'"{s}"' for s in r["subjects"])
+        upper = r["code"].upper()
+        if r["formula_grid"]:
+            single_ref = f"&[]"
+            married_ref = f"&[]"
+            formula_single = f"{upper}_SINGLE_FORMULAS"
+            formula_married = f"{upper}_MARRIED_FORMULAS"
+        else:
+            single_ref = f"{upper}_SINGLE_BRACKETS"
+            married_ref = f"{upper}_MARRIED_BRACKETS"
+            formula_single = "&[]"
+            formula_married = "&[]"
         lines.append("    BaseScale {")
         lines.append(f'        canton_code: "{r["code"]}",')
         lines.append(f"        splitting_factor_married: {splitting},")
-        lines.append(f"        single: {r['code'].upper()}_SINGLE_BRACKETS,")
-        lines.append(f"        married: {r['code'].upper()}_MARRIED_BRACKETS,")
+        lines.append(f"        single: {single_ref},")
+        lines.append(f"        married: {married_ref},")
         lines.append(f"        shared_scale: {str(r['shared_scale']).lower()},")
         flat = r.get("flat_rate_percent")
         lines.append(
             "        flat_rate_percent: "
             + ("None," if flat is None else f"Some({flat!r}),")
         )
+        lines.append(f"        formula_single: {formula_single},")
+        lines.append(f"        formula_married: {formula_married},")
         lines.append(f"        subjects: &[{subjects}],")
         lines.append("    },")
     lines.append("];")
@@ -655,8 +776,19 @@ def main():
     print(f"wrote {out_path}  ({len(results)} cantons)")
     print(f"  sources: {', '.join(contributing)}")
     for r in results:
-        top_s = bands_to_thresholds(r["single"], r["absolute_grid"])[-1][0]
-        top_m = bands_to_thresholds(r["married"], r["absolute_grid"])[-1][0]
+        if r["formula_grid"]:
+            # A formula tariff has no band grid; report segment counts instead so
+            # the summary is still readable.
+            print(
+                f"  {r['code']:3} single={len(formulas_to_segments(r['single'])):2}seg  "
+                f"married={len(formulas_to_segments(r['married'])):2}seg  "
+                f"split={r['splitting_for_married'] or '-'}  formulas"
+            )
+            continue
+        single_bands = bands_to_thresholds(r["single"], r["absolute_grid"])
+        married_bands = bands_to_thresholds(r["married"], r["absolute_grid"])
+        top_s = single_bands[-1][0] if single_bands else 0.0
+        top_m = married_bands[-1][0] if married_bands else 0.0
         factor = r["splitting_for_married"]
         print(
             f"  {r['code']:3} single={len(r['single']):2}b/{top_s:>11.0f}  "
