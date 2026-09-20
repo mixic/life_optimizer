@@ -52,16 +52,21 @@
 //! These are stated rather than hidden, because each makes the deduction too
 //! small (tax too high) or too large (tax too low):
 //!
-//! * Deductions whose trigger is a fact this model has no field for — property
-//!   ownership, pensioner status, self-employment — are listed in
-//!   [`DeductionAssessment::skipped`] and **not** applied.
+//! * Self-employment, and any rule whose trigger is a fact [`Household`] has no
+//!   field for, is listed in [`DeductionAssessment::skipped`] and **not**
+//!   applied. Property ownership and pensioner status used to be on this list
+//!   and are now modelled — see the fields on [`Household`].
+//! * **Wealth** deductions are not modelled at all, because the model has no
+//!   wealth. `Abzug Vermögensverwaltungskosten` sits in the ESTV file under
+//!   `Steuerart = Einkommen`, which is how it came to be deducted from income in
+//!   ZH, SZ, OW, NW and GL before this was noticed.
+//! * A **percentage** pensioner rule is not applied: Basel-Landschaft's is 40-60%
+//!   *of the pension*, and deducting a share of a salary instead would be a share
+//!   of the wrong base. Only the flat-amount form is used.
 //! * The means-tested scales are applied on **net income as given**, which for an
 //!   assessment is income minus the other deductions. This module does not solve
 //!   that circularity; it applies the scales to the income it is handed, which
 //!   is the same convention the ESTV calculator's own ordering implies.
-//! * `Eigenmietwert` (imputed rental value) has both a deduction *and* a
-//!   corresponding income addition. Only the deduction is modelled, so a
-//!   homeowner's position is incomplete in both directions.
 
 use crate::estv_deductions_data::{
     rules_for, scales_for, DeductionRule, DeductionScale, RuleKind,
@@ -91,6 +96,27 @@ pub struct Household {
     pub commuting_costs: Option<f64>,
     /// Income from a secondary employment.
     pub secondary_income: Option<f64>,
+    /// The **imputed rental value** (`Eigenmietwert`) of an owner-occupied home.
+    ///
+    /// This field is unusual in being an *income addition* as well as the base for
+    /// a deduction: Swiss tax adds the rental value the owner would otherwise have
+    /// paid themselves, then allows a deduction of a percentage of it for
+    /// maintenance. A model with only the deduction understates the homeowner's
+    /// taxable income, so [`DeductionAssessment::income_addition`] exposes the
+    /// addition and callers must apply both sides.
+    ///
+    /// `None` means the household is not a homeowner **or** that this is unknown;
+    /// either way no property rule applies, because every property rule in the
+    /// export is a percentage *of this value* and applying one to gross income
+    /// would deduct a percentage of the wrong base.
+    pub imputed_rental_value: Option<f64>,
+    /// Whether the household receives an AHV/IV pension.
+    ///
+    /// Defaults to `false` rather than unknown, because the optimizer models a
+    /// working household: treating an unstated case as a pensioner would grant
+    /// pensioner deductions to everyone, and `Abzug für AHV/IV-Rentner` is 10
+    /// rules plus 15 phase-out scales — far too much to grant by omission.
+    pub receives_pension: bool,
 }
 
 impl Household {
@@ -106,7 +132,21 @@ impl Household {
             childcare_costs: None,
             commuting_costs: None,
             secondary_income: None,
+            imputed_rental_value: None,
+            receives_pension: false,
         }
+    }
+
+    /// An owner-occupier: their home's imputed rental value is known.
+    pub fn homeowner(mut self, imputed_rental_value: f64) -> Self {
+        self.imputed_rental_value = Some(imputed_rental_value);
+        self
+    }
+
+    /// A household receiving an AHV/IV pension.
+    pub fn pensioner(mut self) -> Self {
+        self.receives_pension = true;
+        self
     }
 }
 
@@ -139,6 +179,8 @@ pub enum RuleCategory {
     ImputedRentalValue,
     /// Property maintenance costs.
     PropertyMaintenance,
+    /// Deductions available to a household receiving an AHV/IV pension.
+    Pensioner,
     /// Means-tested social deductions, governed by the phase-out scales.
     MeansTested,
 }
@@ -158,6 +200,7 @@ impl RuleCategory {
             RuleCategory::WealthManagement => "wealth-management",
             RuleCategory::ImputedRentalValue => "imputed-rental-value",
             RuleCategory::PropertyMaintenance => "property-maintenance",
+            RuleCategory::Pensioner => "pensioner",
             RuleCategory::MeansTested => "means-tested",
         }
     }
@@ -170,8 +213,7 @@ impl RuleCategory {
         match self {
             RuleCategory::ProfessionalExpenses
             | RuleCategory::InsurancePremiums
-            | RuleCategory::Marriage
-            | RuleCategory::WealthManagement => true,
+            | RuleCategory::Marriage => true,
 
             RuleCategory::Children | RuleCategory::Childcare | RuleCategory::Education => {
                 household.children > 0
@@ -182,9 +224,26 @@ impl RuleCategory {
             RuleCategory::Pillar3a => household.pillar3a_contribution.is_some(),
             RuleCategory::SecondEarner => household.secondary_income.is_some(),
 
-            // No field in `Household`, so they cannot be applied without
-            // guessing. Reported as skipped.
-            RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance => false,
+            // Pensioner deductions apply only to a household that says it
+            // receives a pension. The default is `false`, so a working household
+            // is never granted them by omission.
+            RuleCategory::Pensioner => household.receives_pension,
+
+            // Every property rule in the export is a percentage of the imputed
+            // rental value — `Abzug vom Eigenmietwert` at 20-40% and
+            // maintenance at 10-20%. Applying one to gross income deducts a
+            // percentage of the *wrong base*, which is why these wait for the
+            // value rather than running unconditionally.
+            RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance => {
+                household.imputed_rental_value.is_some()
+            }
+
+            // A WEALTH deduction, not an income one, even though the ESTV file
+            // lists it under `Steuerart = Einkommen`. It was previously applied
+            // unconditionally, deducting a percentage of *income* as a
+            // wealth-management cost in ZH, SZ, OW, NW and GL. This model has no
+            // wealth, so it is reported as not applicable instead.
+            RuleCategory::WealthManagement => false,
 
             // Applied through the phase-out scales, not as flat rules.
             RuleCategory::MeansTested => false,
@@ -280,6 +339,19 @@ fn exclusive_family(rule: &DeductionRule, category: RuleCategory) -> Option<&'st
         // Day versus residential education, with and without weekly stay.
         return Some("education_form");
     }
+    if category == RuleCategory::PropertyMaintenance {
+        // The bands are keyed on the BUILDING's age — "mit Alter bis 10 Jahren"
+        // versus "über 10 Jahren" — and a building has one age. Summing them
+        // deducted 6,000 of maintenance against a 20,000 rental value where the
+        // law allows one band. Found by the diagnostic, like the child-age and
+        // pillar-3a collisions before it.
+        return Some("property_age_band");
+    }
+    if category == RuleCategory::Pensioner {
+        // "… Ledige" versus "… Verheiratete" versus "… beide Partner
+        // Rentenbezüger" are separate qualifying groups, not cumulative.
+        return Some("pensioner_group");
+    }
     let _ = rule;
     None
 }
@@ -325,8 +397,14 @@ pub fn classify(name: &str) -> Option<RuleCategory> {
         ("Abzug für Alleinerzieher", RuleCategory::MeansTested),
         ("Abzug für Alleinstehende", RuleCategory::MeansTested),
         ("Abzug für ledige Steuerpflichtige", RuleCategory::MeansTested),
-        ("Abzug für ledige AHV", RuleCategory::MeansTested),
-        ("Abzug für AHV", RuleCategory::MeansTested),
+        // Pensioner rules, listed *before* the broader `Abzug für AHV` entry
+        // below so a label naming a pensioner group is not swallowed by it. They
+        // were previously classified as means-tested, which silently excluded
+        // them from every working household and would have applied the wrong
+        // mechanism to a pensioner one.
+        ("Abzug für ledige AHV", RuleCategory::Pensioner),
+        ("Abzug für AHV", RuleCategory::Pensioner),
+        ("Abzug für Alleinstehende über 65", RuleCategory::Pensioner),
         ("Unterstützungsabzug", RuleCategory::MeansTested),
         ("Steuerermässigung pro Kind", RuleCategory::MeansTested),
         // Threshold rows state the income at which a means-tested deduction
@@ -385,6 +463,14 @@ pub struct DeductionAssessment {
     pub skipped: Vec<SkippedDeduction>,
     /// Means-tested deductions, applied from the phase-out scales.
     pub means_tested: f64,
+    /// Taxable-income **additions** this assessment implies, not deductions.
+    ///
+    /// Currently only the imputed rental value of an owner-occupied home. It is
+    /// reported separately rather than netted into the total because the two are
+    /// different lines on an assessment: adding the rental value to income and
+    /// then deducting maintenance is not the same as deducting nothing, and a
+    /// caller that ignored this would understate a homeowner's taxable income.
+    pub income_addition: f64,
 }
 
 impl DeductionAssessment {
@@ -409,6 +495,14 @@ impl DeductionAssessment {
     pub fn uncapped_total(&self) -> f64 {
         let itemised: f64 = self.applied.iter().map(|d| d.amount).sum();
         itemised + self.means_tested
+    }
+
+    /// Taxable income once both sides of the assessment are applied.
+    ///
+    /// `gross + income_addition - deductions`. The addition is what makes a
+    /// homeowner's position symmetric; see [`Self::income_addition`].
+    pub fn taxable_income_with_addition(&self) -> f64 {
+        (self.gross_income + self.income_addition - self.total()).max(0.0)
     }
 
     /// Total as a fraction of gross income.
@@ -533,6 +627,38 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
             .then_with(|| a.name.cmp(b.name))
     });
 
+    let means_tested = means_tested(canton_code, household);
+
+    // Property deductions are capped at the imputed rental value, not at gross
+    // income: you cannot deduct more maintenance against a home than the home is
+    // deemed to earn, and every property rule is a percentage of that value.
+    // Applying the same cap to the *income* base would let a homeowner deduct
+    // more than the value the deduction is measured against.
+    let property_total: f64 = applied
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.category,
+                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+            )
+        })
+        .map(|d| d.amount)
+        .sum();
+    let property_cap = household.imputed_rental_value.unwrap_or(0.0).max(0.0);
+    if property_total > property_cap && property_cap > 0.0 {
+        // Scale the property entries down proportionally so the itemisation still
+        // sums to the total rather than silently disagreeing with it.
+        let scale = property_cap / property_total;
+        for entry in applied.iter_mut().filter(|d| {
+            matches!(
+                d.category,
+                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+            )
+        }) {
+            entry.amount *= scale;
+        }
+    }
+
     DeductionAssessment {
         jurisdiction: rules_for(canton_code)
             .first()
@@ -541,23 +667,48 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
         gross_income: household.gross_income,
         applied,
         skipped,
-        means_tested: means_tested(canton_code, household),
+        means_tested,
+        // The imputed rental value is an addition to taxable income, reported
+        // separately so a caller cannot apply the deduction without it.
+        income_addition: household.imputed_rental_value.unwrap_or(0.0).max(0.0),
     }
 }
 
 /// The amount a rule yields for a household.
 ///
-/// Two categories are driven by a *declared* figure rather than the rule's own
-/// base, because the rule states a ceiling and the taxpayer's actual contribution
-/// is what is deductible:
+/// Three bases appear, and using the wrong one silently deducts a percentage of
+/// the wrong thing:
 ///
-/// * `Pillar3a` — you deduct what you paid in, up to the published maximum.
-/// * `SecondEarner` — a percentage of the second income, not of the total.
-///
-/// The remaining categories apply the rule to gross income, which is the base
-/// the ESTV calculator uses for its `Prozent` column.
+/// * **gross income** — the default, and the base the ESTV calculator's `Prozent`
+///   column assumes for allowances and insurance premiums.
+/// * **the imputed rental value** — every property rule. `Abzug vom Eigenmietwert`
+///   is 20-40% *of the rental value* and maintenance 10-20% of it; applying
+///   either to income is a category error, not a rounding difference.
+/// * **a declared figure** — pillar 3a (what was paid in, capped), a second income
+///   (a percentage of it alone), childcare and commuting costs.
 fn amount_for(rule: &DeductionRule, category: RuleCategory, household: &Household) -> f64 {
     match category {
+        RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance => {
+            match household.imputed_rental_value {
+                Some(value) => rule.apply(value),
+                // Unreachable for a well-formed household: the category gate
+                // requires the value. Returning zero rather than falling back to
+                // income keeps the wrong-base error impossible.
+                None => 0.0,
+            }
+        }
+        RuleCategory::Pensioner => {
+            // Pensioner rules are either a flat amount or a percentage, and the
+            // percentage ones (Basel-Landschaft: 40-60%) are of the pension, not
+            // of employment income — which this model does not carry. Only the
+            // flat-amount form is applied; a percentage form would need a pension
+            // income field to avoid deducting a share of the wrong base.
+            if rule.amount > 0.0 {
+                rule.apply(household.gross_income)
+            } else {
+                0.0
+            }
+        }
         RuleCategory::Pillar3a => {
             let declared = household.pillar3a_contribution.unwrap_or(0.0);
             // The rule states the maximum; deduct the lesser of it and what was
@@ -643,11 +794,13 @@ fn means_tested(canton_code: &str, household: &Household) -> f64 {
 fn scale_applies(scale: &DeductionScale, household: &Household) -> bool {
     let name = scale.name;
 
-    // Pensioner and wealth variants describe a status this model has no field
-    // for, so they cannot be applied without guessing.
-    if name.contains("AHV/IV-Rentner") {
+    // Pensioner scales need the pension status, which `Household` now carries.
+    // They were previously excluded outright because no field existed for it,
+    // which meant a pensioner household silently received none of them.
+    if name.contains("AHV/IV-Rentner") && !household.receives_pension {
         return false;
     }
+    // Wealth scales describe a wealth this model does not track.
     if name.contains("Vermögen") {
         return false;
     }

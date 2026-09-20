@@ -338,3 +338,266 @@ fn sourced_deductions_differ_from_the_hand_entered_estimate() {
         );
     }
 }
+
+// ── Property: the base is the imputed rental value, not income ───────────────
+
+/// Every property rule is a percentage of the **imputed rental value**, so
+/// applying one to gross income deducts a percentage of the wrong base.
+///
+/// A tenant must therefore get *no* property deduction at all, and a homeowner's
+/// must scale with the rental value rather than with their salary.
+#[test]
+fn property_deductions_use_the_rental_value_not_income() {
+    let tenant = Household::employee(100_000.0, true, 0);
+    let tenant_assessment = assess("ZH", &tenant);
+    assert!(
+        !tenant_assessment
+            .applied
+            .iter()
+            .any(|d| matches!(
+                d.category,
+                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+            )),
+        "a tenant must not receive a property deduction: {:?}",
+        tenant_assessment.applied
+    );
+    assert_eq!(tenant_assessment.income_addition, 0.0);
+
+    let homeowner = Household::employee(100_000.0, true, 0).homeowner(20_000.0);
+    let owned = assess("ZH", &homeowner);
+    let property: Vec<_> = owned
+        .applied
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.category,
+                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+            )
+        })
+        .collect();
+    assert!(!property.is_empty(), "a homeowner should get property deductions");
+
+    // Doubling the rental value doubles the property deduction; doubling the
+    // salary must not. That is the difference between the right base and the
+    // wrong one.
+    let richer = assess("ZH", &Household::employee(200_000.0, true, 0).homeowner(20_000.0));
+    let richer_property: f64 = richer
+        .applied
+        .iter()
+        .filter(|d| d.category == RuleCategory::PropertyMaintenance)
+        .map(|d| d.amount)
+        .sum();
+    let owned_property: f64 = property
+        .iter()
+        .filter(|d| d.category == RuleCategory::PropertyMaintenance)
+        .map(|d| d.amount)
+        .sum();
+    assert!(
+        (richer_property - owned_property).abs() < 1e-9,
+        "maintenance must not scale with salary: {owned_property} then {richer_property}"
+    );
+
+    let bigger_home = assess("ZH", &Household::employee(100_000.0, true, 0).homeowner(40_000.0));
+    let bigger_property: f64 = bigger_home
+        .applied
+        .iter()
+        .filter(|d| d.category == RuleCategory::PropertyMaintenance)
+        .map(|d| d.amount)
+        .sum();
+    assert!(
+        bigger_property > owned_property,
+        "maintenance must scale with the rental value: {owned_property} then {bigger_property}"
+    );
+}
+
+/// The imputed rental value is an *income addition* as well as a deduction base.
+///
+/// A model with only the deduction understates a homeowner's taxable income, so
+/// the addition is exposed separately and the assessed income is higher than the
+/// raw gross figure despite the deductions.
+#[test]
+fn imputed_rental_value_is_reported_as_an_income_addition() {
+    let homeowner = Household::employee(100_000.0, true, 0).homeowner(20_000.0);
+    let assessment = assess("ZH", &homeowner);
+
+    assert_eq!(
+        assessment.income_addition, 20_000.0,
+        "the imputed rental value must be added to taxable income"
+    );
+    assert_eq!(
+        assessment.taxable_income_with_addition(),
+        100_000.0 + 20_000.0 - assessment.total(),
+        "taxable income is gross + addition - deductions"
+    );
+    assert!(
+        assessment.taxable_income_with_addition() > assessment.taxable_income(),
+        "a homeowner's assessable income should exceed their gross salary once the \
+         rental value is added, even after the maintenance deduction"
+    );
+
+    // And a tenant has neither side.
+    let tenant = assess("ZH", &Household::employee(100_000.0, true, 0));
+    assert_eq!(tenant.income_addition, 0.0);
+    assert_eq!(tenant.taxable_income_with_addition(), tenant.taxable_income());
+}
+
+/// Property deductions cannot exceed the value they are measured against.
+#[test]
+fn property_deductions_are_capped_at_the_rental_value() {
+    // A tiny rental value with percentage-based rules still cannot yield more
+    // than the value itself.
+    let household = Household::employee(500_000.0, true, 0).homeowner(1_000.0);
+    let assessment = assess("ZH", &household);
+    let property: f64 = assessment
+        .applied
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.category,
+                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+            )
+        })
+        .map(|d| d.amount)
+        .sum();
+    assert!(
+        property <= 1_000.0 + 1e-9,
+        "property deductions {property} exceed the rental value they are based on"
+    );
+}
+
+/// The maintenance bands are keyed on the *building's age*, and a building has
+/// one age — so at most one band applies.
+///
+/// Summing them deducted 6,000 of maintenance against a 20,000 rental value where
+/// the law allows a single band.
+#[test]
+fn property_maintenance_age_bands_are_not_summed() {
+    let household = Household::employee(100_000.0, true, 0).homeowner(20_000.0);
+    for canton in ["Bund", "ZH", "BE", "LU"] {
+        let assessment = assess(canton, &household);
+        let bands: Vec<_> = assessment
+            .applied
+            .iter()
+            .filter(|d| d.category == RuleCategory::PropertyMaintenance)
+            .collect();
+        assert_eq!(
+            bands.len(),
+            1,
+            "{canton}: exactly one maintenance band must apply, got {bands:?}"
+        );
+        assert!(
+            bands[0].amount <= 20_000.0,
+            "{canton}: maintenance {} exceeds the rental value",
+            bands[0].amount
+        );
+    }
+}
+
+// ── Wealth management is not an income deduction ─────────────────────────────
+
+/// `Abzug Vermögensverwaltungskosten` is a **wealth** deduction. The ESTV file
+/// lists it under `Steuerart = Einkommen`, which is why it was applied against
+/// income in ZH, SZ, OW, NW and GL — deducting 0.2-0.3% of a *salary* as a
+/// wealth-management cost.
+#[test]
+fn wealth_management_is_not_deducted_from_income() {
+    let household = Household::employee(100_000.0, false, 0);
+    for canton in ["ZH", "SZ", "OW", "NW", "GL", "UR", "Bund"] {
+        let assessment = assess(canton, &household);
+        assert!(
+            !assessment
+                .applied
+                .iter()
+                .any(|d| d.category == RuleCategory::WealthManagement),
+            "{canton} deducted a wealth-management cost from income: {:?}",
+            assessment.applied
+        );
+    }
+
+    // The rule is still reported rather than dropped, so the omission is visible.
+    let zh = assess("ZH", &household);
+    assert!(
+        zh.skipped
+            .iter()
+            .any(|s| s.name.contains("Vermögensverwaltung")),
+        "the wealth rule should be reported as not applied"
+    );
+}
+
+// ── Pensioner deductions ─────────────────────────────────────────────────────
+
+/// Pensioner deductions need the pension fact, and defaulting to `false` is what
+/// stops them being granted to every working household.
+///
+/// `Abzug für AHV/IV-Rentner` is 10 flat rules plus 15 phase-out scales; granting
+/// them by omission would be a large silent error.
+#[test]
+fn pensioner_deductions_require_the_pension_fact() {
+    let worker = Household::employee(30_000.0, false, 0);
+    let pensioner = Household::employee(30_000.0, false, 0).pensioner();
+
+    for canton in ["SZ", "GL", "SO", "FR", "SH"] {
+        let w = assess(canton, &worker);
+        assert!(
+            !w.applied
+                .iter()
+                .any(|d| d.category == RuleCategory::Pensioner),
+            "{canton} granted a pensioner deduction to a working household: {:?}",
+            w.applied
+        );
+
+        let p = assess(canton, &pensioner);
+        // A pensioner must not receive *less* than a worker on the same income.
+        assert!(
+            p.total() >= w.total(),
+            "{canton}: pensioner {} should not be worse off than worker {}",
+            p.total(),
+            w.total()
+        );
+    }
+
+    // Savoy, Glarus and Solothurn publish flat pensioner amounts, so those must
+    // actually appear.
+    for (canton, expected) in [("SZ", 4_000.0), ("GL", 2_100.0), ("SO", 5_000.0)] {
+        let p = assess(canton, &Household::employee(30_000.0, false, 0).pensioner());
+        let flat = p
+            .applied
+            .iter()
+            .find(|d| d.category == RuleCategory::Pensioner)
+            .unwrap_or_else(|| panic!("{canton} should grant a flat pensioner deduction"));
+        assert_eq!(flat.amount, expected, "{canton}");
+    }
+}
+
+/// A percentage pensioner rule must not be applied to employment income.
+///
+/// Basel-Landschaft's is 40-60% *of the pension*, which this model does not carry;
+/// deducting a share of a salary instead would be a share of the wrong base.
+#[test]
+fn percentage_pensioner_rules_are_not_applied_to_salary() {
+    let pensioner = Household::employee(30_000.0, false, 0).pensioner();
+    let bl = assess("BL", &pensioner);
+    // BL's flat pensioner rule is 0 with percent 40/60, so nothing should appear.
+    for entry in bl.applied.iter().filter(|d| d.category == RuleCategory::Pensioner) {
+        assert!(
+            entry.amount == 0.0,
+            "BL's percentage pensioner rule must not be applied to salary: {entry:?}"
+        );
+    }
+}
+
+/// Pensioner phase-out scales must reach a pensioner household, which the old
+/// blanket exclusion prevented because no field existed for the fact.
+#[test]
+fn pensioner_phase_out_scales_reach_a_pensioner() {
+    let worker = assess("FR", &Household::employee(30_000.0, false, 0));
+    let pensioner = assess("FR", &Household::employee(30_000.0, false, 0).pensioner());
+    assert!(
+        pensioner.means_tested > worker.means_tested,
+        "Fribourg's AHV/IV scale should raise a pensioner's means-tested deduction: \
+         worker {} vs pensioner {}",
+        worker.means_tested,
+        pensioner.means_tested
+    );
+}
+

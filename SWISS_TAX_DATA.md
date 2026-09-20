@@ -529,11 +529,11 @@ selection is explicit:
 * **mutually exclusive variants are grouped**, and at most one is applied;
 * anything unclassified is **reported, never applied**.
 
-### Five bugs the comparison found
+### Seven bugs the comparison found
 
 Each was a plausible-looking number rather than an error, and each was found by
 printing the engine's output beside the existing estimate — not by reasoning.
-All five are now regression tests in `tests/deduction_engine.rs`.
+All seven are now regression tests in `tests/deduction_engine.rs`.
 
 | Bug | Effect at CHF 100,000 |
 |---|---|
@@ -542,11 +542,19 @@ All five are now regression tests in `tests/deduction_engine.rs`.
 | Secondary-employment expenses with no secondary income | CHF 2,400 too much |
 | Pillar 3a tied *and* untied variants summed | CHF 7,056 deducted twice |
 | `contains("Kind")` matched `"ohne Kind"` | disabled FR's and VS's single-person deductions entirely |
+| Both property-maintenance age bands summed | CHF 6,000 of maintenance against a CHF 20,000 rental value |
+| `Abzug Vermögensverwaltungskosten` applied to income | 0.2–0.3% of a salary in ZH, SZ, OW, NW, GL |
 
-The last is the most instructive: `"ohne Kind"` contains `"Kind"`, so a keyword
-test demanded children for a scale that explicitly excludes them. The child
-conditions had to be parsed as *conditions* rather than searched for as keywords —
-the same class of mistake as reading `Kantons-Id` as `Kanton`.
+The `"ohne Kind"` case is the most instructive: `"ohne Kind"` contains `"Kind"`,
+so a keyword test demanded children for a scale that explicitly excludes them. The
+child conditions had to be parsed as *conditions* rather than searched for as
+keywords — the same class of mistake as reading `Kantons-Id` as `Kanton`.
+
+Two of the seven share a shape worth naming, because it has now bitten four times:
+**the export lists alternatives as separate rows**. Child age brackets, pillar 3a
+solution type, property age bands and pensioner groups are all "pick one", and a
+model that sums rows instead of grouping variants overstates every family that has
+them.
 
 ### What the two models actually produce
 
@@ -577,22 +585,79 @@ itemised.
 
 Stated rather than hidden, because each either under- or over-states the tax:
 
-* **Not applied**, and reported by `skipped()`: property deductions
-  (`Eigenmietwert`, maintenance), pensioner deductions, and everything else whose
-  trigger this model has no field for.
-* **`Eigenmietwert`** has both a deduction and a corresponding *income addition*.
-  Only the deduction is modelled, so a homeowner's position is incomplete in both
-  directions.
+* **Not applied**, and reported by `skipped()`: self-employment, and any rule whose
+  trigger `Household` has no field for.
+* **Wealth deductions are not modelled at all**, because the model has no wealth.
+  `Abzug Vermögensverwaltungskosten` sits in the ESTV file under
+  `Steuerart = Einkommen`, which is how it came to be deducted from *income* in
+  ZH, SZ, OW, NW and GL — 0.2–0.3% of a salary taken as a wealth-management cost.
+  It is now reported as not applicable instead.
+* **A percentage pensioner rule is not applied.** Basel-Landschaft's is 40–60%
+  *of the pension*, and deducting a share of a salary instead would be a share of
+  the wrong base. Only the flat-amount form is used.
 * **Bracket selection within a family** takes the larger amount when the
-  distinguishing fact (a child's age, whether the taxpayer has a tied pension
-  solution) is not held. The alternative is reported as skipped, so the
-  uncertainty is visible rather than silent.
+  distinguishing fact (a child's age, a building's age, whether the taxpayer has a
+  tied pension solution) is not held. The alternative is reported as skipped, so
+  the uncertainty is visible rather than silent.
 * **Means-tested scales** are applied to the income as given, which for a real
   assessment is income *net* of the other deductions. That circularity is not
   solved here.
 * Totals are capped at gross income. Valais's phase-out table legitimately allows
   CHF 21,250, which exceeds a CHF 15,000 income; the cap applies to the total, and
   `uncapped_total()` exposes the difference.
+
+### Property, and why the base matters more than the rate
+
+Every property rule in the export is a percentage **of the imputed rental value**,
+not of income: `Abzug vom Eigenmietwert` is 20–40% of it and maintenance 10–20%.
+The first version of the engine applied them to gross income, which is a category
+error rather than a rounding difference — a CHF 100,000 earner with a CHF 20,000
+rental value would have had maintenance calculated off their salary.
+
+`Household::homeowner(imputed_rental_value)` supplies the fact, and three things
+follow:
+
+1. **A tenant gets nothing**, because `None` means the fact is absent and every
+   property rule is gated on it.
+2. **The deduction scales with the home, not the salary** — asserted directly, by
+   doubling each in turn and checking which one moves the figure.
+3. **Property deductions are capped at the rental value.** You cannot deduct more
+   maintenance against a home than the home is deemed to earn.
+
+The `Eigenmietwert` is also an **income addition**, not only a deduction base: the
+rental value the owner would otherwise have paid themselves is added to taxable
+income first. Modelling only the deduction understates a homeowner's taxable
+income, so `DeductionAssessment::income_addition` exposes it and
+`taxable_income_with_addition()` applies both sides. At CHF 100,000 with a
+CHF 20,000 rental value, taxable income lands *above* the salary despite the
+deductions — which is the correct direction and the one a one-sided model gets
+wrong.
+
+### Pensioner deductions
+
+`Abzug für AHV/IV-Rentner` is 10 flat rules plus 15 phase-out scales, across eight
+cantons. `Household::pensioner()` supplies the fact. The default is `false`, not
+"unknown", precisely because granting these by omission would be a large silent
+error for every working household.
+
+They were previously classified as *means-tested*, which excluded them from every
+household and would have applied the wrong mechanism to a pensioner one. They are
+now their own category, with the flat-amount form applied (SZ 4,000, GL 2,100,
+SO 5,000) and the percentage form left alone for the reason above.
+
+### Two more collisions found by the diagnostic
+
+Both were plausible numbers rather than errors, and both are now regression tests:
+
+| Bug | Effect |
+|---|---|
+| Both property-maintenance age bands summed | CHF 6,000 of maintenance against a CHF 20,000 rental value where the law allows one band |
+| `Abzug Vermögensverwaltungskosten` applied to income | 0.2–0.3% of a salary in ZH, SZ, OW, NW, GL |
+
+The pattern is now familiar enough to name: **the export lists alternatives as
+separate rows**, and a model that sums rows instead of grouping variants will
+overstate every family that has them. It has now bitten four times — child age
+brackets, pillar 3a solution type, property age bands, and pensioner groups.
 
 ---
 
