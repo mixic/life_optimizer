@@ -885,7 +885,7 @@ The two honest paths, unchanged by the work above:
 
 ---
 
-## 8. OPEN DEFECT: tax is charged on gross income, not taxable income
+## 8. FIXED: tax was charged on gross income, not taxable income
 
 **Found, verified, and NOT yet fixed.** Recorded here so it is not lost, because it
 changes the tool's central calculation and needs its own deliberate pass.
@@ -897,7 +897,7 @@ and then multiplies it by **gross** income:
 let taxable = self.taxable_income_after_estimated_deductions(gross_income);
 let base_tax_rate = self.lookup_tax_rate(taxable);      // rate IS a burden rate
 ...
-gross_income * (1.0 - (base_tax_rate + social))         // applied to GROSS  (wrong)
+gross_income * (1.0 - (base_tax_rate + social))         // applied to GROSS -- the defect
 ```
 
 ### Why the rate is a burden rate
@@ -909,27 +909,37 @@ published point exactly -- which is what
 pins. So the rate is tax / taxable, a function of taxable income. Multiplying it by
 gross income overcharges.
 
-### The size of the error
+### The fix
+
+```text
+tax            = rate(taxable) x taxable
+effective_rate = tax / gross + social
+after_tax      = gross x (1 - effective_rate)      // exact inverse
+```
 
 At CHF 100,000 gross, single, Bern: taxable CHF 84,300, rate 15.76%.
 
-| Quantity | Value |
+| Quantity | Before | After |
 |---|---|
-| Rate looked up at taxable | 15.76% |
-| Burdened **gross** (current) | CHF 15,758 |
-| Burdened **taxable** (correct) | CHF 13,284 |
-| Overcharge | **CHF 2,474 (19%)** |
+| Tax charged | CHF 15,758 | **CHF 13,284** |
+| Tax share of gross | 15.76% | 13.28% |
+| Effective rate (tax + 12.9% payroll) | 28.66% | 26.18% |
+| After-tax income | CHF 71,341.60 | **CHF 73,815.67** |
+| Overcharge removed | | **CHF 2,474** |
 
-`after_tax_income` was independently verified to consume exactly this quantity: at
-CHF 70,000 it returns CHF 51,655.49, and `70000 * (1 - (0.1331 + 0.129))` gives the
-same figure to the cent.
+At CHF 70,000 gross the tax falls from CHF 9,314.51 to CHF 7,852.14 and after-tax
+income rises from CHF 51,655.49 to CHF 53,117.86.
 
-### What a fix would touch, which is why it is not rushed
+### What it changed, and why it needed its own pass
 
-`after_tax_income` feeds `monthly_after_tax`, which decides **feasibility** and
-the optimum work percentage -- so correcting it will change which scenario the tool
-recommends, not merely a displayed number. It should be done with the golden tests
-re-derived rather than patched in passing.
+`after_tax_income` feeds `monthly_after_tax`, which decides **feasibility** and the
+optimal work percentage — so this moved recommendations, not merely a displayed
+number, exactly as anticipated when it was recorded rather than patched.
+
+All 202 tests were re-run. The three that failed were asserting the *old* relation
+(`effective == tax_only + social`, which held only while the tax was charged on
+gross); they now assert the burden decomposition against the schedule rather than in
+the scenario's own terms, so they cannot pass by both sides moving together.
 
 ### A correction to the previous round's report
 

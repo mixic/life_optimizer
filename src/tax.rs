@@ -317,24 +317,42 @@ impl TaxSchedule {
         (gross_income - deduction).max(0.0)
     }
 
-    /// Calculate effective tax rate using official lookup table + social security
+    /// Total deductions — tax plus payroll charges — as a fraction of **gross**
+    /// income.
+    ///
+    /// The tax component is the rate schedule evaluated on *taxable* income,
+    /// expressed as a share of gross:
+    ///
+    /// ```text
+    /// tax            = rate(taxable) x taxable
+    /// effective_rate = tax / gross + social
+    /// ```
+    ///
+    /// It previously returned `rate(taxable) + social`, i.e. it divided the tax by
+    /// the *wrong* denominator, and `after_tax_income` then multiplied the result
+    /// by gross — charging the taxable-income rate against gross income. At
+    /// CHF 100,000 gross (taxable CHF 84,300, rate 15.76%) that charged
+    /// CHF 15,758 instead of CHF 13,284, an overcharge of about 19%.
+    ///
+    /// The rate schedule is a *burden* rate: the Bern table's own reference point
+    /// of 10.08% at CHF 40,000 means the burden on CHF 40,000 taxable is
+    /// CHF 4,032, which `tests::test_exact_official_rates_single` pins.
+    ///
+    /// [`after_tax_income`](Self::after_tax_income) is kept as the inverse of this
+    /// function, so `gross x (1 - effective_tax_rate) == after_tax_income`.
     pub fn effective_tax_rate(&self, gross_income: f64) -> f64 {
-        if gross_income == 0.0 {
+        if gross_income <= 0.0 {
             return 0.0;
         }
 
         let taxable_income = self.taxable_income_after_estimated_deductions(gross_income);
+        let tax = self.tax_rate_on_taxable(taxable_income) * taxable_income;
 
-        // Get base tax rate from official table on reduced taxable income.
-        let base_tax_rate = self.tax_rate_on_taxable(taxable_income);
+        let social_security_total = self.social_security_rate
+            + self.unemployment_rate
+            + self.pension_rate;
 
-        // Add social security contributions
-        let social_security_total = self.social_security_rate +
-                                     self.unemployment_rate +
-                                     self.pension_rate;
-
-        // Total effective rate. This makes the model reflect common Swiss deductions.
-        base_tax_rate + social_security_total
+        tax / gross_income + social_security_total
     }
 
     /// Get tax-only rate (without social security) for a **gross** income.
@@ -399,7 +417,13 @@ impl TaxSchedule {
         table[table.len() - 1].1
     }
 
-    /// Calculate after-tax income
+    /// Gross income less tax and payroll charges.
+    ///
+    /// Deliberately the inverse of [`effective_tax_rate`](Self::effective_tax_rate),
+    /// so `gross x (1 - effective_tax_rate) == after_tax_income` holds exactly. The
+    /// two must not be changed independently: they were once inconsistent (a rate
+    /// derived from taxable income applied to gross), and the resulting overcharge
+    /// was invisible because both sides of the pair moved together.
     pub fn after_tax_income(&self, gross_income: f64) -> f64 {
         let tax_rate = self.effective_tax_rate(gross_income);
         gross_income * (1.0 - tax_rate)
@@ -436,19 +460,49 @@ mod tests {
                 "100k tax should be 17.24%, got {:.2}%", rate_100k * 100.0);
     }
 
+    /// The effective rate decomposes into the tax share of gross plus payroll
+    /// charges, and the tax share is the taxable-income rate scaled by
+    /// `taxable / gross`.
+    ///
+    /// The test previously subtracted the *taxable* rate from the effective rate
+    /// and called the remainder social security — which only worked because the
+    /// effective rate was `rate(taxable) + social`, i.e. because the tax was being
+    /// charged on gross income. The remainder was the payroll share with a
+    /// compensating error folded into it.
     #[test]
     fn test_total_rate_includes_social() {
         let schedule = TaxSchedule::bern_city_default(false, 0);
 
-        let taxable_income = schedule.taxable_income_after_estimated_deductions(100_000.0);
-        let tax_only_100k = schedule.lookup_tax_rate(taxable_income);
-        let total_100k = schedule.effective_tax_rate(100_000.0);
-        let social_security = total_100k - tax_only_100k;
+        let gross = 100_000.0;
+        let taxable_income = schedule.taxable_income_after_estimated_deductions(gross);
+        let tax_only = schedule.tax_only_rate(gross);
+        let total = schedule.effective_tax_rate(gross);
 
-        // With Swiss deductions, the effective social-security share still remains in the
-        // expected range of roughly 11–13% of gross income.
-        assert!(social_security > 0.11 && social_security < 0.13,
-                "Social security should remain roughly 11–13% of gross income, got {:.1}%", social_security * 100.0);
+        // Payroll charges are a flat share of gross by construction.
+        let social_expected = schedule.social_security_rate
+            + schedule.unemployment_rate
+            + schedule.pension_rate;
+        assert!(
+            (0.11..0.14).contains(&social_expected),
+            "payroll charges should be roughly 11-14% of gross, got {:.1}%",
+            social_expected * 100.0
+        );
+
+        // Effective = tax share of gross + payroll share.
+        let tax_share = tax_only * taxable_income / gross;
+        assert!(
+            (total - (tax_share + social_expected)).abs() < 1e-12,
+            "effective {total} should equal tax share {tax_share} + social {social_expected}"
+        );
+
+        // And the tax component is strictly below the taxable rate, because gross
+        // exceeds taxable. That inequality IS the defect this test now guards: the
+        // old code made the two equal.
+        assert!(
+            tax_share < tax_only,
+            "the tax share of gross ({tax_share}) must be below the taxable rate \
+             ({tax_only}); if they are equal the rate is being applied to gross"
+        );
     }
 
     #[test]
@@ -528,15 +582,26 @@ mod tests {
                      tax_rate_on_taxable(taxable) {via_taxable}"
                 );
 
-                // And the effective rate is exactly the tax-only rate plus the
-                // social-security components.
+                // And the effective rate is the tax share of GROSS plus payroll
+                // charges. The tax-only rate is a rate on *taxable* income, so it
+                // must be scaled by `taxable / gross` before being compared — this
+                // is the step whose absence let the tax be charged on gross.
                 let social = schedule.social_security_rate
                     + schedule.unemployment_rate
                     + schedule.pension_rate;
+                let tax_share = via_gross * taxable / gross;
                 let effective = schedule.effective_tax_rate(gross);
                 assert!(
-                    (effective - (via_gross + social)).abs() < 1e-12,
-                    "at gross {gross}: effective {effective} != tax-only {via_gross} + social {social}"
+                    (effective - (tax_share + social)).abs() < 1e-12,
+                    "at gross {gross}: effective {effective} != tax share {tax_share} + social {social}"
+                );
+
+                // The relation the pair must satisfy both ways round.
+                let after = schedule.after_tax_income(gross);
+                assert!(
+                    (after - gross * (1.0 - effective)).abs() < 1e-9,
+                    "at gross {gross}: after_tax_income {after} is not the inverse of \
+                     effective_tax_rate {effective}"
                 );
             }
         }

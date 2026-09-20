@@ -750,20 +750,32 @@ mod tests {
 
         assert!((scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
                 "tax-only rate should match the official Bern table");
-        // The scenario's tax-only rate is now the schedule's rate on the *deducted*
-        // income, so the effective rate is exactly that plus payroll charges --
-        // not below it. The old assertion expected a gap, which existed only
-        // because the two accessors disagreed about the base.
+
+        // The scenario must carry the schedule's figures unchanged, and the pair
+        // must satisfy the burden relation: the tax-only rate is a rate on TAXABLE
+        // income, so the tax share of gross is it scaled by `taxable / gross`.
+        //
+        // This assertion previously read `effective == tax_only + social`, which
+        // held only while the tax was being charged on gross income. It is checked
+        // against the schedule rather than restated in the scenario's own terms, so
+        // it cannot pass by both sides moving together.
+        let gross = scenario.gross_income;
+        let taxable = schedule.taxable_income_after_estimated_deductions(gross);
+        let social = schedule.social_security_rate
+            + schedule.unemployment_rate
+            + schedule.pension_rate;
+        let expected_effective = scenario.tax_only_rate * taxable / gross + social;
         assert!(
-            (scenario.effective_tax_rate
-                - (scenario.tax_only_rate
-                    + schedule.social_security_rate
-                    + schedule.unemployment_rate
-                    + schedule.pension_rate))
-                .abs()
-                < 1e-9,
-            "effective rate should be the tax-only rate plus payroll charges"
+            (scenario.effective_tax_rate - expected_effective).abs() < 1e-9,
+            "effective rate {} should be tax share {} + social {social}",
+            scenario.effective_tax_rate,
+            scenario.tax_only_rate * taxable / gross
         );
+        assert!(
+            (scenario.after_tax_income - gross * (1.0 - scenario.effective_tax_rate)).abs() < 1e-6,
+            "after-tax income must be the inverse of the effective rate"
+        );
+
         assert!(scenario.effective_tax_rate > schedule.social_security_rate
                     + schedule.unemployment_rate
                     + schedule.pension_rate,
