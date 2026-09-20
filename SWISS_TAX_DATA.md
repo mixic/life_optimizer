@@ -535,6 +535,24 @@ selection is explicit:
 * **mutually exclusive variants are grouped**, and at most one is applied;
 * anything unclassified is **reported, never applied**.
 
+### Status of the objective
+
+| Piece | State |
+|---|---|
+| Data imported with per-rule provenance | **done** — 617 rules, 22 scales, 27 jurisdictions |
+| Rule kinds modelled (`Betrag`/`Prozent`/`Min`/`Max`, threshold scales) | **done** |
+| Federal / cantonal composition | **done** — assessed per jurisdiction, itemised with its source |
+| Selection: which rules apply to a household | **done** — with 9 bugs found and fixed |
+| Coverage of the facts that gate them | **done** — property, pensioner, insurance, plus CLI flags |
+| *Replacing* the estimate in the reported figures | **not done — the user's decision** |
+
+The last row is why this objective is not closed. The sourced layer exists, is
+tested, and is reachable — `--custom-tax-rate`, `--imputed-rental-value`,
+`--pensioner` and `--insurance-premiums` all feed it — but `tax.rs` still computes
+the reported figures from the ~35%-cap estimate. Switching that default moves every
+number the tool produces, so it is a decision to be taken after reading the
+comparison output rather than a defect to be corrected.
+
 ### Nine bugs the comparison found
 
 Each was a plausible-looking number rather than an error, and each was found by
