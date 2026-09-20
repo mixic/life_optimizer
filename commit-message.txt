@@ -1,89 +1,17 @@
-Widen the deduction engine to property and pensioners, and fix two more collisions
+Show the imputed rental value as an income addition in the comparison output
 
-Closes the two largest gaps the engine reported, and the diagnostic used to check
-the new code found two further bugs. Test count rises from 186 to 194.
+The widened engine reports a homeowner's Eigenmietwert as an income ADDITION as
+well as a deduction base, so the comparison now prints it -- with an explicit plus
+sign, because every other figure in that list is a deduction and a bare number
+between two minus-figures would read as one.
 
-Property: the base matters more than the rate
+Nothing else changes: the household is not yet constructible as a homeowner from
+the CLI, so this branch is inert until flags exist for it. It is printed anyway so
+the field cannot silently disappear from the output if that changes.
 
-Every property rule in the ESTV export is a percentage of the IMPUTED RENTAL VALUE
-(`Eigenmietwert`), not of income: `Abzug vom Eigenmietwert` is 20-40% of it and
-maintenance 10-20%. The engine applied them to gross income, which is a category
-error rather than a rounding difference -- a CHF 100,000 earner with a CHF 20,000
-rental value had maintenance calculated off their salary.
-
-`Household::homeowner(value)` supplies the fact, and three things follow:
-
-  - a tenant gets nothing, because every property rule is gated on the value
-  - the deduction scales with the HOME, not the salary -- asserted directly by
-    doubling each in turn and checking which one moves the figure
-  - property deductions are capped at the rental value: you cannot deduct more
-    maintenance against a home than the home is deemed to earn
-
-The Eigenmietwert is also an INCOME ADDITION, not only a deduction base
-
-The module doc flagged this as a gap and it was a real one: the rental value the
-owner would otherwise have paid themselves is added to taxable income first, and
-only then is maintenance deducted. Modelling the deduction alone understates a
-homeowner's taxable income.
-
-`DeductionAssessment::income_addition` now carries it and
-`taxable_income_with_addition()` applies both sides. At CHF 100,000 with a
-CHF 20,000 rental value, taxable income lands ABOVE the salary despite the
-deductions -- the correct direction, and the one a one-sided model gets wrong. The
-addition is kept as its own field rather than netted into `total()` because the
-two are different lines on an assessment, and a caller that ignored the addition
-would silently understate the tax.
-
-Pensioner deductions, which were classified as the wrong thing
-
-`Abzug für AHV/IV-Rentner` is 10 flat rules plus 15 phase-out scales across eight
-cantons. They were classified as MEANS-TESTED, which excluded them from every
-household and would have applied the wrong mechanism to a pensioner one.
-
-They are now their own category behind `Household::pensioner()`. The default is
-`false` rather than unknown, deliberately: granting these by omission would be a
-large silent error for every working household, and 25 rules is far too much to
-concede. The flat-amount form is applied (SZ 4,000, GL 2,100, SO 5,000); the
-PERCENTAGE form is not, because Basel-Landschaft's is 40-60% of the PENSION and
-this model carries no pension income -- deducting a share of a salary would be a
-share of the wrong base.
-
-Two more bugs the diagnostic found
-
-  Both property-maintenance age bands summed
-    "mit Alter bis 10 Jahren" and "über 10 Jahren" are bands of ONE deduction
-    keyed on the building's age, and a building has one age. Summing them
-    deducted CHF 6,000 against a CHF 20,000 rental value.
-
-  Abzug Vermögensverwaltungskosten applied to income
-    A WEALTH deduction sitting under `Steuerart = Einkommen` in the export, which
-    is how it came to deduct 0.2-0.3% of a SALARY as a wealth-management cost in
-    ZH, SZ, OW, NW and GL. This model has no wealth, so the rule is reported as
-    not applicable instead of applied to the wrong base.
-
-Both are regression tests now. The pattern is familiar enough to name: the export
-lists ALTERNATIVES AS SEPARATE ROWS, and a model that sums rows instead of
-grouping variants overstates every family that has them. It has now bitten four
-times -- child age brackets, pillar 3a solution type, property age bands, and
-pensioner groups.
-
-Tests (tests/deduction_engine.rs, 8 new)
-
-  property_deductions_use_the_rental_value_not_income
-  imputed_rental_value_is_reported_as_an_income_addition
-  property_deductions_are_capped_at_the_rental_value
-  property_maintenance_age_bands_are_not_summed
-  wealth_management_is_not_deducted_from_income
-  pensioner_deductions_require_the_pension_fact
-  percentage_pensioner_rules_are_not_applied_to_salary
-  pensioner_phase_out_scales_reach_a_pensioner
-
-Documentation
-
-SWISS_TAX_DATA.md: the bug table grows to seven, the property section records the
-base and the income addition with the numeric example, and the pensioner section
-records the reclassification. The module's own "known modelling gaps" list is
-corrected -- property and pensioner status are no longer on it, and the wealth and
-percentage-pensioner limitations are.
+Also visible in this commit is the effect of the wealth-deduction fix on a plain
+tenant: Zurich's sourced total falls from CHF 12,600 to CHF 12,300, because
+`Abzug Vermögensverwaltungskosten` (0.3% of income, capped at 6,000) is no longer
+deducted from a salary.
 
 Verified: 194 tests pass, clippy unchanged at 9 pre-existing warnings.

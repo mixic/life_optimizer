@@ -967,6 +967,16 @@ fn print_deduction_model_comparison(
                 assessment.means_tested, label
             );
         }
+        // An income ADDITION, printed with a plus so it cannot be misread as
+        // another deduction when the list above it is all minus-figures. Only a
+        // homeowner has one today.
+        if assessment.income_addition > 0.0 {
+            println!(
+                "      {:>+9.2}  [{}] imputed rental value added to taxable income \
+                 (Eigenmietwert)",
+                assessment.income_addition, label
+            );
+        }
     }
 
     // Anything considered and not applied is reported, so a small total reads as
