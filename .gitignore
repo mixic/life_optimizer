@@ -26,3 +26,6 @@ target
 
 # DSH harness session state
 .dsh/
+
+# Python bytecode from the tools/ scripts
+__pycache__/
