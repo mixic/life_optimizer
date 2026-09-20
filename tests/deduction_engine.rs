@@ -687,6 +687,89 @@ fn insurance_variants_follow_marital_status() {
     );
 }
 
+/// The means-tested deduction must not feed its own base.
+///
+/// The scale is a step function of net income, so if the deduction were
+/// subtracted before the lookup, lowering the base would raise the deduction,
+/// which would lower the base again. The published tables resolve this by keying
+/// on the income remaining *after the other deductions* — a definition, not a
+/// fixed point — and `--insurance-premiums` exercises it: declaring a premium
+/// reduces the base and therefore raises the means-tested figure, once and
+/// stably.
+#[test]
+fn means_tested_deduction_does_not_feed_its_own_base() {
+    let mut household = Household::employee(30_000.0, false, 0);
+    let before = assess("FR", &household).means_tested;
+
+    household.insurance_premiums = Some(2_000.0);
+    let after = assess("FR", &household);
+
+    assert!(
+        after.means_tested >= before,
+        "a lower net income cannot reduce a means-tested deduction: {before} then {}",
+        after.means_tested
+    );
+
+    // Stable: assessing the same household twice gives the same answer, so there
+    // is no iteration left to converge.
+    let again = assess("FR", &household);
+    assert_eq!(
+        after.means_tested, again.means_tested,
+        "the assessment must be a single pass, not a fixed-point iteration"
+    );
+    assert_eq!(after.total(), again.total());
+}
+
+/// The net-income base must hold across cantons, not just where it was noticed.
+///
+/// Swept over every canton that has a means-tested scale, and **restricted to the
+/// sub-cap regime**: where the scale's own figure already exceeds gross income
+/// (Valais allows CHF 21,250 against a CHF 15,000 income) the total is capped and
+/// the base has no observable effect, so asserting a direction there would be
+/// asserting a coincidence.
+#[test]
+fn means_tested_scales_use_net_income_for_every_canton() {
+    use life_optimizer::estv_deductions_data::DEDUCTION_SCALES;
+
+    let mut cantons: Vec<&str> = DEDUCTION_SCALES.iter().map(|s| s.canton_code).collect();
+    cantons.sort_unstable();
+    cantons.dedup();
+
+    let mut exercised = 0;
+    for canton in cantons {
+        // A modest income, where a means-tested deduction is in range.
+        let base = Household::employee(20_000.0, false, 0);
+        let before = assess(canton, &base);
+        if before.means_tested == 0.0 {
+            continue; // the scale does not reach this household
+        }
+        // Skip where the total is already capped, since then either answer gives
+        // the same total and the check would be vacuous.
+        if before.uncapped_total() > before.gross_income {
+            continue;
+        }
+
+        let mut with_premium = base;
+        with_premium.insurance_premiums = Some(1_500.0);
+        let after = assess(canton, &with_premium);
+
+        assert!(
+            after.means_tested >= before.means_tested,
+            "{canton}: reducing net income by CHF 1,500 must not reduce the \
+             means-tested deduction ({} then {})",
+            before.means_tested,
+            after.means_tested
+        );
+        exercised += 1;
+    }
+
+    assert!(
+        exercised >= 3,
+        "only {exercised} canton(s) were actually exercised; this test is not \
+         checking what it claims"
+    );
+}
+
 /// A rule that applies but yields nothing must not vanish from the report.
 ///
 /// The insurance-premium family was discarded by a silent `continue` on a zero

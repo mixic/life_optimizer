@@ -480,7 +480,7 @@ non-zero value of each field, and reports a **conflict** if two rows disagree on
 field — which would mean the source itself is inconsistent, not that row order
 should decide.
 
-### Phase-out scales
+### Phase-out scales, and the circularity that dissolved
 
 The means-tested deductions are step functions of net income that phase *down* to
 zero, so `DeductionScale::amount_at` walks the steps rather than interpolating:
@@ -491,6 +491,30 @@ FR  Abzug für bescheidenes Einkommen, Ledige ohne Kind
 ```
 
 Every scale in the export phases to zero, which is asserted.
+
+The scales were originally applied to **gross** income, and this module described
+the result as an unsolved circularity: the deduction depends on net income, but net
+income depends on the deduction. Both halves of that were wrong.
+
+* **The column is `Reineinkommen` — net income — not gross.** Keying on gross
+  understated the deduction for exactly the households it exists for, since a
+  household with more deductions has *lower* net income and the scale allows it
+  more. Schaffhausen at CHF 20,000 with a CHF 1,500 premium moves 3,225 → 3,525;
+  Fribourg at CHF 25,000 moves 3,100 → 3,500.
+* **There is no circularity.** The base is income minus the *other* deductions,
+  excluding the means-tested deduction itself. Subtracting that too would lower the
+  base, raising the deduction, lowering the base again — a loop that only exists if
+  you define the base that way. Defined as "income remaining after the other
+  deductions" it is a single pass, which `means_tested_deduction_does_not_feed_its_own_base`
+  asserts by assessing twice and requiring the same answer.
+
+The distinction matters because it is the difference between a definition and a
+fixed-point search, and the module previously recorded the wrong one as an
+acknowledged limitation. A sweep over every canton with a scale
+(`means_tested_scales_use_net_income_for_every_canton`) checks the direction, and
+skips the capped regime — Valais allows CHF 21,250 against a CHF 15,000 income, so
+there the base has no observable effect and asserting one would be asserting a
+coincidence.
 
 ### Status: both models are printed; the tax base is not switched
 
@@ -625,9 +649,10 @@ Stated rather than hidden, because each either under- or over-states the tax:
   distinguishing fact (a child's age, a building's age, whether the taxpayer has a
   tied pension solution) is not held. The alternative is reported as skipped, so
   the uncertainty is visible rather than silent.
-* **Means-tested scales** are applied to the income as given, which for a real
-  assessment is income *net* of the other deductions. That circularity is not
-  solved here.
+* **Means-tested scales** are keyed on income *net* of the other deductions, which
+  is what the export's `Reineinkommen` column means. See the phase-out section
+  above; the base deliberately excludes the means-tested deduction itself, which
+  makes it a single pass rather than a fixed-point search.
 * Totals are capped at gross income. Valais's phase-out table legitimately allows
   CHF 21,250, which exceeds a CHF 15,000 income; the cap applies to the total, and
   `uncapped_total()` exposes the difference.

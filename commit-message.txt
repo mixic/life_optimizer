@@ -1,73 +1,56 @@
-Fix a rate-base defect: the printed Tax Rate used gross income
+Key the means-tested deduction scales on net income, and drop a false limitation
 
-`TaxSchedule` had two accessors that disagreed about which income the rate schedule
-applies to, and the one feeding the printed "Tax Rate" was the wrong one. Test
-count rises from 198 to 199.
+The phase-out scales were applied to GROSS income, and the module documented the
+result as an acknowledged, unsolved circularity. Both halves of that were wrong.
+Test count rises from 199 to 201.
 
-    effective_tax_rate(gross)  ->  looked up on taxable_income_after_estimates(gross)
-    tax_only_rate(gross)       ->  looked up on gross
+The column is Reineinkommen, which is net income
 
-The tax actually charged was always computed on deducted income, which is correct.
-Only the number shown to the user was wrong -- and consistently too high, because
-the progressive schedule was applied to a larger base:
+Keying on gross understated the deduction for exactly the households it exists for:
+a household with more deductions has LOWER net income, and the scale allows it
+more. Measured effects:
 
-    gross 100,000   shown 17.24%   charged 15.76%   overstated by 1.48pp
-    gross  50,000   shown 12.00%   charged 10.56%   overstated by 1.44pp
-    gross 150,000   shown 21.34%   charged 19.50%   overstated by 1.84pp
-    gross 250,000   shown 24.73%   charged 24.73%   overstated by 0.00pp
+    SH  gross 20,000, +1,500 premiums    3,225 -> 3,525
+    FR  gross 25,000                     3,100 -> 3,500
+    FR  gross 30,000                     2,100 -> 2,500
 
-The gap closes at 250,000 because the Bern table clamps above 200,000 -- which is
-exactly why the defect could sit at the top of the range unnoticed.
+Every differing scale moves UP, which is the direction that makes a means-tested
+deduction coherent.
 
-How it stayed hidden, which is the instructive part
+There was no circularity to begin with
 
-THREE tests called `tax_only_rate` with a TAXABLE figure and asserted the published
-rates. They passed because the function deducted a second time and the tests then
-compared against positions that tolerated the result. The bug and its tests agreed
-with each other, so neither looked wrong. The clearest case is
-`bern_table_is_close_to_the_published_figures`, which asserted `|diff| < 15.0`
-where the real answer is -5.74pp -- a tolerance wide enough to accept either the
-correct figure or the twice-deducted one.
+The base is income minus the OTHER deductions, excluding the means-tested deduction
+itself. Subtracting that too would lower the base, raising the deduction, lowering
+the base again -- a loop that exists only if you define the base that way. Defined
+as "the income remaining after the other deductions" it is a plain single pass.
 
-The fix
+That distinction is the point of the change: it is the difference between a
+definition and a fixed-point search, and the module had recorded the wrong one as a
+limitation. `means_tested_deduction_does_not_feed_its_own_base` asserts it by
+assessing the same household twice and requiring identical answers, so a future
+edit that reintroduces the feedback is caught.
 
-  - `tax_only_rate(gross)` now deducts first, so both accessors use one base
-  - `tax_rate_on_taxable(taxable)` is new, for asking about an income that is
-    already taxable. Converting a taxable figure back to a gross one just to have
-    it deducted again is the mistake that hid this.
-  - `rate_accessors_agree_on_the_same_income` asserts the invariant directly: the
-    tax-only rate equals `tax_rate_on_taxable(taxable_income_after_estimates(gross))`
-    to within 1e-12, and the effective rate equals it plus payroll charges.
+`means_tested` and `means_tested_scale_for` now take the scale base as a parameter
+rather than reading `household.gross_income` internally, so the gross/net
+distinction cannot be silently collapsed by a later edit. `means_tested_scale`
+remains as a convenience for a household that declares nothing, where net income is
+gross income.
 
-Corroboration rather than assertion
+Tests (tests/deduction_engine.rs, 2 new)
 
-The three tests that encoded the bug now call `tax_rate_on_taxable`, and the model
-figures they produce reproduce the table already documented in SWISS_TAX_DATA.md
-EXACTLY -- 5.41 / 12.00 / 17.24 / 24.73 / 24.73 against published 16.01 / 18.50 /
-22.98 / 32.15 / 37.09, i.e. -10.60 / -6.50 / -5.74 / -7.42 / -12.36pp. Those
-numbers were written down before this defect existed, so their restoration is
-independent evidence that the fix corrects the base rather than moving a figure.
+  means_tested_deduction_does_not_feed_its_own_base
+  means_tested_scales_use_net_income_for_every_canton
 
-`bern_table_is_close_to_the_published_figures` now pins that documented -13.5 to
--5.0pp envelope instead of `|diff| < 15.0`, so a future regression fails rather
-than hides.
-
-One assertion in `optimizer.rs` had to change meaning: it expected the effective
-rate to be strictly BELOW tax-only plus payroll charges, a gap that existed only
-because the two accessors disagreed. It now asserts equality.
-
-What did NOT change
-
-The deduction MODEL is untouched: still the ~35%-cap estimate, still with the
-sourced model printed beside it. This makes the reported rate consistent with the
-tax already being charged rather than moving anything between models -- which is
-why it was safe to do without the user's decision on switching the tax base.
+The second sweeps every canton holding a scale and asserts the direction, while
+deliberately SKIPPING the capped regime: Valais allows CHF 21,250 against a
+CHF 15,000 income, so there the base has no observable effect and asserting one
+would be asserting a coincidence. Four cantons are exercised, and the test fails if
+fewer than three are, so it cannot quietly become vacuous.
 
 Documentation
 
-SWISS_TAX_DATA.md gains section 6 on the defect, with the table, the reason it hid,
-and an explicit statement that the model is unchanged. DesignDocument.md's
-TaxSchedule interface gains the new method.
+SWISS_TAX_DATA.md's phase-out section is rewritten: it records the mis-keyed base,
+the numeric effects, and why the "circularity" was a mistake rather than a
+limitation. The module's own gaps list no longer claims it as unsolved.
 
-Verified: 199 tests pass, clippy unchanged at 9 pre-existing warnings, and the
-published-reference figures match the documented table exactly.
+Verified: 201 tests pass, clippy unchanged at 9 pre-existing warnings.

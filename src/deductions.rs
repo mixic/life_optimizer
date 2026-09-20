@@ -63,10 +63,11 @@
 //! * A **percentage** pensioner rule is not applied: Basel-Landschaft's is 40-60%
 //!   *of the pension*, and deducting a share of a salary instead would be a share
 //!   of the wrong base. Only the flat-amount form is used.
-//! * The means-tested scales are applied on **net income as given**, which for an
-//!   assessment is income minus the other deductions. This module does not solve
-//!   that circularity; it applies the scales to the income it is handed, which
-//!   is the same convention the ESTV calculator's own ordering implies.
+//! * The means-tested scales are keyed on `Reineinkommen` — income net of the
+//!   other deductions — and that is what this module uses. The base excludes the
+//!   means-tested deduction itself, which is a definition rather than a fixed
+//!   point: subtracting it too would lower the base, raising the deduction and
+//!   lowering the base again.
 
 use crate::estv_deductions_data::{
     rules_for, scales_for, DeductionRule, DeductionScale, RuleKind,
@@ -637,7 +638,21 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
             .then_with(|| a.name.cmp(b.name))
     });
 
-    let means_tested = means_tested(canton_code, household);
+    // The means-tested scales are keyed on `Reineinkommen` — NET income — not on
+    // gross. Applying them to gross systematically understated them for exactly
+    // the households they exist for, since the more deductions a household has
+    // the lower its net income and the more the scale allows.
+    //
+    // The base is gross minus the *itemised* deductions, and deliberately not
+    // minus the means-tested deduction itself: subtracting it would lower the
+    // base, which would raise the deduction, which would lower the base again.
+    // That is the "circularity" this module used to describe as unsolved. It
+    // dissolves once the scale is understood as a function of the income
+    // *remaining after the other deductions* — a plain definition, not a fixed
+    // point to iterate.
+    let itemised_total: f64 = applied.iter().map(|d| d.amount).sum();
+    let net_income = (household.gross_income - itemised_total).max(0.0);
+    let means_tested = means_tested(canton_code, household, net_income);
 
     // Property deductions are capped at the imputed rental value, not at gross
     // income: you cannot deduct more maintenance against a home than the home is
@@ -808,9 +823,13 @@ fn amount_for(rule: &DeductionRule, category: RuleCategory, household: &Househol
 /// overlapping *alternatives* (`… Ledige`, `… Verheiratete`, `… Ledige ohne
 /// Kind`) and a household qualifies for exactly one of them. Summing them would
 /// deduct several times over.
-fn means_tested(canton_code: &str, household: &Household) -> f64 {
-    means_tested_scale(canton_code, household)
-        .map(|scale| scale.amount_at(household.gross_income))
+///
+/// `scale_base` is **net** income — see the comment at the call site. It is passed
+/// in rather than read off `household` so the gross/net distinction cannot be
+/// silently collapsed by a later edit.
+fn means_tested(canton_code: &str, household: &Household, scale_base: f64) -> f64 {
+    means_tested_scale_for(canton_code, household, scale_base)
+        .map(|scale| scale.amount_at(scale_base))
         .unwrap_or(0.0)
 }
 
@@ -861,17 +880,37 @@ fn scale_applies(scale: &DeductionScale, household: &Household) -> bool {
     }
 }
 
-/// The scale a household should use for a given canton, if any.
+/// The scale a household should use for a given **net** income, if any.
 ///
 /// Exposed for display: a means-tested deduction that silently appears in a
 /// total is hard to check, and naming the scale is what makes it checkable.
-pub fn means_tested_scale(canton_code: &str, household: &Household) -> Option<&'static DeductionScale> {
+///
+/// Takes the scale base rather than reading it off the household, for the same
+/// reason as [`means_tested`] — the scales are keyed on `Reineinkommen`, not on
+/// gross income, and that must not be easy to get wrong.
+pub fn means_tested_scale_for(
+    canton_code: &str,
+    household: &Household,
+    scale_base: f64,
+) -> Option<&'static DeductionScale> {
     scales_for(canton_code)
         .into_iter()
         .filter(|s| scale_applies(s, household))
         .max_by(|a, b| {
-            a.amount_at(household.gross_income)
-                .partial_cmp(&b.amount_at(household.gross_income))
+            a.amount_at(scale_base)
+                .partial_cmp(&b.amount_at(scale_base))
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
+}
+
+/// The scale for a household that declares no other deductions.
+///
+/// A convenience for callers that only have gross income: with nothing itemised,
+/// net income *is* gross income. A caller that knows the other deductions should
+/// use [`means_tested_scale_for`] with the reduced figure.
+pub fn means_tested_scale(
+    canton_code: &str,
+    household: &Household,
+) -> Option<&'static DeductionScale> {
+    means_tested_scale_for(canton_code, household, household.gross_income)
 }
