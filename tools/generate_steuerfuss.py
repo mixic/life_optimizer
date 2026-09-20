@@ -193,6 +193,24 @@ def main():
         return f'"{escaped}"'
 
     lines = []
+    # The GPL-3.0 header is emitted here rather than added afterwards by
+    # tools/add_license_header.py, so regenerating the data never strips it.
+    lines.append("// Life Optimizer")
+    lines.append("// Copyright (C) 2026 MILAN NIKOLIC")
+    lines.append("//")
+    lines.append("// This program is free software: you can redistribute it and/or modify")
+    lines.append("// it under the terms of the GNU General Public License as published by")
+    lines.append("// the Free Software Foundation, either version 3 of the License, or")
+    lines.append("// (at your option) any later version.")
+    lines.append("//")
+    lines.append("// This program is distributed in the hope that it will be useful,")
+    lines.append("// but WITHOUT ANY WARRANTY; without even the implied warranty of")
+    lines.append("// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the")
+    lines.append("// GNU General Public License for more details.")
+    lines.append("//")
+    lines.append("// You should have received a copy of the GNU General Public License")
+    lines.append("// along with this program.  If not, see <https://www.gnu.org/licenses/>.")
+    lines.append("")
     lines.append("//! Cantonal and capital-city Steuerfuss data, generated from ESTV")
     lines.append("//! workbooks.")
     lines.append("//!")
@@ -262,6 +280,23 @@ def main():
     lines.append("    STEUERFUSS_ROWS")
     lines.append("        .iter()")
     lines.append("        .find(|r| r.canton_code == canton_code && r.year == year)")
+    lines.append("}")
+    lines.append("")
+
+    # Emit a match with one arm per canton code so callers can select on the
+    # enum without a string lookup. Written for every canton present, with the
+    # year each row came from, so the provenance stays visible at the call site.
+    lines.append("/// Select a canton's row for a given year via a match on the code.")
+    lines.append("///")
+    lines.append("/// Generated so that every canton in the workbook is reachable; an")
+    lines.append("/// unrecognised code returns `None` rather than a neighbouring canton.")
+    lines.append("pub fn steuerfuss_for_code(canton_code: &str, year: u16) -> Option<&'static SteuerfussRow> {")
+    lines.append("    match canton_code {")
+    codes_seen = sorted({c for entries in per_year.values() for c in entries})
+    for code in codes_seen:
+        lines.append(f'        "{code}" => steuerfuss_row("{code}", year),')
+    lines.append("        _ => None,")
+    lines.append("    }")
     lines.append("}")
     lines.append("")
 

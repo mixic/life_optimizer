@@ -352,13 +352,58 @@ pub const BERN_BASE_SCALE_PLACEHOLDER: &[FederalBracket] = &[
     FederalBracket { threshold: 200_000.0, rate: 0.1200 },
 ];
 
+/// Fill in Steuerfuss figures from the generated ESTV import.
+///
+/// `canton_tax_data` hard-codes the handful of cantons whose entry has been
+/// hand-checked. This wrapper supplies the Steuerfuss and capital-municipal
+/// figures for *every* canton from `canton_steuerfuss_data`, which already holds
+/// them for all 26 cantons. Without it the registry reported "missing: cantonal
+/// Steuerfuss, capital municipal Steuerfuss" for cantons whose multipliers were
+/// sitting in the workbook the whole time.
+///
+/// Base scales cannot be filled this way — they are a separate publication and
+/// genuinely absent — so a canton still fails unless a scale has been imported.
+/// The provenance of each filled figure names the workbook and year, so a
+/// supplied number is never anonymous.
+fn with_imported_steuerfuss(canton: Canton, mut data: CantonTaxData) -> CantonTaxData {
+    // A deliberately hand-entered value always wins over the bulk import.
+    if data.steuerfuss.is_none() {
+        if let Some(row) = crate::canton_steuerfuss_data::steuerfuss_for_code(canton.code(), 2024) {
+            if let Some(fuss) = row.cantonal {
+                data.steuerfuss = Some(fuss);
+                data.steuerfuss_provenance = Provenance::Official {
+                    source: "ESTV, Steuerfüsse in den Kantonshauptorten (natural persons)",
+                    year: 2024,
+                };
+            }
+        }
+    }
+    if data.capital_municipal_fuss.is_none() {
+        if let Some(row) = crate::canton_steuerfuss_data::steuerfuss_for_code(canton.code(), 2024) {
+            if let Some(fuss) = row.municipal {
+                data.capital_municipal_fuss = Some(fuss);
+                data.municipal_provenance = Provenance::Official {
+                    source: "ESTV, Steuerfüsse in den Kantonshauptorten (cantonal capital)",
+                    year: 2024,
+                };
+            }
+        }
+    }
+    data
+}
+
 /// The cantonal tax data table.
 ///
 /// Everything is [`CantonTaxData::unsourced`] except where a figure has been
-/// deliberately entered with its provenance. The registry is intentionally
-/// honest about how little is currently filled in: the structure is complete,
-/// the data is not.
+/// deliberately entered with its provenance. Steuerfuss and municipal multipliers
+/// are then backfilled for all cantons from the generated ESTV import; base
+/// scales are not, and remain the reason most cantons cannot be priced.
 pub fn canton_tax_data(canton: Canton) -> CantonTaxData {
+    with_imported_steuerfuss(canton, hand_entered_tax_data(canton))
+}
+
+/// The hand-checked entries, before the bulk Steuerfuss import is layered on.
+fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
     match canton {
         // Bern is priced by `TaxSchedule::bern_city_default`, which carries its
         // own hand-entered Stadt Bern rate table taken from the city's own
@@ -661,16 +706,136 @@ mod tests {
 
     /// The error message must be actionable: it names the canton and what is
     /// missing, and explains why no estimate was substituted.
+    ///
+    /// Note it must name the *base scale*, not the Steuerfuss: the Steuerfuss is
+    /// backfilled from the ESTV import for all 26 cantons, so for Vaud it is no
+    /// longer missing. Reporting a field that is present would send a reader
+    /// looking in the wrong place.
     #[test]
     fn error_message_is_actionable() {
         let err = cantonal_tax(Canton::Vaud, 100_000.0, false, false).unwrap_err();
         let message = err.to_string();
         assert!(message.contains("VD"), "should name the canton: {message}");
-        assert!(message.contains("Steuerfuss"), "should name what is missing: {message}");
+        assert!(
+            message.contains("base tax scale"),
+            "should name the genuinely missing item: {message}"
+        );
+        assert!(
+            !message.contains("cantonal Steuerfuss"),
+            "must not report the Steuerfuss as missing when it is supplied: {message}"
+        );
         assert!(
             message.contains("will not substitute"),
             "should state the no-fallback policy: {message}"
         );
+    }
+
+    /// Cantons whose 2024 source cell held no plain cantonal Steuerfuss.
+    ///
+    /// These are **documented source exceptions**, not registry gaps, and the
+    /// list is asserted exactly so that a change in the source data fails the
+    /// test rather than silently altering which cantons are priceable:
+    ///
+    /// * `GE` — cell reads `148.5%9)`, with footnote 9: *"Rabais de 12% de
+    ///   l'impôt cantonal de 147.5%"*. A rebate applies, so the effective
+    ///   multiplier is not the printed figure.
+    /// * `VS` — cell reads `3)`, footnoted *"Kein Vielfaches"*: Valais does not
+    ///   express a cantonal multiplier at all.
+    /// * `BL` — the cell is blank, so there is nothing to read.
+    /// * `FR` — the cantonal cell is blank; Fribourg splits income and wealth
+    ///   rows instead.
+    const STEUERFUSS_SOURCE_EXCEPTIONS: &[&str] = &["GE", "VS", "BL", "FR"];
+
+    /// The bulk Steuerfuss import must reach every canton whose source cell
+    /// actually held a multiplier.
+    ///
+    /// This is the regression guard for the defect it fixes: three cantons were
+    /// hand-entered while the workbook held multipliers for all 26, so 23
+    /// cantons reported "missing: cantonal Steuerfuss" for data that was
+    /// already in the repository.
+    #[test]
+    fn steuerfuss_is_supplied_for_every_canton_except_source_exceptions() {
+        for canton in ALL_CANTONS {
+            let data = canton_tax_data(*canton);
+            if STEUERFUSS_SOURCE_EXCEPTIONS.contains(&canton.code()) {
+                assert!(
+                    data.steuerfuss.is_none(),
+                    "{}: is a documented source exception and should stay unsupplied",
+                    canton.code()
+                );
+                continue;
+            }
+            assert!(
+                data.steuerfuss.is_some(),
+                "{}: Steuerfuss should be supplied from the ESTV import",
+                canton.code()
+            );
+            assert!(
+                data.steuerfuss_provenance.is_usable(),
+                "{}: a supplied Steuerfuss must carry provenance",
+                canton.code()
+            );
+        }
+    }
+
+    /// Exactly the expected cantons lack a cantonal Steuerfuss — no more, no
+    /// fewer. If the source data changes, this fails and forces the change to
+    /// be reviewed rather than silently shifting coverage.
+    #[test]
+    fn source_exception_set_is_exactly_as_documented() {
+        let mut actual: Vec<&str> = ALL_CANTONS
+            .iter()
+            .filter(|c| canton_tax_data(**c).steuerfuss.is_none())
+            .map(|c| c.code())
+            .collect();
+        actual.sort_unstable();
+
+        let mut expected = STEUERFUSS_SOURCE_EXCEPTIONS.to_vec();
+        expected.sort_unstable();
+
+        assert_eq!(
+            actual, expected,
+            "the set of cantons without a cantonal Steuerfuss changed"
+        );
+    }
+
+    /// For an ordinary canton, only the base scale should remain missing — the
+    /// multipliers are supplied and must not be reported as absent.
+    #[test]
+    fn only_the_base_scale_remains_missing() {
+        for canton in [Canton::Vaud, Canton::Ticino, Canton::Zug, Canton::Solothurn] {
+            let missing = canton_tax_data(canton).missing_fields();
+            assert!(
+                missing.contains(&"cantonal base tax scale"),
+                "{}: the base scale is the outstanding item",
+                canton.code()
+            );
+            assert!(
+                !missing.contains(&"cantonal Steuerfuss"),
+                "{}: Steuerfuss is supplied, so it must not be listed",
+                canton.code()
+            );
+        }
+    }
+
+    /// Geneva and Valais must name their *own* reason for being unpriced, and
+    /// it should not be the base scale alone — their multipliers are the
+    /// blocker as well.
+    #[test]
+    fn rebate_and_no_multiplier_cantons_report_their_own_gap() {
+        for canton in [Canton::Geneva, Canton::Valais] {
+            let missing = canton_tax_data(canton).missing_fields();
+            assert!(
+                missing.contains(&"cantonal base tax scale"),
+                "{}: the base scale is missing",
+                canton.code()
+            );
+            assert!(
+                missing.contains(&"cantonal Steuerfuss"),
+                "{}: its Steuerfuss is a source exception, so it is genuinely missing",
+                canton.code()
+            );
+        }
     }
 
     /// Zürich has sourced multipliers but no base scale, so it must still fail —

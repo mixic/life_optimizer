@@ -147,15 +147,37 @@ they imply. Two things worth noting:
 
 ---
 
-### Cantonal simple-tax scales — **NOT SOURCED**
+### Cantonal simple-tax scales — **NOT SOURCED (the sole remaining blocker)**
 
 The Steuerfuss is only a multiplier. The **base scale it multiplies** is a
 separate publication, and it is not in the workbooks above. Without it,
 `cantonal_tax()` cannot return a figure.
 
-`src/cantons.rs` therefore returns `CantonTaxError::NotSourced` for every canton
-and **never** substitutes another canton's rates or an estimate. Each canton
-requires:
+Steuerfuss and capital-municipal multipliers are now **supplied for every canton
+whose source cell held a plain number** — they are backfilled from the generated
+ESTV import by `with_imported_steuerfuss`, rather than being hand-entered per
+canton. Before that, only three cantons were wired and 23 reported "missing:
+cantonal Steuerfuss" for data already in the repository.
+
+Four cantons are **documented source exceptions** and remain unsupplied, asserted
+exactly by `source_exception_set_is_exactly_as_documented`:
+
+| Canton | Source cell | Why no multiplier |
+|---|---|---|
+| `GE` | `148.5%9)` | Footnote 9: a 12% rebate applies, so the printed figure is not the effective multiplier |
+| `VS` | `3)` | Footnote 3: *"Kein Vielfaches"* — Valais expresses no cantonal multiplier |
+| `BL` | blank | Nothing to read |
+| `FR` | blank | Fribourg uses separate income and wealth rows |
+
+So the outstanding data is:
+
+1. **`base_scale` for 25 cantons** (Aargau is done) — from an ESTV "Tarife"
+   export, the same `.xlsx` shape as `estv_scales_AG.xlsx`.
+2. **An effective multiplier for `GE`**, and a resolution for `VS`, `BL`, `FR` —
+   see the table above. This needs a decision, not just a file.
+3. **The federal tariff values** — see the next section.
+
+Each canton requires:
 
 1. **`steuerfuss_percent`** — available from the ESTV workbook above (done)
 2. **`base_scale`** — the canton's simple-tax tariff: a list of

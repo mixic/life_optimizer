@@ -9213,3 +9213,39 @@ pub fn steuerfuss_row(canton_code: &str, year: u16) -> Option<&'static Steuerfus
         .iter()
         .find(|r| r.canton_code == canton_code && r.year == year)
 }
+
+/// Select a canton's row for a given year via a match on the code.
+///
+/// Generated so that every canton in the workbook is reachable; an
+/// unrecognised code returns `None` rather than a neighbouring canton.
+pub fn steuerfuss_for_code(canton_code: &str, year: u16) -> Option<&'static SteuerfussRow> {
+    match canton_code {
+        "AG" => steuerfuss_row("AG", year),
+        "AI" => steuerfuss_row("AI", year),
+        "AR" => steuerfuss_row("AR", year),
+        "BE" => steuerfuss_row("BE", year),
+        "BL" => steuerfuss_row("BL", year),
+        "BS" => steuerfuss_row("BS", year),
+        "FR" => steuerfuss_row("FR", year),
+        "GE" => steuerfuss_row("GE", year),
+        "GL" => steuerfuss_row("GL", year),
+        "GR" => steuerfuss_row("GR", year),
+        "JU" => steuerfuss_row("JU", year),
+        "LU" => steuerfuss_row("LU", year),
+        "NE" => steuerfuss_row("NE", year),
+        "NW" => steuerfuss_row("NW", year),
+        "OW" => steuerfuss_row("OW", year),
+        "SG" => steuerfuss_row("SG", year),
+        "SH" => steuerfuss_row("SH", year),
+        "SO" => steuerfuss_row("SO", year),
+        "SZ" => steuerfuss_row("SZ", year),
+        "TG" => steuerfuss_row("TG", year),
+        "TI" => steuerfuss_row("TI", year),
+        "UR" => steuerfuss_row("UR", year),
+        "VD" => steuerfuss_row("VD", year),
+        "VS" => steuerfuss_row("VS", year),
+        "ZG" => steuerfuss_row("ZG", year),
+        "ZH" => steuerfuss_row("ZH", year),
+        _ => None,
+    }
+}
