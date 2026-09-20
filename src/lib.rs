@@ -36,6 +36,7 @@ pub mod tax;
 pub mod federal_tax;
 pub mod federal_tariff_data;
 pub mod estv_scales_data;
+pub mod estv_deductions_data;
 pub mod cantons;
 pub mod canton_steuerfuss_data;
 pub mod requirements;
@@ -45,3 +46,4 @@ pub mod display;
 pub mod monte_carlo;
 pub mod mc_display;
 pub mod economic_regimes;
+
