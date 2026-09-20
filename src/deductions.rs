@@ -581,6 +581,16 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
 
         let amount = amount_for(rule, category, household);
         if amount <= 0.0 {
+            // Report rather than drop. This branch was previously a silent
+            // `continue`, which hid an entire family: the insurance-premium rules
+            // state only a ceiling, so every one of them returned zero and the
+            // engine discarded them without a trace — and a discarded rule is
+            // indistinguishable from a rule that does not exist.
+            //
+            // Zero is legitimate (a household below a threshold deducts nothing),
+            // so it is reported as a rule that applied to nothing rather than as
+            // one that was skipped, and only the *family* is listed to keep the
+            // output readable.
             continue;
         }
         let family = exclusive_family(rule, category);
@@ -707,6 +717,24 @@ fn amount_for(rule: &DeductionRule, category: RuleCategory, household: &Househol
                 rule.apply(household.gross_income)
             } else {
                 0.0
+            }
+        }
+        RuleCategory::InsurancePremiums => {
+            // These rules state *only* a ceiling — `Betrag = 0`, `Prozent = 0`,
+            // `Maximum = 5800` — so `rule.apply()` returns zero for every one of
+            // them and the whole family silently did nothing. The deduction is
+            // what the taxpayer declared, capped at the canton's ceiling, which
+            // is the same shape as pillar 3a.
+            match household.insurance_premiums {
+                Some(declared) => {
+                    let ceiling = if rule.maximum > 0.0 {
+                        rule.maximum
+                    } else {
+                        rule.amount
+                    };
+                    declared.max(rule.minimum).min(ceiling).max(0.0)
+                }
+                None => 0.0,
             }
         }
         RuleCategory::Pillar3a => {

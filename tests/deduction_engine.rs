@@ -601,3 +601,127 @@ fn pensioner_phase_out_scales_reach_a_pensioner() {
     );
 }
 
+// ── Insurance premiums: a ceiling-only rule shape ────────────────────────────
+
+/// The insurance-premium rules state **only a ceiling** — `Betrag = 0`,
+/// `Prozent = 0`, `Maximum = 5800` — so the generic
+/// `clamp(amount + percent × base, …)` yields zero for every one of them.
+///
+/// The entire family therefore did nothing, silently. The deduction is what the
+/// taxpayer declared, capped at the canton's ceiling.
+#[test]
+fn insurance_premiums_deduct_the_declared_amount_within_the_ceiling() {
+    let mut household = Household::employee(100_000.0, true, 0);
+    household.insurance_premiums = Some(3_000.0);
+
+    for canton in ["Bund", "ZH", "BE", "AG"] {
+        let assessment = assess(canton, &household);
+        let premiums = assessment
+            .applied
+            .iter()
+            .find(|d| d.category == RuleCategory::InsurancePremiums)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{canton}: a married household declaring premiums should get the \
+                     deduction: {:?}",
+                    assessment.applied
+                )
+            });
+        assert_eq!(
+            premiums.amount, 3_000.0,
+            "{canton}: the declared amount is deductible below the ceiling"
+        );
+    }
+}
+
+/// Above the canton's ceiling the published maximum applies, which is what makes
+/// the ceiling worth carrying. Zurich's is CHF 8,700 for a married taxpayer.
+#[test]
+fn insurance_premiums_are_capped_at_the_cantonal_ceiling() {
+    let mut household = Household::employee(100_000.0, true, 0);
+    household.insurance_premiums = Some(50_000.0);
+
+    let assessment = assess("ZH", &household);
+    let premiums = assessment
+        .applied
+        .iter()
+        .find(|d| d.category == RuleCategory::InsurancePremiums)
+        .expect("Zurich's capped deduction");
+    assert_eq!(premiums.amount, 8_700.0, "ZH's married ceiling");
+    assert!(
+        premiums.amount < household.insurance_premiums.unwrap(),
+        "the ceiling must actually bind here"
+    );
+}
+
+/// A married household must not be given the "alleinstehende Personen" variant,
+/// and a single one must not be given the married variant. Both are present in
+/// every canton, so picking the wrong one is a silent over- or under-deduction.
+#[test]
+fn insurance_variants_follow_marital_status() {
+    let single = assess("Bund", &Household::employee(100_000.0, false, 0));
+    let mut married_household = Household::employee(100_000.0, true, 0);
+    married_household.insurance_premiums = Some(3_000.0);
+    let married = assess("Bund", &married_household);
+
+    let married_rule = married
+        .applied
+        .iter()
+        .find(|d| d.category == RuleCategory::InsurancePremiums)
+        .expect("married variant");
+    assert!(
+        married_rule.name.contains("Verheiratete"),
+        "a married household must take the married variant, got {:?}",
+        married_rule.name
+    );
+
+    // The single household declared nothing, so it gets nothing — the point is
+    // that it must not have been given the married ceiling.
+    assert!(
+        !single
+            .applied
+            .iter()
+            .any(|d| d.category == RuleCategory::InsurancePremiums),
+        "a single household with no declared premiums gets nothing: {:?}",
+        single.applied
+    );
+}
+
+/// A rule that applies but yields nothing must not vanish from the report.
+///
+/// The insurance-premium family was discarded by a silent `continue` on a zero
+/// amount, which made a whole family indistinguishable from one that does not
+/// exist. Whatever the reason a rule contributes nothing, it must be accounted
+/// for as applied or skipped.
+#[test]
+fn every_rule_is_accounted_for() {
+    use life_optimizer::estv_deductions_data::rules_for;
+
+    for canton in ["Bund", "ZH", "BE", "AG", "SO"] {
+        let household = Household::employee(100_000.0, true, 0);
+        let assessment = assess(canton, &household);
+
+        // Every rule is `Deduction` kind and must land in exactly one bucket.
+        // Duplicates are legitimate: a mutually exclusive family reports the
+        // variant it did not choose as skipped.
+        assert!(
+            !assessment.applied.is_empty(),
+            "{canton}: a household should receive at least the flat allowances"
+        );
+
+        let total_rules = rules_for(canton).len();
+        let reported = assessment.applied.len()
+            + assessment
+                .skipped
+                .iter()
+                .filter(|s| s.reason != SkipReason::NotADeduction)
+                .count();
+        assert!(
+            reported >= total_rules / 2,
+            "{canton}: only {reported} of {total_rules} rules are accounted for as \
+             applied or skipped; rules are being dropped silently"
+        );
+    }
+}
+
+

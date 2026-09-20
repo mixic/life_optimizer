@@ -1,17 +1,60 @@
-Show the imputed rental value as an income addition in the comparison output
+Let the CLI supply the household facts, and fix two insurance-premium bugs
 
-The widened engine reports a homeowner's Eigenmietwert as an income ADDITION as
-well as a deduction base, so the comparison now prints it -- with an explicit plus
-sign, because every other figure in that list is a deduction and a bare number
-between two minus-figures would read as one.
+Exposes the widened deduction engine through flags, so its property, pensioner and
+insurance coverage is reachable rather than only testable -- and wiring the flags
+found two more bugs. Test count rises from 194 to 198.
 
-Nothing else changes: the household is not yet constructible as a homeowner from
-the CLI, so this branch is inert until flags exist for it. It is printed anyway so
-the field cannot silently disappear from the output if that changes.
+New flags on `optimize`
 
-Also visible in this commit is the effect of the wealth-deduction fix on a plain
-tenant: Zurich's sourced total falls from CHF 12,600 to CHF 12,300, because
-`Abzug Vermögensverwaltungskosten` (0.3% of income, capped at 6,000) is no longer
-deducted from a salary.
+  --imputed-rental-value <CHF>   the home's Eigenmietwert
+  --pensioner                    receives an AHV/IV pension
+  --insurance-premiums <CHF>     declared premiums and savings interest
 
-Verified: 194 tests pass, clippy unchanged at 9 pre-existing warnings.
+A fact that is NOT supplied is skipped rather than assumed, which is why an
+unadorned run shows a small sourced total: it is reporting what it was told. The
+"N further rule(s) were considered and not applied" line is the measure of what the
+household did not declare. Supplying all three moves a CHF 100,000 married Zurich
+household from CHF 3,000 to roughly CHF 14,000 of federal deductions.
+
+Two bugs, found by running the flags rather than by reasoning
+
+  The insurance-premium family deducted NOTHING, in all 27 jurisdictions
+
+    These rules state only a CEILING -- `Betrag = 0`, `Prozent = 0`,
+    `Maximum = 5800` -- so the generic `clamp(amount + percent * base, ...)`
+    returned zero for every one of them. The deduction is what the taxpayer
+    declared, capped at the canton's ceiling, which is the same shape as pillar 3a
+    and needed the same treatment: ZH's married ceiling is 8,700, the federal one
+    5,550, and a declared 3,000 deducts 3,000.
+
+  A rule yielding zero was dropped SILENTLY
+
+    This is why the first bug was invisible. The engine discarded zero-amount
+    rules with a bare `continue`, so the family vanished from both the applied AND
+    the skipped list -- and a dropped rule cannot be distinguished from a rule that
+    does not exist. That is precisely the failure the `skipped` list was built to
+    prevent, and it had a hole in it. A new test asserts rules are accounted for,
+    so a future family cannot disappear the same way.
+
+Refactor
+
+The comparison function took eight arguments once the flags were added, so the
+three facts are grouped into a `HouseholdFacts` struct with `Default`. The defaults
+mean *not supplied*, which is the same distinction the engine makes, and it drops
+the lint rather than silencing it.
+
+Tests (tests/deduction_engine.rs, 4 new)
+
+  insurance_premiums_deduct_the_declared_amount_within_the_ceiling
+  insurance_premiums_are_capped_at_the_cantonal_ceiling
+  insurance_variants_follow_marital_status
+  every_rule_is_accounted_for
+
+Documentation
+
+SWISS_TAX_DATA.md: the bug table grows to nine, a new section tabulates the three
+flags and explains that an unsupplied fact is skipped rather than assumed, and the
+insurance bugs are recorded with the reason the second one hid the first.
+
+Verified: 198 tests pass, clippy unchanged at 9 pre-existing warnings. All three
+flags exercised end to end through the binary.

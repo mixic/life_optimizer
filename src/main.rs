@@ -122,6 +122,23 @@ enum Commands {
         #[arg(long, default_value = "0.0")]
         quasi_inelastic_share: f64,
 
+        /// Imputed rental value (Eigenmietwert) of your home, in CHF/year. This is
+        /// an *income addition* as well as the base for every property deduction,
+        /// so it raises taxable income. Omit if you rent.
+        #[arg(long)]
+        imputed_rental_value: Option<f64>,
+
+        /// You receive an AHV/IV pension. Unlocks the pensioner deductions, which
+        /// are otherwise never applied.
+        #[arg(long, default_value_t = false)]
+        pensioner: bool,
+
+        /// Declared private insurance premiums and savings interest, in CHF/year.
+        /// These are capped by each canton, so the published ceiling applies where
+        /// your figure exceeds it.
+        #[arg(long)]
+        insurance_premiums: Option<f64>,
+
         /// Required project output index for your role (G_t). Enables the
         /// employer achievement-capacity constraint; without it, work percentage
         /// is treated as fully discretionary.
@@ -268,6 +285,9 @@ fn main() {
             quasi_inelastic_share,
             required_output_index,
             ai_productivity_gain,
+            imputed_rental_value,
+            pensioner,
+            insurance_premiums,
         } => {
             let consumption = match consumption_config(consumption_profile, sparing_ratio, utilization_discipline, quasi_inelastic_share) {
                 Ok(c) => c,
@@ -294,6 +314,11 @@ fn main() {
                 conversion: resolve_conversion(conversion_rate, pension_fund),
                 consumption_profile: consumption,
                 achievement: achievement_constraint(required_output_index, ai_productivity_gain),
+                household_facts: HouseholdFacts {
+                    imputed_rental_value,
+                    receives_pension: pensioner,
+                    insurance_premiums,
+                },
             });
         }
         Commands::Compare {
@@ -606,6 +631,8 @@ struct OptimizeParams<'a> {
     conversion: monte_carlo::ConversionRateScenario,
     consumption_profile: consumption::ConsumptionProfileConfig,
     achievement: Option<optimizer::AchievementConstraint>,
+    /// Extra household facts the deduction model uses; see [`HouseholdFacts`].
+    household_facts: HouseholdFacts,
 }
 
 fn run_optimization(p: OptimizeParams<'_>) {
@@ -627,6 +654,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
         conversion,
         consumption_profile,
         achievement,
+        household_facts,
     } = p;
 
     println!("\n{}", "=== LIFE OPTIMIZER ===".bold().cyan());
@@ -682,7 +710,14 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // earner: the hand-entered ~35%-cap estimate in `tax.rs`, and the sourced
     // ESTV rules in `deductions.rs`. Both are printed so the difference is
     // visible on a real scenario rather than only in a test fixture.
-    print_deduction_model_comparison(&tax_schedule, &tax_basis, optimal.gross_income, married, children);
+    print_deduction_model_comparison(
+        &tax_schedule,
+        &tax_basis,
+        optimal.gross_income,
+        married,
+        children,
+        household_facts,
+    );
 
     // Display work-life balance results, naming the tax basis that produced them
     // so the rate line cannot be read as a different canton's figures.
@@ -902,6 +937,31 @@ struct CompareParams<'a> {
     canton: Option<&'a str>,
 }
 
+/// The household facts the deduction model needs beyond income and family size.
+///
+/// A struct rather than three more positional parameters, and deliberately with
+/// `None`/`false` defaults that mean *not supplied* — the deduction engine skips
+/// a category whose facts are missing rather than assuming them, so a caller that
+/// omits one gets a smaller deduction and a report, never a guess.
+#[derive(Debug, Clone, Copy, Default)]
+struct HouseholdFacts {
+    /// `--imputed-rental-value`: the home's `Eigenmietwert`.
+    imputed_rental_value: Option<f64>,
+    /// `--pensioner`.
+    receives_pension: bool,
+    /// `--insurance-premiums`.
+    insurance_premiums: Option<f64>,
+}
+
+impl HouseholdFacts {
+    /// Apply these facts to a household under construction.
+    fn apply(self, household: &mut deductions::Household) {
+        household.imputed_rental_value = self.imputed_rental_value;
+        household.receives_pension = self.receives_pension;
+        household.insurance_premiums = self.insurance_premiums;
+    }
+}
+
 /// Print the sourced deduction assessment beside the hand-entered estimate.
 ///
 /// Exists because the two models disagree materially and the direction matters:
@@ -916,10 +976,12 @@ fn print_deduction_model_comparison(
     gross_income: f64,
     married: bool,
     children: u32,
+    facts: HouseholdFacts,
 ) {
     // The federal rules always apply, and a canton's add to them. Both are shown
     // so the reader can see which half a figure came from.
-    let household = deductions::Household::employee(gross_income, married, children);
+    let mut household = deductions::Household::employee(gross_income, married, children);
+    facts.apply(&mut household);
     let federal = deductions::assess("Bund", &household);
     let cantonal = canton_code_from_basis(tax_basis)
         .map(|code| deductions::assess(code, &household))
@@ -1162,6 +1224,9 @@ fn run_interactive() {
         conversion: monte_carlo::ConversionRateScenario::Statutory,
         consumption_profile: consumption::ConsumptionProfileConfig::default(),
         achievement: None,
+        // The interactive prompt does not ask about these, and assuming them
+        // would be exactly the guessing the deduction model refuses to do.
+        household_facts: HouseholdFacts::default(),
     });
 }
 

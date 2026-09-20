@@ -529,11 +529,11 @@ selection is explicit:
 * **mutually exclusive variants are grouped**, and at most one is applied;
 * anything unclassified is **reported, never applied**.
 
-### Seven bugs the comparison found
+### Nine bugs the comparison found
 
 Each was a plausible-looking number rather than an error, and each was found by
 printing the engine's output beside the existing estimate — not by reasoning.
-All seven are now regression tests in `tests/deduction_engine.rs`.
+All nine are now regression tests in `tests/deduction_engine.rs`.
 
 | Bug | Effect at CHF 100,000 |
 |---|---|
@@ -544,6 +544,8 @@ All seven are now regression tests in `tests/deduction_engine.rs`.
 | `contains("Kind")` matched `"ohne Kind"` | disabled FR's and VS's single-person deductions entirely |
 | Both property-maintenance age bands summed | CHF 6,000 of maintenance against a CHF 20,000 rental value |
 | `Abzug Vermögensverwaltungskosten` applied to income | 0.2–0.3% of a salary in ZH, SZ, OW, NW, GL |
+| Insurance-premium rules deducted nothing | the family did nothing in all 27 jurisdictions |
+| A zero-amount rule was dropped silently | a family looked like it did not exist |
 
 The `"ohne Kind"` case is the most instructive: `"ohne Kind"` contains `"Kind"`,
 so a keyword test demanded children for a scale that explicitly excludes them. The
@@ -645,7 +647,42 @@ household and would have applied the wrong mechanism to a pensioner one. They ar
 now their own category, with the flat-amount form applied (SZ 4,000, GL 2,100,
 SO 5,000) and the percentage form left alone for the reason above.
 
-### Two more collisions found by the diagnostic
+### Supplying the facts, and what happens when you do not
+
+The comparison is driven by CLI flags, so the engine's coverage is reachable
+rather than only testable:
+
+| Flag | Fact | Effect |
+|---|---|---|
+| `--imputed-rental-value` | the home's `Eigenmietwert` | adds it to taxable income *and* unlocks every property deduction |
+| `--pensioner` | receives an AHV/IV pension | unlocks 10 rules and 15 scales, otherwise never applied |
+| `--insurance-premiums` | declared premiums | deducted up to the canton's ceiling |
+
+A fact that is **not** supplied is skipped rather than assumed. That is why an
+unadorned run shows a small sourced total: it is reporting what it was told, and
+the trailing "N further rule(s) were considered and not applied" line is the
+measure of what the household did not declare. Supplying all three moves a
+CHF 100,000 married Zurich household from CHF 3,000 to roughly CHF 14,000 of
+federal deductions.
+
+### Two more bugs found while wiring the flags
+
+Both are regression tests now, and the second is the more instructive:
+
+| Bug | Effect |
+|---|---|
+| Insurance-premium rules deducted nothing | the whole family did nothing, across all 27 jurisdictions |
+| A rule yielding zero was dropped silently | a whole family was indistinguishable from one that does not exist |
+
+The insurance rules state **only a ceiling** — `Betrag = 0`, `Prozent = 0`,
+`Maximum = 5800` — so the generic `clamp(amount + percent × base, …)` returned
+zero for every one of them. The second bug is why that was invisible: the engine
+discarded zero-amount rules with a silent `continue`, so the family vanished from
+both the applied *and* the skipped list. A dropped rule cannot be distinguished
+from a rule that does not exist, which is the exact failure the `skipped` list was
+built to prevent — and it had a hole in it.
+
+### Two more collisions
 
 Both were plausible numbers rather than errors, and both are now regression tests:
 
