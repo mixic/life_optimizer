@@ -43,6 +43,16 @@ struct ScenarioRow {
 }
 
 pub fn print_optimal_result(scenario: &WorkScenario) {
+    print_optimal_result_for(scenario, None)
+}
+
+/// As [`print_optimal_result`], but naming the tax basis.
+///
+/// The tax-rate line used to read "(official Bern tax only)" unconditionally,
+/// which was false for every other canton once the two-level model began
+/// pricing them. The basis is now supplied by the caller, so the label cannot
+/// misdescribe the figure beside it.
+pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>) {
     // Only call it "optimal" when it is actually affordable *and* the
     // employer's required output is still delivered. Announcing an optimum next
     // to "below requirements" is the kind of self-contradicting output that
@@ -63,7 +73,11 @@ pub fn print_optimal_result(scenario: &WorkScenario) {
     println!("  Gross Income:    {} CHF/year", format!("{:.0}", scenario.gross_income).cyan());
     println!("  After-Tax:       {} CHF/year", format!("{:.0}", scenario.after_tax_income).cyan());
     println!("  Monthly Net:     {} CHF/month", format!("{:.0}", scenario.monthly_after_tax).cyan().bold());
-    println!("  Tax Rate:        {:.1}% (official Bern tax only)", scenario.tax_only_rate * 100.0);
+    println!("  Tax Rate:        {:.1}%{}", scenario.tax_only_rate * 100.0,
+        match tax_basis {
+            Some(basis) => format!(" ({basis})"),
+            None => String::new(),
+        });
     println!("  Social Security: 12.9% (AHV/IV/EO/ALV/BVG)");
     println!("  Total Deduction: {}", format!("{:.1}%", scenario.effective_tax_rate * 100.0).yellow());
 

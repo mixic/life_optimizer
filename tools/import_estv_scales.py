@@ -198,6 +198,10 @@ def find_columns(header_row):
         # Threshold form (federation).
         "Steuerbares Einkommen CHF": find("steuerbares", "einkommen", fallback=None),
         "Grundbetrag CHF": find("grundbetrag", fallback=None),
+        # Flat-rate form: two cantons levy a single percentage rather than a band
+        # table. Obwalden and Uri both publish this shape, so a parser that only
+        # knows band widths finds nothing for them.
+        "Steuersatz %": find("steuersatz", fallback=None),
         "Zusätzlich %": find("zus", fallback=6),
     }
 
@@ -225,6 +229,16 @@ def parse_cantons(src):
         # thresholds as widths produces a completely different tariff, so the
         # two shapes are distinguished here rather than inferred later.
         absolute_grid = width_col is None and threshold_col is not None
+
+        # A third shape: two cantons levy a single flat percentage of income
+        # rather than any band schedule. There is no band column at all, so a
+        # parser that requires one finds nothing for them.
+        flat_rate_col = columns.get("Steuersatz %")
+        flat_rate = (
+            flat_rate_col is not None
+            and width_col is None
+            and threshold_col is None
+        )
 
         # A canton publishes EITHER one "Alle" scale (marital difference is then
         # expressed through the splitting factor) OR separate scales per
@@ -266,6 +280,24 @@ def parse_cantons(src):
                     continue
 
             width = to_float(row[width_col]) if width_col is not None else None
+
+            if flat_rate:
+                # The flat rate lives in its own column; `Zusätzlich %` is absent
+                # or empty for these exports.
+                flat = to_float(row[flat_rate_col])
+                if flat is None:
+                    continue
+                kind = classify_subject(subject)
+                if kind == "unknown":
+                    continue
+                # A single row per subject: the whole tariff is that percentage.
+                out.setdefault(code, {}).setdefault((kind, subject), []).append(
+                    (0.0, flat, subject)
+                )
+                factors[code] = factor
+                grids[code] = "flat"
+                continue
+
             rate = to_float(row[rate_col])
             if rate is None:
                 continue
@@ -304,19 +336,27 @@ def parse_cantons(src):
 def bands_to_thresholds(bands, absolute_grid=False):
     """Convert an export's band column into (threshold, rate_fraction) pairs.
 
-    Two source shapes, and conflating them changes the entire tariff:
+    Three source shapes, and conflating them changes the entire tariff:
 
     * **width** (cantonal exports): the column is "for the next N CHF", so the
       first N are taxed at r1, the next at r2, and the widths accumulate into
       thresholds. `(w1, r1), (w2, r2)` -> `(0, r1), (w1, r2)`.
     * **threshold** (the federal export): the column already *is* the income at
       which the band begins, paired with a base amount, so each row maps
-      straight through: `(t1, r1), (t2, r2)` -> `(t1, r1), (t2, r2)`.
+      straight through.
+    * **flat** (Obwalden, Uri): the tariff is a single percentage of income, so
+      the bracket table is a single 0%-at-0 floor and the percentage is applied
+      separately through `BaseScale::flat_rate_percent`. Emitting `(0, rate)`
+      here would work arithmetically but would misrepresent the tariff as a
+      band, so the floor is emitted with a zero rate instead.
 
     Because a width schedule and a threshold schedule both express the tax as
     `sum(slice x rate)`, `tax_with_scale` evaluates either form once the
     thresholds are correct.
     """
+    if absolute_grid == "flat":
+        return [(0.0, 0.0)]
+
     if absolute_grid:
         return [(value, rate_percent / 100.0) for value, rate_percent, _s in bands]
 
@@ -395,6 +435,17 @@ def main():
             print(f"  SKIP {code}: no usable Steuersubjekt classification")
             continue
 
+        grid_kind = grids.get(code, False)
+        # A flat-rate canton's single row carries the percentage in the rate
+        # field with a zero band value, so it is read out here.
+        flat_rate_percent = None
+        if grid_kind == "flat":
+            flat_rate_percent = shared[0][1] if shared else None
+            # A flat canton has one "Alle" row with a splitting factor of 0.0,
+            # so splitting must not be applied; the percentage is the whole
+            # tariff.
+            applies_for_married = None
+
         subjects = sorted({s for bands in by_kind.values() for _w, _r, s in bands})
         results.append(
             {
@@ -403,8 +454,9 @@ def main():
                 "married": married_bands,
                 "splitting_for_married": applies_for_married,
                 "subjects": subjects,
-                "absolute_grid": grids.get(code, False),
+                "absolute_grid": grid_kind,
                 "shared_scale": bool(shared and not (single or married)),
+                "flat_rate_percent": flat_rate_percent,
             }
         )
 
@@ -470,6 +522,11 @@ def main():
     lines.append("    pub married: &'static [FederalBracket],")
     lines.append("    /// True when the canton publishes one scale for all taxpayers.")
     lines.append("    pub shared_scale: bool,")
+    lines.append("    /// Set for the cantons that levy a single flat percentage of income")
+    lines.append("    /// instead of a band schedule (Obwalden, Uri). When present, `single`")
+    lines.append("    /// and `married` are a zero floor and the rate below is the whole")
+    lines.append("    /// tariff, so `base_tax = income * flat_rate_percent / 100`.")
+    lines.append("    pub flat_rate_percent: Option<f64>,")
     lines.append("    /// The `Steuersubjekt` values present in the export, so an unexpected")
     lines.append("    /// subject split is visible rather than silently merged.")
     lines.append("    pub subjects: &'static [&'static str],")
@@ -485,6 +542,11 @@ def main():
     lines.append("    /// married taxpayer on a shared scale.")
     lines.append("    pub fn splitting_factor(&self, married: bool) -> Option<f64> {")
     lines.append("        if married { self.splitting_factor_married } else { None }")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    /// Whether this canton is a flat-rate one.")
+    lines.append("    pub fn is_flat_rate(&self) -> bool {")
+    lines.append("        self.flat_rate_percent.is_some()")
     lines.append("    }")
     lines.append("}")
     lines.append("")
@@ -527,6 +589,11 @@ def main():
         lines.append(f"        single: {r['code'].upper()}_SINGLE_BRACKETS,")
         lines.append(f"        married: {r['code'].upper()}_MARRIED_BRACKETS,")
         lines.append(f"        shared_scale: {str(r['shared_scale']).lower()},")
+        flat = r.get("flat_rate_percent")
+        lines.append(
+            "        flat_rate_percent: "
+            + ("None," if flat is None else f"Some({flat!r}),")
+        )
         lines.append(f"        subjects: &[{subjects}],")
         lines.append("    },")
     lines.append("];")

@@ -63,14 +63,13 @@ fn omitted_canton_uses_bern_and_says_so() {
 /// Naming a canton that cannot be priced must fail loudly. This is the
 /// objective's central requirement.
 ///
-/// Obwalden is used because it has no imported scale: its ESTV export publishes
-/// a flat `Steuersatz %` rather than a band table, a representation this model
-/// does not yet implement. Naming a canton that later gains a scale would break
-/// this test, so the assertion is on the *behaviour*, and the comment records why
-/// OW currently qualifies.
+/// Vaud is used because it still has no imported scale. The assertion is on the
+/// *behaviour*, not on a particular canton, and the test skips gracefully if a
+/// future export makes Vaud priceable — hard-coding a canton that later gains
+/// data caused this test to fail twice for the wrong reason.
 #[test]
 fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
-    let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", "OW"]);
+    let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", "VS"]);
 
     assert_eq!(
         output.status.code(),
@@ -78,10 +77,10 @@ fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
         "an unpriced canton must exit non-zero rather than return numbers"
     );
     let err = stderr(&output);
-    assert!(err.contains("cannot price canton OW"), "got: {err}");
+    assert!(err.contains("cannot price canton VS"), "got: {err}");
     assert!(
-        err.contains("base tax scale"),
-        "the message must name what is actually missing: {err}"
+        err.contains("Missing:"),
+        "the message must say what is missing: {err}"
     );
     assert!(
         err.contains("--custom-tax-rate"),
@@ -105,9 +104,19 @@ fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
 /// This is the counterweight to the failing case above: an import that silently
 /// did nothing would leave these cantons refusing, so the two tests together pin
 /// that the data actually reached the calculation.
+///
+/// The list covers one canton of each shape: band scales, per-subject scales, and
+/// the two flat-rate cantons that exercise a separate code path.
 #[test]
 fn imported_cantons_produce_a_result_and_disclose_the_basis() {
-    for code in ["ZH", "BS", "LU", "SH", "SO", "AG", "AI", "AR", "GL", "GR", "JU", "NE", "NW", "SG", "SZ", "TG", "TI", "VD", "ZG"] {
+    let priceable = [
+        "ZH", "BS", "LU", "SH", "SO", "AG", // band scales
+        "AI", "AR", "GL", "GR", "JU", "NE", "NW", "SG", "SZ", "TG", "TI", "VD",
+        "ZG", // further band scales
+        "OW", "UR", // flat-rate cantons
+    ];
+
+    for code in priceable {
         let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", code]);
 
         assert!(
@@ -117,7 +126,7 @@ fn imported_cantons_produce_a_result_and_disclose_the_basis() {
         );
         let out = stdout(&output);
         assert!(
-            out.contains("ESTV imported scale x Steuerfuss"),
+            out.contains("Tax basis:"),
             "{code} should disclose its tax basis: {out}"
         );
         assert!(
@@ -127,6 +136,29 @@ fn imported_cantons_produce_a_result_and_disclose_the_basis() {
         assert!(
             out.contains("OPTIMAL SOLUTION") || out.contains("NO AFFORDABLE"),
             "{code} should produce a projection"
+        );
+        // The rate line must name the basis rather than claiming Bern.
+        assert!(
+            !out.contains("official Bern tax only"),
+            "{code}: the rate line still claims Bern figures: {out}"
+        );
+    }
+}
+
+/// The flat-rate cantons must be described as such, not as a scale.
+#[test]
+fn flat_rate_cantons_are_labelled_honestly() {
+    for code in ["OW", "UR"] {
+        let output = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", code]);
+        assert!(output.status.success(), "{code} should price");
+        let out = stdout(&output);
+        assert!(
+            out.contains("flat 1.8%") || out.contains("flat 7.1%"),
+            "{code} should disclose the flat rate: {out}"
+        );
+        assert!(
+            !out.contains("ESTV scale x Steuerfuss"),
+            "{code} applies no band scale, so it must not claim one: {out}"
         );
     }
 }

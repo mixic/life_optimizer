@@ -147,33 +147,52 @@ they imply. Two things worth noting:
 
 ---
 
-### Cantonal simple-tax scales — **8 of 26 imported**
+#### Coverage: 22 of 26 cantons priceable
+
+**Priceable (22):** AG AI AR BE BS GL GR JU LU NE NW OW SG SH SO SZ TG TI UR VD ZG ZH
+
+Bern is priced by its standalone Stadt Bern table; the other 21 use the imported
+scale (or flat rate) multiplied by the Steuerfuss.
+
+**Refusing (4):**
+
+| Canton | Cause |
+|---|---|
+| `BL` | its export uses **logarithmic formulas** rather than a band table |
+| `GE` | scale imported, but its Steuerfuss cell reads `148.5%9)` with a 12% rebate footnote |
+| `VS` | scale imported, but its Steuerfuss cell is `3)` — *"Kein Vielfaches"* |
+| `FR` | scale imported, but its Steuerfuss cell is blank |
+
+#### Three band shapes, and two cantons with no bands at all
+
+| Shape | Cantons | Representation |
+|---|---|---|
+| band **widths** (`Für die nächsten CHF`) | most | thresholds accumulated from widths |
+| absolute **thresholds** (`Steuerbares Einkommen CHF` + `Grundbetrag CHF`) | Bund | thresholds taken directly |
+| **flat percentage** (`Steuersatz %`) | OW, UR | `BaseScale::flat_rate_percent`, no bands |
+| **formulas** (`Formel`) | BL | not implemented |
+
+Obwalden and Uri are the two cantons that levy a single uniform rate rather than
+a progressive scale, and they need a separate multiplication rather than a band
+walk. Their table is emitted as a single 0%-at-0 floor so the band machinery does
+not double-count, with the percentage applied separately.
+
+#### Open item: Steuerfuss vintage lags the scale vintage
+
+Scales come from **2026** exports; Steuerfüsse are read from the **2024** row of
+the ESTV workbook. Two cantons have already been observed to differ between those
+years — **Sarnen's cantonal multiplier moved 3.35 (2024) to 3.25 (2026)** — so a
+canton whose multiplier changed is priced with slightly stale figures.
+`steuerfuss_vintage_is_recorded` pins the current state so changing it is
+deliberate.
+
+### Cantonal simple-tax scales — imported
 
 Scales are imported from ESTV "Tarife" exports by
 `tools/import_estv_scales.py`, which reads **every canton present in a file**, so
 one workbook can add several. Current coverage:
 
-| Canton | Treatment | Top rate |
-|---|---|---|
-| `AG` | shared scale, splitting 2.0 | 11.0% |
-| `BS` | per-subject scales (married = 2x single) | 28.2% |
-| `LU` | per-subject scales | 5.8% |
-| `ZH` | per-subject scales | 13.0% |
-| `SH` | shared scale, splitting 1.9 | 12.0% |
-| `SO` | shared scale, splitting 1.9 | 11.5% |
-
-Priceable end to end today: **AG, BS, LU, SH, SO, ZH** (six), plus **Bern** via
-its legacy standalone table.
-
-Imported but **not** priceable, because the canton has no usable multiplier:
-
-| Canton | Why |
-|---|---|
-| `GE` | scale imported, but its Steuerfuss cell reads `148.5%9)` with footnote 9: a 12% rebate applies |
-| `FR` | scale imported, but its Steuerfuss cell is blank |
-
-The remaining 18 cantons have neither a scale nor (for some) a multiplier, and
-refuse loudly.
+Priceable end to end today: the 22 cantons listed above.
 
 #### Marital treatment is expressed in two incompatible ways
 

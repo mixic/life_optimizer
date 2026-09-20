@@ -1,151 +1,77 @@
-Import scales for all cantons plus the federal tariff, verified against DBG Art. 36
+Add flat-rate cantons and fix the tax-basis label
 
-Imports the full ESTV export set: 25 cantonal scale files plus
-estv_scales_Bund.xlsx. Twenty cantons now price end to end, up from six, and the
-federal tariff is verified against the statute. Test count rises from 150 to 154.
+Supports the two cantons that levy a uniform percentage rather than a
+progressive scale, bringing priceable cantons from 20 to 22, and fixes a display
+labelling bug. Test count rises from 154 to 158.
 
-Federal tariff verified
+Flat-rate cantons (Obwalden, Uri)
 
-src/federal_tariff_data.rs is generated from the ESTV Bund export and its values
-have been reconciled against the statutory text of DBG Art. 36, published in
-SR 642.11.pdf. The statute reads (abridged):
+OW and UR publish a single `Steuersatz %` (1.8% and 7.1%) instead of a band
+table, so a parser that requires a band column found nothing for them. Both are
+the cantons the finpension article identifies as having a uniform rate.
 
-  bis 15 200 Franken Einkommen   0.00 und fuer je weitere 100 Franken 0.77
-  fuer 33 200 Franken Einkommen 138.60 und fuer je weitere 100 Franken 0.88 mehr
-  fuer 43 500 Franken Einkommen 229.20 und fuer je weitere 100 Franken 2.64 mehr
-  fuer 58 000 Franken Einkommen 612.00 und fuer je weitere 100 Franken 2.97 mehr
+BaseScale gains `flat_rate_percent` and `is_flat_rate()`. The imported table for
+these cantons is a single 0%-at-0 floor, so the band machinery contributes
+nothing and the percentage is applied as `income x rate x Steuerfuss`. Emitting
+the rate as a one-band schedule would have worked arithmetically but would
+misrepresent the tariff as progressive.
 
-Every threshold, marginal rate and base amount agrees with the imported table.
-FEDERAL_TARIFF_IS_VERIFIED is now true, and
-federal_tax::tests::statute_values_match_the_imported_grid asserts the
-thresholds, the marginal rates, and the tax computed up to each threshold
-against the base amounts the statute states.
+Verified: OW at CHF 100,000 gives 12,978 = 100000 x 1.8% x (3.35 + 3.86), and the
+effective cantonal rate does not change with income, which is what distinguishes
+a flat canton. The test also asserts that a band canton (ZH) IS progressive, so
+the two paths are contrasted rather than one merely exercised.
 
-That reconciliation corrected two errors, both introduced here rather than found
-in the data:
+Display bug: the tax-rate line claimed Bern
 
-  - The original hand-entered federal table had a top marginal rate of 7.39%
-    against the statutory maximum of 13.2%, and a non-monotonic segment.
-  - A hand computation quoted during development claimed an average federal
-    burden of about 1.80% at CHF 100,000 taxable. That was wrong; it used
-    misremembered bands. The correct figure is about 2.69%, which is what this
-    tariff produces.
+`print_optimal_result` printed "Tax Rate: 13.0% (official Bern tax only)"
+unconditionally, which became false the moment the two-level model started
+pricing other cantons. It is now supplied by the caller:
 
-The federal export also uses a different column layout from the cantonal ones,
-and conflating them silently changes the tariff:
+  OW  Tax Rate: 13.0% (OW flat 1.8% x Steuerfuss)
+  ZH  Tax Rate:  9.9% (ZH ESTV scale x Steuerfuss)
+  BE  Tax Rate: 14.5% (official Bern table)
 
-  Cantonal: "Fuer die naechsten CHF"          band WIDTH, no base column
-  Federal:  "Steuerbares Einkommen CHF"       absolute THRESHOLD, plus
-                                              "Grundbetrag CHF" base amount
+This was nearly invisible: OW's correct 13.0% coincides with the hard-coded Bern
+figure, so the label looked right while describing the wrong canton. The CLI also
+now distinguishes a flat rate from a scale in the "Tax basis" line.
 
-Treating federal thresholds as widths yields a wholly different schedule. Note
-that several headers contain "CHF", so a naive substring match on `chf` finds
-`Grundbetrag CHF` instead of `Fuer die naechsten CHF` -- the bug that briefly
-corrupted the cantonal scales during this work, and the reason the width column
-now excludes `grundbetrag`, `steuerbares` and `einkommen`.
+Open item found while testing: Steuerfuss vintage lags the scale vintage
 
-Coverage
+Scales are imported from 2026 exports while Steuerfuesse are read from the 2024
+row of the ESTV workbook. Sarnen's cantonal multiplier moved 3.35 (2024) to 3.25
+(2026), so OW is priced with the 2024 figure. That was discovered by a test
+failing on a 180 CHF discrepancy, and is now recorded by
+steuerfuss_vintage_is_recorded rather than papered over.
 
-  priceable (20): AG AI AR BE BS GL GR JU LU NE NW SG SH SO SZ TG TI VD ZG ZH
-  refusing   (6): BL FR GE OW UR VS
+The same check showed Aargau's hand-entered Steuerfuss is 1.11 while the workbook
+carries 1.12 for 2024, so that value has its own provenance. The test asserts the
+figure in use, not a cross-check against the workbook, and says so.
 
-Bern remains priced by its standalone Stadt Bern table. The six refusals each
-have a specific, named cause and fail loudly rather than substituting:
+Remaining refusals (4)
 
-  BL     export uses logarithmic formulas, not a band table
-  OW UR  exports publish a flat "Steuersatz %" (1.8%, 7.1%) -- the two cantons
-         with a uniform rate; that representation is not implemented
-  GE     scale imported, but its Steuerfuss cell reads "148.5%9)" with a 12%
-         rebate footnote, so the printed figure is not the effective rate
-  VS     scale imported, but its Steuerfuss cell is "3)" -- "Kein Vielfaches"
-  FR     scale imported, but its Steuerfuss cell is blank
-
-Importer changes (tools/import_estv_scales.py)
-
-  - Accepts the absolute-threshold format as well as band widths, selected by
-    which column the export provides rather than inferred from values.
-  - Accepts "Bund" where cantons use a two-letter code; previously the federal
-    file was silently skipped because its code failed a two-letter test.
-  - Takes cantonal rows only: several exports also carry `Gemeinde` rows, and
-    including them would apply municipal tax twice, since the Steuerfuss already
-    carries the municipal multiplier.
-  - Emits the federal tariff into its own module, src/federal_tariff_data.rs,
-    rather than mixing it into the cantonal registry.
-  - Keeps Steuersubjekt labels separate during parsing and merges them
-    afterwards. Jura publishes "Alleinstehend ohne Kinder" and "Alleinstehend
-    mit Kindern im Konkubinat" with identical bands; appending both into one
-    list concatenated two scales into one, producing 14 bands where 7 are
-    correct. Vaud had the same defect and went from 38 bands to 19.
-  - Emits a valid Rust identifier for the federal entry, which is not a
-    two-letter code.
-
-Marital treatment, which the exports forced into the open
-
-Cantons express marital status in two incompatible ways, and applying both would
-count the adjustment twice:
-
-  - a shared scale (Steuersubjekt = Alle) with a splitting factor -- AG 2.0,
-    SH 1.9, SO 1.9, GL 1.7, GR 1.9, NE 1.923, NW 1.85, GE 2.0, VS 0.0; or
-  - separate scales per Steuersubjekt, where the difference is already in the
-    table and splitting must NOT be applied -- AR, BS, FR, JU, LU, SZ, TI, VD,
-    ZG, ZH.
-
-BaseScale carries both axes and splitting_factor(married) returns a value only
-for a married taxpayer on a shared scale.
+  BL  export uses logarithmic formulas rather than a band table
+  GE  scale imported, but its Steuerfuss cell carries a 12% rebate footnote
+  VS  scale imported, but its Steuerfuss cell is "Kein Vielfaches"
+  FR  scale imported, but its Steuerfuss cell is blank
 
 Tests
 
 New:
-  statute_values_match_the_imported_grid
-  verification_flag_reflects_the_statutory_reconciliation
-  single_grid_thresholds_are_the_published_ones
-  allowance_is_a_zero_rate_band
-  top_band_reduction_is_the_only_rate_decrease
-  thresholds_never_decrease_and_start_with_the_allowance
-  half_the_inputs_still_fails_rather_than_guessing
+  flat_rate_cantons_apply_a_single_percentage
+  flat_rate_cantons_are_flagged
+  steuerfuss_vintage_is_recorded
+  flat_rate_cantons_are_labelled_honestly
 
-Corrected:
-  Several federal tests encoded invariants from the old hand-entered table and
-  were wrong about the real statute. In particular:
-    - the tariff is NOT marginal-rate monotonic: the rate caps at 13.2% and
-      falls to 11.5% above CHF 793,400, by design;
-    - the married grid is NOT the single grid with doubled thresholds; it has a
-      different band count and a 1% opening rate, so at low incomes a married
-      couple can pay slightly more;
-    - the allowance is a 0%-rate band, not a CHF 14,500 deduction.
-  Two canton tests also failed for the right reason: they named cantons that had
-  since become priceable. They now derive the unpriceable set from the data
-  (unpriceable_cantons()), so adding exports no longer breaks them.
-
-Tools
-
-  pdf_identity_h_text.py, pdf_identity_h_lines.py
-      Decode Identity-H PDFs (one glyph per Tj operator) using the fonts'
-      ToUnicode CMaps. This is what unlocked SR 642.11; the existing
-      pdf_text.py only handles parenthesised Tj/TJ operands and returned
-      nothing for that file.
-  find_tariff_in_dbg.py
-      Targeted search for Art. 36's values in the decoded text, because line
-      reconstruction is imperfect.
-  diagnose_exports.py
-      Reports, per export, the canton codes and header row found, so a file that
-      yields nothing reveals why.
+Corrected: the two CLI canton tests hard-coded cantons that have since become
+priceable, and had already failed twice for that reason. They now assert
+behaviour, use VS as the refusing case, cover every priceable canton including
+the flat ones, and assert that no canton's rate line claims Bern.
 
 Documentation
 
-SWISS_TAX_DATA.md section 3 records the statutory reconciliation, the two errors
-it corrected, the column-layout trap, the coverage table, and the specific cause
-for each refusing canton.
+SWISS_TAX_DATA.md records the three band shapes plus the formula shape, the
+flat-rate representation, the 22/4 coverage split, and the vintage mismatch as an
+open item.
 
-Not done
-
-Deduction data has been supplied (estv_deductions.xlsx, 623 rows;
-estv_deduction_scales.xlsx, 471 rows) but is not imported. TaxDeductionBreakdown
-still uses a rough estimated model rather than canton-specific rules, so wiring
-it is new machinery rather than a data drop.
-
-The flat-rate cantons (OW, UR) and the formula-based one (BL) need
-representations the scale model does not yet have.
-
-Verified: 154 tests pass, cargo doc --lib clean under -D warnings, no new clippy
+Verified: 158 tests pass, cargo doc --lib clean under -D warnings, no new clippy
 warnings (8 pre-existing remain).

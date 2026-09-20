@@ -160,6 +160,15 @@ impl TaxSchedule {
         }
     }
 
+    /// Canton code that this schedule prices, for display purposes.
+    ///
+    /// `canton_name` was already present but unused by callers, which let the
+    /// display hard-code "official Bern tax only" — false for every other
+    /// canton. Exposing a short code lets the CLI state the real basis.
+    pub fn canton_code(&self) -> &str {
+        &self.canton_name
+    }
+
     /// Build a schedule for a canton priced by the two-level model
     /// (base scale x Steuerfuss), from the ESTV-imported scales.
     ///

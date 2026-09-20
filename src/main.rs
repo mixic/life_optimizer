@@ -587,12 +587,14 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     validate_ages(age, retirement_age, life_expectancy);
 
-    let mut tax_schedule = if let Some(rate) = custom_tax_rate {
+    // Resolve the schedule together with a short label for its basis, so the
+    // "Tax Rate" line reports what actually produced the figure.
+    let (mut tax_schedule, tax_basis): (TaxSchedule, String) = if let Some(rate) = custom_tax_rate {
         // An observed personal rate supersedes any canton table, so the canton
         // is not resolved in this branch -- resolving it would reject a run
         // that does not need cantonal data at all.
         println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
-        TaxSchedule::custom_rate(rate)
+        (TaxSchedule::custom_rate(rate), "your observed rate".to_string())
     } else {
         // Resolve the canton explicitly. This fails loudly for cantons whose
         // tax scale has not been loaded, rather than quietly returning Bern
@@ -605,15 +607,27 @@ fn run_optimization(p: OptimizeParams<'_>) {
                     "{}",
                     "  Tax basis: Bern — official Stadt Bern rate table (2024).".dimmed()
                 );
-                TaxSchedule::bern_city_default(married, children)
+                (
+                    TaxSchedule::bern_city_default(married, children),
+                    "official Bern table".to_string(),
+                )
             }
             priced => match TaxSchedule::from_canton_scale(priced, married, children) {
                 Some(schedule) => {
+                    // A flat-rate canton has no band schedule, so say so rather
+                    // than implying a scale was applied.
+                    let flat = cantons::imported_scale(priced)
+                        .and_then(|s| s.flat_rate_percent);
+                    let detail = match flat {
+                        Some(rate) => format!("flat {rate}% x Steuerfuss"),
+                        None => "ESTV scale x Steuerfuss".to_string(),
+                    };
                     println!(
                         "{}",
                         format!(
-                            "  Tax basis: {} — ESTV imported scale x Steuerfuss ({}).",
+                            "  Tax basis: {} — {} ({}).",
                             priced.name(),
+                            detail,
                             priced.capital()
                         )
                         .dimmed()
@@ -623,7 +637,10 @@ fn run_optimization(p: OptimizeParams<'_>) {
                         "  Verify against your own tax assessment before relying on it."
                             .yellow()
                     );
-                    schedule
+                    (
+                        schedule,
+                        format!("{} {}", priced.code(), detail),
+                    )
                 }
                 None => {
                     // `resolve_canton` only lets priceable cantons through, so
@@ -680,8 +697,9 @@ fn run_optimization(p: OptimizeParams<'_>) {
     let (optimal, all_scenarios) = (outcome.scenario.clone(), outcome.all_scenarios.clone());
 
     display::print_tax_deduction_breakdown(&tax_schedule, optimal.gross_income);
-    // Display work-life balance results
-    display::print_optimal_result(&optimal);
+    // Display work-life balance results, naming the tax basis that produced them
+    // so the rate line cannot be read as a different canton's figures.
+    display::print_optimal_result_for(&optimal, Some(&tax_basis));
 
     // When nothing was feasible, say which constraint eliminated the options.
     // The remedies are completely different: one is a budget problem, the other

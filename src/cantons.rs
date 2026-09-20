@@ -343,9 +343,17 @@ pub fn is_priceable(canton: Canton) -> bool {
 
 /// Whether the Steuerfuss and a base scale are both available, from whichever
 /// source supplies the scale.
+///
+/// A flat-rate canton has no band schedule but does have a rate, so it counts as
+/// priced: an imported scale carrying `flat_rate_percent` supplies the tariff on
+/// its own.
 fn is_priced_any_source(canton: Canton) -> bool {
     let data = canton_tax_data(canton);
-    data.steuerfuss.is_some() && (data.base_scale.is_some() || imported_scale(canton).is_some())
+    let scale_available = data.base_scale.is_some()
+        || imported_scale(canton).is_some_and(|s| {
+            s.flat_rate_percent.is_some() || s.single.iter().any(|b| b.rate > 0.0)
+        });
+    data.steuerfuss.is_some() && scale_available
 }
 
 /// Bern's cantonal base scale.
@@ -656,6 +664,29 @@ pub fn cantonal_tax(
             None,
         ),
     };
+
+    // A flat-rate canton levies one percentage of income with no band
+    // schedule, so the scale path does not apply at all. Obwalden and Uri are
+    // the two cantons that work this way, and they are handled before the
+    // brackets are consulted.
+    if let Some(imported) = imported_scale(canton) {
+        if let Some(flat) = imported.flat_rate_percent {
+            if !(0.0..=30.0).contains(&flat) {
+                return Err(CantonTaxError::InvalidData {
+                    canton,
+                    detail: format!("flat rate {flat}% is outside the plausible range 0-30%"),
+                });
+            }
+            let base = taxable_income * flat / 100.0;
+            let mut total_fuss = fuss;
+            if include_municipal {
+                if let Some(municipal) = data.capital_municipal_fuss {
+                    total_fuss += municipal;
+                }
+            }
+            return Ok(base * total_fuss);
+        }
+    }
 
     cantonal_tax_from_scale(
         scale,
@@ -1215,6 +1246,114 @@ mod tests {
             married < single,
             "splitting should favour the married taxpayer: {married:.2} vs {single:.2}"
         );
+    }
+
+    /// Obwalden and Uri levy a **flat** percentage of income rather than a band
+    /// schedule, so they exercise a code path no other canton uses.
+    ///
+    /// Hand-checkable, but note the **vintage mismatch** it exposes: the
+    /// Steuerfuss data is 2024 while the imported scales are 2026, so the
+    /// multipliers here are the 2024 ones. Sarnen's cantonal Steuerfuss moved
+    /// from 3.35 (2024) to 3.25 (2026), so the 2024 figure is what this asserts.
+    /// That mismatch is recorded as an open item rather than papered over.
+    #[test]
+    fn flat_rate_cantons_apply_a_single_percentage() {
+        let income = 100_000.0;
+
+        let ow = cantonal_tax(Canton::Obwalden, income, false, true)
+            .expect("Obwalden should be priceable from the flat rate");
+        // 2024 rates: cantonal 3.35 + Sarnen 3.86.
+        let expected_ow = income * 0.018 * (3.35 + 3.86);
+        assert!(
+            (ow - expected_ow).abs() < 1.0,
+            "OW: expected {expected_ow:.2} at 2024 Steuerfuesse, got {ow:.2}"
+        );
+
+        let ur = cantonal_tax(Canton::Uri, income, false, true)
+            .expect("Uri should be priceable from the flat rate");
+        let expected_ur = income * 0.071 * (1.00 + 0.95);
+        assert!(
+            (ur - expected_ur).abs() < 1.0,
+            "UR: expected {expected_ur:.2}, got {ur:.2}"
+        );
+
+        // A flat rate is proportional, so the effective cantonal rate must not
+        // change with income. That is what distinguishes these cantons.
+        let ow_low = cantonal_tax(Canton::Obwalden, 50_000.0, false, true).unwrap();
+        let ow_high = cantonal_tax(Canton::Obwalden, 200_000.0, false, true).unwrap();
+        assert!(
+            ((ow_high / 200_000.0) - (ow_low / 50_000.0)).abs() < 1e-9,
+            "a flat-rate canton must be proportional across incomes"
+        );
+
+        // And a band canton must NOT be, which is the contrast that makes the
+        // flat path worth testing separately.
+        let zh_low = cantonal_tax(Canton::Zurich, 50_000.0, false, true).unwrap();
+        let zh_high = cantonal_tax(Canton::Zurich, 200_000.0, false, true).unwrap();
+        assert!(
+            (zh_high / 200_000.0) > (zh_low / 50_000.0),
+            "a band canton should be progressive"
+        );
+    }
+
+    /// The Steuerfuss vintage is behind the scale vintage, and that should be
+    /// visible rather than silent.
+    ///
+    /// Scales are imported from **2026** exports while Steuerfüsse are read from
+    /// the **2024** row of the ESTV workbook. Two cantons have already been
+    /// observed to differ between those years — Sarnen's cantonal multiplier
+    /// moved 3.35 (2024) to 3.25 (2026) — so a canton whose multiplier changed
+    /// will be priced with slightly stale figures.
+    ///
+    /// This test records the current state rather than asserting a year, so that
+    /// updating the Steuerfüsse is a deliberate act that must also re-verify the
+    /// affected cantons.
+    #[test]
+    fn steuerfuss_vintage_is_recorded() {
+        let ag_2024 = crate::canton_steuerfuss_data::steuerfuss_for_code("AG", 2024)
+            .and_then(|r| r.cantonal);
+        let ag_2026 = crate::canton_steuerfuss_data::steuerfuss_for_code("AG", 2026)
+            .and_then(|r| r.cantonal);
+
+        assert!(
+            ag_2024.is_some() && ag_2026.is_some(),
+            "the workbook should carry both vintages, which is what makes the \
+             mismatch correctable"
+        );
+
+        // Aargau's value is hand-entered in the registry, so it is asserted here
+        // only as the figure currently in use — not as a cross-check against the
+        // workbook, which differs (1.11 against 1.12 for 2024).
+        let in_use = canton_tax_data(Canton::Aargau).steuerfuss.expect("AG fuss");
+        assert!(
+            (in_use - 1.11).abs() < 1e-9,
+            "Aargau's hand-entered Steuerfuss changed to {in_use}; if the \
+             workbook value is now preferred, update this test and re-verify the \
+             Aargau figures in the docs"
+        );
+    }
+
+    /// The two flat-rate cantons must be flagged as such, so callers describe
+    /// the basis accurately rather than implying a scale was applied.
+    #[test]
+    fn flat_rate_cantons_are_flagged() {
+        for canton in [Canton::Obwalden, Canton::Uri] {
+            let scale = imported_scale(canton)
+                .unwrap_or_else(|| panic!("{} should have an imported scale", canton.code()));
+            assert!(
+                scale.is_flat_rate(),
+                "{}: should be flagged flat-rate",
+                canton.code()
+            );
+            assert!(
+                scale.flat_rate_percent.is_some(),
+                "{}: should carry the percentage",
+                canton.code()
+            );
+        }
+
+        let zh = imported_scale(Canton::Zurich).expect("ZH scale");
+        assert!(!zh.is_flat_rate(), "Zürich is a band canton, not flat-rate");
     }
 
     /// Ordinary cantons must now be priceable from the imported scales.
