@@ -280,6 +280,29 @@ impl TaxSchedule {
         let work_equipment = (gross_income * 0.01).min(3_500.0);
         let health_insurance = (gross_income * 0.012).min(4_500.0);
 
+        // ── UNSOURCED COMPONENT: `rent` ────────────────────────────────────────
+        //
+        // Rent is **not deductible** for a Swiss employee. There is no such
+        // deduction in cantonal or federal law, and this line has no source.
+        //
+        // It is not merely misnamed either. Where a canton does allow a space cost
+        // — Vaud and Zug publish a `Maximalabzug Miete` — it is a **flat ceiling**
+        // (VD 6,800 / 11,000 single / 13,500 married; ZG 10,800) that does not vary
+        // with income. This component instead scales at 12% of gross, reaching
+        // CHF 20,000 at CHF 200,000 — above every real ceiling in the export, and
+        // rising without limit in a way no published rule does.
+        //
+        // Removing it would be a large change, not a tidy-up: for a household with
+        // no children this component is **71-76% of the whole estimate** at every
+        // income tested (CHF 4,800 of CHF 6,280 at 40k; CHF 12,000 of CHF 15,700 at
+        // 100k), because the other components all cap at comparatively low figures.
+        // It would therefore raise every affected household's tax and move
+        // recommendations, and the reported figures are what the tool's output has
+        // always meant — so it is left in place and documented rather than changed
+        // unilaterally.
+        //
+        // It is also the single largest reason the estimate and `src/deductions.rs`
+        // disagree.
         let rent = if self.married {
             (gross_income * 0.11).min(18_000.0)
         } else {
@@ -517,6 +540,50 @@ mod tests {
         // Should be between 15.38% and 16.26%
         assert!(rate_85k > 0.1538 && rate_85k < 0.1626,
                 "85k rate should be between 15.38% and 16.26%, got {:.2}%", rate_85k * 100.0);
+    }
+
+    /// The estimate's `rent` component is unsourced, and behaves unlike any
+    /// published space-cost rule.
+    ///
+    /// Rent is **not deductible** for a Swiss employee. The only sourced space
+    /// costs in the ESTV export are Vaud's and Zug's `Maximalabzug Miete`, and both
+    /// are **flat ceilings** — VD 6,800 / 11,000 single / 13,500 married, ZG
+    /// 10,800 — that do not vary with income. This component instead scales at 12%
+    /// of gross, passing every real ceiling by CHF 100,000 and continuing to rise.
+    ///
+    /// The test pins that contrast rather than the values, so anyone who changes
+    /// the component must decide what it is meant to be: the figures here are the
+    /// estimate's own, and a departure from them moves every reported number.
+    #[test]
+    fn rent_component_is_unsourced_and_scales_with_income() {
+        let single = TaxSchedule::bern_city_default(false, 0);
+
+        // It scales with income, unlike every sourced ceiling.
+        let low = single.deduction_breakdown(100_000.0).rent;
+        let high = single.deduction_breakdown(200_000.0).rent;
+        assert!(
+            high > low,
+            "the estimate's rent scales with income ({low} -> {high}); a sourced \
+             space-cost rule would not"
+        );
+
+        // It exceeds every ceiling the export publishes.
+        assert!(
+            high >= 13_500.0,
+            "at CHF 200,000 the estimate claims {high} of rent, above VD's married \
+             ceiling of 13,500 and Zug's 10,800"
+        );
+
+        // And it dominates the estimate, which is why removing it would be a large
+        // change rather than a tidy-up.
+        let breakdown = single.deduction_breakdown(100_000.0);
+        let share = breakdown.rent / breakdown.deductible_total;
+        assert!(
+            share > 0.65,
+            "rent is {:.0}% of the estimate at CHF 100,000; if that dropped, the \
+             documented magnitude is stale",
+            share * 100.0
+        );
     }
 
     /// `non_deductible_total` must not affect any tax figure.

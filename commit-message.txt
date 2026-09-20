@@ -1,52 +1,52 @@
-Classify the last six deduction rules, and gate St. Gallen's conditional one
+Document that the estimate's rent component is unsourced and dominates it
 
-Pushed classification coverage to 100% and made it an invariant. Six real deductions
-were being ignored; all six are now classified, and the build fails if a refreshed
-export adds one that is not. Test count rises from 203 to 206.
+No behaviour change. Records a finding that decides what the tax-base comparison
+actually means, and pins it with a test so any future change is a decision rather
+than an accident. Test count rises from 206 to 207.
 
-The six, and why each was missed
+The finding
 
-  Abzug Krankenkassenprämien, Verheiratete / alleinstehende Personen /
-    minderj. Kind / vollj. Kind in Ausbildung
-      Fribourg publishes health-insurance premiums under their own label rather
-      than as `Versicherungsprämien`, so no prefix matched. Classified as
-      InsurancePremiums -- they are ceiling-only, the same shape as the rest of
-      that family, and exactly one adult variant applies per household (4,810 for
-      a single taxpayer, 9,620 married).
+`TaxDeductionBreakdown::rent` is 12% of gross (11% married), capped at 20,000. Rent
+is **not deductible for a Swiss employee** -- there is no such deduction in cantonal
+or federal law, and this component has no source.
 
-  Abzug Versicherungspärmien und Sparzinsen, Verheiratete, beide ohne Beiträge
-    Säule 2/3a
-      AN UPSTREAM TYPO: `Versicherungspärmien`, missing the `s`. No
-      correct-spelling prefix can match it. Listed explicitly rather than loosened
-      to a substring, which would start catching labels nobody has seen yet.
+It is not merely misnamed. The only space costs the ESTV export publishes are Vaud's
+and Zug's `Maximalabzug Miete`, and both are FLAT CEILINGS that do not vary with
+income:
 
-  Kinderausbildungskosten Eigenbeitrag
-      St. Gallen, a flat CHF 3,200, and the one that needed more than a
-      classification: it is conditional on the taxpayer actually making such a
-      contribution. Applying it to any household with a child would deduct the
-      amount unconditionally, in a canton the default output path never reaches.
-      Gated on a new `Household::education_contribution`, exposed as
-      `--education-contribution`.
+    VD  6,800 / 11,000 single / 13,500 married
+    ZG  10,800
 
-Verified end to end: SG married with two children and a CHF 3,200 contribution
-reports CHF 16,400 of cantonal deductions against CHF 13,200 without -- the
-difference being exactly the Eigenbeitrag.
+This component instead scales at 12% of gross, passing every real ceiling by
+CHF 100,000 and rising without limit -- reaching CHF 20,000 at CHF 200,000, above
+every published cap. No sourced rule behaves that way.
 
-Coverage is now an invariant, not an audit
+It also dominates the estimate: 71-76% of the whole total for a household with no
+children (CHF 4,800 of CHF 6,280 at 40k; CHF 12,000 of CHF 15,700 at 100k), because
+every other component caps at a comparatively low figure. So it is the single
+largest reason the estimate and `src/deductions.rs` disagree.
 
-`every_deduction_rule_is_classified` asserts that no deduction-kind rule lacks a
-category. A generated table cannot be hand-audited every time the export is
-refreshed, so the test asserts the property instead, and reports the offending
-label when it fails. That is how the Jura typo surfaced.
+A correction to my own first draft
 
-Also
+I initially wrote that removing it would cut the estimate by "31-72%". Measuring
+instead of estimating gave 71-76% for a childless household and revealed that the
+earlier figure conflated `rent` with `family_specific`. The documented numbers are
+the measured ones.
 
-  - `Commands::Optimize` is boxed into a new `OptimizeArgs` struct. The enum's
-    largest variant reached 299 bytes once the household-fact flags were added, and
-    a plain enum is as large as its biggest variant, so every `Commands` value paid
-    for it. The refactor drops a clippy warning rather than silencing it.
-  - SWISS_TAX_DATA.md records the six rules, the typo, and the per-category rule
-    counts as a check that no family collapsed to zero.
+Why this is documented rather than changed
 
-Verified: 206 tests pass, clippy back to 9 pre-existing warnings, and no CLI golden
-changed.
+Removing it would raise every affected household's tax and move recommendations --
+the same class of change as the tax-base fix, but without that fix's justification.
+The tax-base defect was arithmetic contradicting the published table; this is a
+modelling decision about whether to keep an invented component, and the reported
+figures are what the tool's output has always meant. It is the user's call, now with
+the size of the decision stated.
+
+Documentation
+
+SWISS_TAX_DATA.md records it beside the withdrawn `non_deductible_total`, and
+`rent_component_is_unsourced_and_scales_with_income` pins the contrast with the
+sourced ceilings -- if it ever stops scaling with income, or stops dominating, the
+documented magnitude is stale and the test says so.
+
+Verified: 207 tests pass, clippy unchanged at 9 pre-existing warnings.

@@ -554,6 +554,23 @@ misread from the output:
   withdrawn than shown unexplained; the field is retained for serialised
   compatibility and `non_deductible_total_feeds_no_tax_figure` pins that it stays
   out of every calculation.
+* **The `rent` component is unsourced and is not a Swiss deduction at all.** Rent is
+  not deductible for an employee, and this component has no source. It is not merely
+  misnamed: the only space costs the export publishes are Vaud's and Zug's
+  `Maximalabzug Miete`, and both are **flat ceilings** — VD 6,800 / 11,000 single /
+  13,500 married, ZG 10,800 — that do **not** vary with income. This one scales at
+  12% of gross, passing every real ceiling by CHF 100,000 and rising without limit.
+
+  It is **71–76% of the whole estimate** for a household with no children (CHF 4,800
+  of CHF 6,280 at 40k; CHF 12,000 of CHF 15,700 at 100k), because the other
+  components all cap at comparatively low figures. So it is the single largest reason
+  the estimate and the sourced model disagree, and removing it would raise every
+  affected household's tax.
+
+  It is left in place deliberately rather than changed unilaterally: it moves
+  recommendations, and the reported figures are what the tool's output has always
+  meant. `rent_component_is_unsourced_and_scales_with_income` pins the contrast with
+  the sourced ceilings so a future change is a decision rather than an accident.
 
 Until then, treat the current deduction figures as an estimate, and prefer
 `--custom-tax-rate` with your observed rate.
