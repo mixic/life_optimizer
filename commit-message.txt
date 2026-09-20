@@ -1,56 +1,39 @@
-Key the means-tested deduction scales on net income, and drop a false limitation
+Withdraw an untraceable figure from the deduction breakdown
 
-The phase-out scales were applied to GROSS income, and the module documented the
-result as an acknowledged, unsolved circularity. Both halves of that were wrong.
-Test count rises from 199 to 201.
+`TaxDeductionBreakdown::non_deductible_total` was 2% of income after the deductible
+items. It has no source, and nothing reads it -- it reached the user only through
+`display.rs`, where it was printed between "Total deductible" and "Taxable income
+after deductions" and therefore read as part of that arithmetic. It is not: taxable
+income is gross minus `deductible_total` alone, so a reader could not reconcile the
+lines and would reasonably conclude one of them was wrong.
 
-The column is Reineinkommen, which is net income
+FutureWork.md section 7 sets the standard that a number be traceable "to a data
+source, to a named assumption, to a documented estimation method". This one is none
+of the three, so it is withdrawn from the output rather than shown unexplained. The
+struct field is retained for serialised compatibility, and
+`non_deductible_total_feeds_no_tax_figure` pins that it stays out of every
+calculation -- so if it ever gains a role, its removal from the display becomes a
+real omission rather than a tidying-up.
 
-Keying on gross understated the deduction for exactly the households it exists for:
-a household with more deductions has LOWER net income, and the scale allows it
-more. Measured effects:
+The estimate's doc comment also no longer oversells it
 
-    SH  gross 20,000, +1,500 premiums    3,225 -> 3,525
-    FR  gross 25,000                     3,100 -> 3,500
-    FR  gross 30,000                     2,100 -> 2,500
+It described itself as a "structured Swiss deduction model ... intended to represent
+realistic, legally relevant deductions". Every component is hand-entered, and `rent`
+at 12% of gross has no counterpart in Swiss tax law at all -- rent is not deductible
+for an employee. The comment now says so, and names `src/deductions.rs` as the
+sourced replacement.
 
-Every differing scale moves UP, which is the direction that makes a means-tested
-deduction coherent.
-
-There was no circularity to begin with
-
-The base is income minus the OTHER deductions, excluding the means-tested deduction
-itself. Subtracting that too would lower the base, raising the deduction, lowering
-the base again -- a loop that exists only if you define the base that way. Defined
-as "the income remaining after the other deductions" it is a plain single pass.
-
-That distinction is the point of the change: it is the difference between a
-definition and a fixed-point search, and the module had recorded the wrong one as a
-limitation. `means_tested_deduction_does_not_feed_its_own_base` asserts it by
-assessing the same household twice and requiring identical answers, so a future
-edit that reintroduces the feedback is caught.
-
-`means_tested` and `means_tested_scale_for` now take the scale base as a parameter
-rather than reading `household.gross_income` internally, so the gross/net
-distinction cannot be silently collapsed by a later edit. `means_tested_scale`
-remains as a convenience for a household that declares nothing, where net income is
-gross income.
-
-Tests (tests/deduction_engine.rs, 2 new)
-
-  means_tested_deduction_does_not_feed_its_own_base
-  means_tested_scales_use_net_income_for_every_canton
-
-The second sweeps every canton holding a scale and asserts the direction, while
-deliberately SKIPPING the capped regime: Valais allows CHF 21,250 against a
-CHF 15,000 income, so there the base has no observable effect and asserting one
-would be asserting a coincidence. Four cantons are exercised, and the test fails if
-fewer than three are, so it cannot quietly become vacuous.
+One property of the estimate is now recorded because it is easy to misread from the
+output: the 35% cap BINDS for families at moderate incomes. At CHF 60,000 with two
+children both the plain and the `--family-tax-mode` figures are CHF 21,000 -- the
+cap -- so the flag has no visible effect there, while it still works (+CHF 3,000)
+wherever the cap does not bind. Measured across 20 family/income combinations before
+concluding this was the cap behaving as designed rather than a defect.
 
 Documentation
 
-SWISS_TAX_DATA.md's phase-out section is rewritten: it records the mis-keyed base,
-the numeric effects, and why the "circularity" was a mistake rather than a
-limitation. The module's own gaps list no longer claims it as unsolved.
+SWISS_TAX_DATA.md records both the withdrawn figure and the cap behaviour, with the
+reasoning for each.
 
-Verified: 201 tests pass, clippy unchanged at 9 pre-existing warnings.
+Verified: 202 tests pass, clippy unchanged at 9 pre-existing warnings, and no CLI
+golden asserted the removed line.

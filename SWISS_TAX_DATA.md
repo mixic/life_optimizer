@@ -537,6 +537,24 @@ estimate** by `optimize`, so the difference is visible on a real scenario:
 Pointing the reported figures at the sourced model is a separate decision, because
 it moves every number the tool produces.
 
+Two properties of the estimate are worth recording because both are easy to
+misread from the output:
+
+* **The 35% cap binds for families at moderate incomes.** At CHF 60,000 with two
+  children, the plain and `--family-tax-mode` figures are both CHF 21,000 — the cap
+  — so the flag has no visible effect there. It works (+CHF 3,000) wherever the cap
+  does not bind, e.g. CHF 60,000 with one child or CHF 140,000 with two.
+* **One invented figure has been withdrawn from the output.**
+  `TaxDeductionBreakdown::non_deductible_total` is 2% of income *after* the
+  deductible items. It has no source, and nothing reads it — it reached the user
+  only through `display.rs`, printed between "Total deductible" and "Taxable income
+  after deductions" where it read as part of that arithmetic even though taxable
+  income is gross minus `deductible_total` alone. A reader could not reconcile the
+  lines. §7's standard is that numbers be traceable, so an untraceable one is better
+  withdrawn than shown unexplained; the field is retained for serialised
+  compatibility and `non_deductible_total_feeds_no_tax_figure` pins that it stays
+  out of every calculation.
+
 Until then, treat the current deduction figures as an estimate, and prefer
 `--custom-tax-rate` with your observed rate.
 

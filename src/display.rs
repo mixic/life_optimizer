@@ -193,8 +193,17 @@ pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f
     println!("    • Rent/apartment:    CHF {:.0}", deduction.rent);
     println!("    • Family-specific:   CHF {:.0}", deduction.family_specific);
     println!("    • Total deductible:  CHF {:.0}", deduction.deductible_total);
-    println!("  Non-deductible estimate: CHF {:.0}", deduction.non_deductible_total);
+    // `non_deductible_total` is deliberately NOT printed. It is 2% of income after
+    // the items above, it feeds no tax calculation, and sitting between "total
+    // deductible" and "taxable income" it read as part of that arithmetic — which
+    // it is not, since taxable income is gross minus `deductible_total` alone.
     println!("  Taxable income after deductions: CHF {:.0}", tax_schedule.taxable_income_after_estimated_deductions(gross_income));
+    println!(
+        "  {}",
+        "  Estimate only — these components are hand-entered, not sourced. The \
+         sourced rules are compared below."
+            .yellow()
+    );
 }
 
 pub fn print_comparison_table(scenarios: &[WorkScenario]) {

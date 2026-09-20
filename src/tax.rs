@@ -34,6 +34,19 @@ pub struct TaxDeductionBreakdown {
     pub rent: f64,
     pub family_specific: f64,
     pub deductible_total: f64,
+    /// Not a deduction, not part of `deductible_total`, and **not used by any tax
+    /// calculation** — nothing reads it but the display.
+    ///
+    /// It is `2%` of income *after* the deductible items, which is a figure with no
+    /// source and no stated purpose. It used to be printed inside the deduction
+    /// breakdown, where it read as part of the arithmetic leading to taxable
+    /// income; a reader could not reconcile it and would reasonably conclude one of
+    /// the lines was wrong. `FutureWork.md` §7's standard is that numbers be
+    /// traceable, so an untraceable one is better withdrawn from the output than
+    /// shown unexplained.
+    ///
+    /// The field is retained for serialised compatibility. See
+    /// [`crate::deductions`] for the sourced replacement.
     pub non_deductible_total: f64,
 }
 
@@ -231,9 +244,22 @@ impl TaxSchedule {
         })
     }
 
-    /// Structured Swiss deduction model for common tax-deductible employee costs.
-    /// The categories below are intended to represent realistic, legally relevant deductions,
-    /// with a stronger family/childcare mode for married parents.
+    /// An **estimate** of common Swiss employee deductions, not a sourced model.
+    ///
+    /// Every component below is hand-entered: `commuting` is 1.5% of gross capped
+    /// at CHF 4,000, `rent` is 12% of gross capped at CHF 20,000, and so on. None
+    /// of them comes from a published table, and the rental component in particular
+    /// has no counterpart in Swiss tax law — rent is not deductible for an employee.
+    ///
+    /// It survives because it is what the reported figures are computed from, and
+    /// changing that moves every number the tool produces. `src/deductions.rs`
+    /// holds the sourced replacement, built from the ESTV rule exports, and
+    /// `optimize` prints both so the difference is visible before the default is
+    /// switched.
+    ///
+    /// Total deductions are capped at 35% of gross, which binds for families at
+    /// moderate incomes — at CHF 60,000 with two children both the plain and the
+    /// `family_tax_mode` figures sit at the cap, so the flag has no effect there.
     pub fn deduction_breakdown(&self, gross_income: f64) -> TaxDeductionBreakdown {
         if gross_income <= 0.0 {
             return TaxDeductionBreakdown::default();
@@ -437,6 +463,46 @@ mod tests {
         // Should be between 15.38% and 16.26%
         assert!(rate_85k > 0.1538 && rate_85k < 0.1626,
                 "85k rate should be between 15.38% and 16.26%, got {:.2}%", rate_85k * 100.0);
+    }
+
+    /// `non_deductible_total` must not affect any tax figure.
+    ///
+    /// It is `2%` of income *after* the deductible items, it has no source, and it
+    /// used to be printed between "total deductible" and "taxable income" — where
+    /// it read as part of the arithmetic even though taxable income is gross minus
+    /// `deductible_total` alone. This test exists so the field cannot quietly
+    /// acquire a role: if it ever feeds a calculation, the removal from the display
+    /// becomes a real omission rather than a tidying-up.
+    #[test]
+    fn non_deductible_total_feeds_no_tax_figure() {
+        for schedule in [
+            TaxSchedule::bern_city_default(false, 0),
+            TaxSchedule::bern_city_default(true, 2),
+        ] {
+            for gross in [40_000.0, 60_000.0, 100_000.0, 250_000.0] {
+                let breakdown = schedule.deduction_breakdown(gross);
+
+                // Taxable income is gross minus the deductible total, full stop.
+                assert!(
+                    (schedule.taxable_income_after_estimated_deductions(gross)
+                        - (gross - breakdown.deductible_total).max(0.0))
+                        .abs()
+                        < 1e-9,
+                    "at gross {gross}: taxable income is not gross minus deductible_total"
+                );
+
+                // And it is not silently folded into the deductible total.
+                assert!(
+                    breakdown.deductible_total <= gross * 0.35 + 1e-9,
+                    "at gross {gross}: the total exceeds the documented 35% cap"
+                );
+                assert!(
+                    breakdown.non_deductible_total >= 0.0
+                        && breakdown.non_deductible_total < breakdown.deductible_total,
+                    "at gross {gross}: the undocumented figure should stay minor"
+                );
+            }
+        }
     }
 
     /// The two public rate accessors must agree on the same income.
