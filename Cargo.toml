@@ -1,14 +1,18 @@
 [workspace]
 # The root package is itself a member; only the other members are listed.
 #
-# `multipolar-sim` lives in its own crate rather than as modules of
+# `multipolar_sim` lives in its own crate rather than as modules of
 # `life-optimizer` on purpose. This crate's numbers are sourced or explicitly
 # flagged `NotSourced`, and it has no fallback path by construction
 # (`SWISS_TAX_DATA.md`, `FutureWork.md` section 7). The simulator's parameters are
 # illustrative by construction. Keeping them in separate crates means an
 # illustrative figure cannot reach a reported tax or pension number by accident:
 # the boundary is a `use` statement that does not exist.
-members = ["crates/multipolar-sim"]
+#
+# The member sits at the repository root rather than under `crates/`; a workspace
+# member may live anywhere, and a single member does not need a directory level of
+# its own.
+members = ["multipolar_sim"]
 resolver = "2"
 
 [package]

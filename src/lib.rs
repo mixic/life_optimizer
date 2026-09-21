@@ -34,13 +34,13 @@
 //!
 //! # Sibling crate
 //!
-//! The workspace also contains `crates/multipolar-sim`, a Monte Carlo simulator for a
+//! The workspace also contains `multipolar_sim`, a Monte Carlo simulator for a
 //! multipolar world and what its equilibria imply for pension security. It is
 //! deliberately *not* a module of this crate: every figure here is sourced or
 //! explicitly flagged as unsourced, while the simulator's figures are illustrative by
 //! construction, and separate crates make that boundary a `use` statement that does
 //! not exist. A build failure there cannot block this library either. See
-//! `crates/multipolar-sim/README.md`.
+//! `multipolar_sim/README.md`.
 
 pub mod tax;
 pub mod federal_tax;

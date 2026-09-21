@@ -65,7 +65,7 @@ Unlike simple inflation calculators or financial tools, this optimizer addresses
    - Interactive questionnaire
    - Flexible parameter inputs
 
-### Companion crate: `crates/multipolar-sim`
+### Companion crate: `multipolar_sim`
 
 A second, independent tool in the same workspace: a Monte Carlo simulator for a
 multipolar world. Five power blocs, every pair of them playing a 2×2 Cooperate/Compete
@@ -86,7 +86,7 @@ forecast.** `--sweep` is the informative mode. It is a separate crate rather tha
 module here because every figure this project reports is sourced or explicitly flagged
 as unsourced, while the simulator's figures are invented by construction; separate
 crates keep an illustrative number from reaching a reported tax or pension figure by
-accident. See `crates/multipolar-sim/README.md`.
+accident. See `multipolar_sim/README.md`.
 
 ### Documentation (6 comprehensive guides)
 

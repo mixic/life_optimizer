@@ -105,7 +105,7 @@ the right answer at 28 (single, building a foundation) is not the right answer a
 
 ## Companion tool: the multipolar world simulator
 
-This repository contains a second and independent tool. `crates/multipolar-sim` is a
+This repository contains a second and independent tool. `multipolar_sim` is a
 Monte Carlo simulator for a multipolar world: five power blocs, every pair of them
 playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved (pure
 or mixed), random annual shocks, and what the resulting world implies for pension
@@ -135,7 +135,7 @@ simulator's figures are invented by construction. Keeping them in separate crate
 means an illustrative number cannot reach a reported tax or pension figure by
 accident — the boundary is a `use` statement that does not exist. The same separation
 means a build failure in the simulator cannot block the optimizer. See
-[`crates/multipolar-sim/README.md`](crates/multipolar-sim/README.md) for the model and
+[`multipolar_sim/README.md`](multipolar_sim/README.md) for the model and
 its module map.
 
 ---
@@ -306,8 +306,7 @@ inflation-adjusted needs through your planning horizon. See
 ```
 life-optimizer/
 ├── Cargo.toml                    Workspace manifest (root package: life-optimizer)
-├── crates/
-│   └── multipolar-sim/           Companion Monte Carlo world simulator (see above)
+├── multipolar_sim/               Companion Monte Carlo world simulator (see above)
 ├── src/
 │   ├── main.rs                   CLI, command dispatch, orchestration
 │   ├── lib.rs                    Library surface and module map
