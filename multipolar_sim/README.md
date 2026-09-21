@@ -8,12 +8,22 @@ Run it with `cargo run -p multipolar_sim`, and with `--sweep` for the run that
 actually matters.
 
 ```
+cargo run -p multipolar_sim -- --compare               # who wins, and who loses
 cargo run -p multipolar_sim -- --sweep                  # the informative mode
 cargo run -p multipolar_sim -- --seed 42 --runs 1000    # reproducible ensemble
 cargo run -p multipolar_sim -- --bloc "Atlantic:0.50:0.02:0.010:1.0"
 cargo run -p multipolar_sim -- --bloc "Antarctic:0.06:0.010:0.020:1.00"
 cargo run -p multipolar_sim -- --help
 ```
+
+`--compare` answers "who wins and who loses" directly. It runs the same years
+twice, from the same shock draws, once with a cooperative payoff balance and once
+with a non-cooperative one, and prints each bloc's share and dominance probability
+in both worlds next to how the world itself fares. It then separates the two claims
+worth separating: a cooperative world is better on *every* aggregate while still
+redistributing power away from some blocs, which is robust, whereas the *identity*
+of the largest bloc is decided by the invented starting shares and growth biases and
+should not be read as a prediction.
 
 `--bloc` takes `Name:share:bias:volatility:affinity`, edits the named bloc if the
 system has one and appends it otherwise, and is repeatable — so the five-pole

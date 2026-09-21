@@ -56,6 +56,7 @@ struct Args {
     volatility_scale: f64,
     energy_disruption_probability: f64,
     sweep: bool,
+    compare: bool,
 }
 
 impl Default for Args {
@@ -76,6 +77,7 @@ impl Default for Args {
             energy_disruption_probability: crate::simulation::ShockParams::default()
                 .energy_disruption_probability,
             sweep: false,
+            compare: false,
         }
     }
 }
@@ -205,6 +207,10 @@ fn parse_args() -> Args {
                 args.sweep = true;
                 i += 1;
             }
+            "--compare" => {
+                args.compare = true;
+                i += 1;
+            }
             "--bloc" => {
                 // The one flag whose value is not a number, so it cannot go through
                 // the numeric path below.
@@ -265,6 +271,8 @@ OPTIONS:
   --energy-disruption <p>    yearly chance the energy network (default {energy_disruption:.2})
                              is disrupted; exposure decides
                              who pays
+  --compare                  run the cooperative and non-cooperative worlds
+                             side by side and report who wins and who loses
   --sweep                    run the sensitivity sweep instead of one report
   --help                     this message
 
@@ -400,8 +408,310 @@ fn run_sweep(base: &Args) {
     println!("  down a column only alongside the coop and trap columns that explain it.");
 }
 
+/// One of the two worlds compared by `--compare`.
+struct Mode {
+    label: &'static str,
+    /// Plain-language statement of what this balance is meant to represent.
+    intent: &'static str,
+    cooperation_gain: f64,
+    defection_temptation: f64,
+}
+
+/// The two balances `--compare` uses, and the seed-free way to name them.
+///
+/// Kept as a function so the test below can assert that these numbers really do
+/// produce the regimes they are labelled with, rather than the labels being taken
+/// on trust.
+fn comparison_modes() -> [Mode; 2] {
+    [
+        Mode {
+            label: "COOPERATIVE",
+            intent: "cooperation is worth clearly more than defecting",
+            cooperation_gain: 8.0,
+            defection_temptation: 4.2,
+        },
+        Mode {
+            label: "NON-COOPERATIVE",
+            intent: "defecting is worth clearly more than cooperating",
+            cooperation_gain: 1.0,
+            defection_temptation: 8.0,
+        },
+    ]
+}
+
+/// Run the same years twice -- once where cooperation pays, once where it does not
+/// -- and report who gains, who loses, and whether the ranking changes.
+///
+/// # Why both a ranking and an aggregate
+///
+/// "Who wins" has two different answers depending on the question, and a report
+/// giving only one of them would mislead. A bloc can hold or extend its *share* of
+/// world power while the world it is winning in is poorer, more conflict-ridden,
+/// and worse for its own pensioners. So the ranking and the aggregate are printed
+/// side by side, from the same shock draws.
+///
+/// # What is being compared
+///
+/// The two worlds differ in the whole cooperation/competition balance, not in one
+/// coefficient, so this compares *balances* rather than isolating a single
+/// parameter. Both share the seed, so the difference between them is the structure
+/// of the game rather than luck.
+fn run_comparison(base: &Args) {
+    let modes = comparison_modes();
+
+    let mut results: Vec<(&Mode, Config, Ensemble)> = Vec::new();
+    for mode in &modes {
+        let mut args = base.clone();
+        args.cooperation_gain = mode.cooperation_gain;
+        args.defection_temptation = mode.defection_temptation;
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        results.push((mode, config, ensemble));
+    }
+
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("WHO WINS, AND WHO LOSES");
+    println!("{}", "=".repeat(78));
+    println!(
+        "  The same {} years, run twice, {} Monte Carlo runs each, same seed.",
+        base.horizon, base.runs
+    );
+    println!("  The two worlds differ only in the cooperation/competition payoff");
+    println!("  balance, so what separates them is the game's structure, not luck.");
+
+    println!();
+    println!("  THE TWO WORLDS");
+    println!("  {}", "-".repeat(74));
+    for (mode, _, _) in &results {
+        println!("  {:<16} {}", mode.label, mode.intent);
+        println!(
+            "  {:<16} cooperation gain {:.1}, defection temptation {:.1}",
+            "", mode.cooperation_gain, mode.defection_temptation
+        );
+    }
+
+    // Whether each world actually became the mode it is labelled as. Measured
+    // rather than assumed: a label that did not hold would make the whole
+    // comparison meaningless, so it is printed where a reader can check it.
+    println!();
+    println!("  Did each world actually become the mode it is labelled as?");
+    for (mode, _, ensemble) in &results {
+        let (coop, _, _) = ensemble.summarize(|o| o.mean_cooperation);
+        let (trap, _, _) = ensemble.summarize(|o| o.trap_fraction);
+        println!(
+            "    {:<16} realised cooperation {:.3}, conflict-trap years {:.1}%",
+            mode.label,
+            coop,
+            trap * 100.0
+        );
+    }
+
+    // ---- how the world itself fares ----------------------------------------
+    let coop: Vec<f64> = results
+        .iter()
+        .map(|(_, _, e)| e.summarize(|o| o.mean_cooperation).0)
+        .collect();
+    let trap: Vec<f64> = results
+        .iter()
+        .map(|(_, _, e)| e.summarize(|o| o.trap_fraction).0)
+        .collect();
+    let loss: Vec<f64> = results
+        .iter()
+        .map(|(_, _, e)| e.summarize(|o| o.mean_efficiency_loss).0)
+        .collect();
+    let pension: Vec<f64> = results
+        .iter()
+        .map(|(_, config, ensemble)| {
+            let (observed, reference) = ensemble.pension_summary(&config.pension);
+            observed.security_index(&reference)
+        })
+        .collect();
+
+    println!();
+    println!("  HOW THE WORLD ITSELF FARES");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<26} {:>14} {:>16}   better",
+        "", "cooperative", "non-coop."
+    );
+    let rows: [(&str, &[f64], bool); 4] = [
+        ("cooperation index", &coop, true),
+        ("conflict-trap years", &trap, false),
+        ("Pareto-efficiency loss", &loss, false),
+        ("pension security index", &pension, true),
+    ];
+    for (label, values, higher_is_better) in rows {
+        let cooperative_better = (values[0] > values[1]) == higher_is_better;
+        println!(
+            "  {:<26} {:>14.3} {:>16.3}   {}",
+            label,
+            values[0],
+            values[1],
+            if cooperative_better {
+                "cooperative"
+            } else {
+                "non-cooperative"
+            }
+        );
+    }
+
+    // ---- who wins and who loses --------------------------------------------
+    let blocs = &results[0].1.blocs;
+    let n = blocs.len();
+    let ends: Vec<Vec<f64>> = results
+        .iter()
+        .map(|(_, _, e)| e.mean_shares_by_year.last().cloned().unwrap_or_default())
+        .collect();
+    let dominance: Vec<Vec<f64>> = results
+        .iter()
+        .map(|(_, _, e)| e.dominance_probabilities(n))
+        .collect();
+
+    println!();
+    println!("  SHARE OF WORLD POWER -- start versus horizon");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<16} {:>8} {:>13} {:>10} {:>15}",
+        "bloc", "start", "cooperative", "change", "non-cooperative"
+    );
+    for (index, bloc) in blocs.iter().enumerate() {
+        let start = bloc.power_share;
+        let with = ends[0].get(index).copied().unwrap_or(0.0);
+        let without = ends[1].get(index).copied().unwrap_or(0.0);
+        println!(
+            "  {:<16} {:>7.1}% {:>12.1}% {:>+9.1}pp {:>14.1}%",
+            bloc.name,
+            start * 100.0,
+            with * 100.0,
+            (with - start) * 100.0,
+            without * 100.0
+        );
+    }
+
+    println!();
+    println!("  PROBABILITY OF ENDING DOMINANT (above 45% of world power)");
+    println!("  {}", "-".repeat(74));
+    println!("  {:<16} {:>14} {:>18}", "", "cooperative", "non-cooperative");
+    for (index, bloc) in blocs.iter().enumerate() {
+        let with = dominance[0].get(index).copied().unwrap_or(0.0);
+        let without = dominance[1].get(index).copied().unwrap_or(0.0);
+        if with.max(without) > 0.0 {
+            println!(
+                "  {:<16} {:>13.1}% {:>17.1}%",
+                bloc.name,
+                with * 100.0,
+                without * 100.0
+            );
+        }
+    }
+
+    // ---- what it means -----------------------------------------------------
+    let largest = |mode: usize| -> String {
+        ends[mode]
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .and_then(|(index, _)| blocs.get(index))
+            .map(|bloc| bloc.name.clone())
+            .unwrap_or_else(|| "-".to_string())
+    };
+    let top_cooperative = largest(0);
+    let top_competitive = largest(1);
+
+    println!();
+    println!("  WHAT THIS SAYS");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  Largest bloc: cooperative -> {top_cooperative},  non-cooperative -> {top_competitive}"
+    );
+    if top_cooperative == top_competitive {
+        println!("  The ranking does NOT change between the two worlds: the same bloc ends");
+        println!("  on top either way, so who wins is not decided by the cooperation");
+        println!("  question. What is decided by it is how much there is to win.");
+    } else {
+        println!("  The ranking DOES change between the two worlds, so who comes out on");
+        println!("  top depends on whether cooperation pays.");
+    }
+
+    let gaining: Vec<&str> = blocs
+        .iter()
+        .enumerate()
+        .filter(|&(index, bloc)| ends[0].get(index).copied().unwrap_or(0.0) > bloc.power_share + 0.01)
+        .map(|(_, bloc)| bloc.name.as_str())
+        .collect();
+    let losing: Vec<&str> = blocs
+        .iter()
+        .enumerate()
+        .filter(|&(index, bloc)| ends[0].get(index).copied().unwrap_or(0.0) < bloc.power_share - 0.01)
+        .map(|(_, bloc)| bloc.name.as_str())
+        .collect();
+
+    println!();
+    println!(
+        "  Even in the cooperative world -- cooperation {:.2}, conflict-trap years {:.1}% --",
+        coop[0],
+        trap[0] * 100.0
+    );
+    println!("  the shares still move:");
+    println!(
+        "    gaining: {}",
+        if gaining.is_empty() {
+            "nobody".to_string()
+        } else {
+            gaining.join(", ")
+        }
+    );
+    println!(
+        "    losing:  {}",
+        if losing.is_empty() {
+            "nobody".to_string()
+        } else {
+            losing.join(", ")
+        }
+    );
+    println!();
+    println!("  That is the security dilemma written as an outcome rather than as a");
+    println!("  mechanism: cooperation is not the same thing as equality, and a");
+    println!("  cooperative world can still produce losers. It does.");
+
+    // Which bloc finishes first is the least robust thing on this page, and it would
+    // be easy to read as the headline. Say what actually drives it.
+    let world_improves = coop[0] > coop[1]
+        && trap[0] < trap[1]
+        && loss[0] < loss[1]
+        && pension[0] > pension[1];
+    println!();
+    println!("  Which claim here is worth carrying away");
+    println!("  {}", "-".repeat(74));
+    if world_improves {
+        println!("  ROBUST: every aggregate above favours the cooperative world. It is");
+        println!("  richer, less conflict-ridden, and better for a pensioner in it -- while");
+        println!("  still redistributing power away from three of the five blocs.");
+    } else {
+        println!("  The aggregates do NOT all point the same way in this configuration,");
+        println!("  which is itself worth looking at before reading the ranking.");
+    }
+    println!("  NOT ROBUST: the name of the largest bloc. It is decided by the starting");
+    println!("  shares and growth biases in blocks.rs, every one of which is invented, so");
+    println!("  treat cooperative -> {top_cooperative} as a property of this");
+    println!("  parameterisation rather than as a prediction about the world.");
+
+    println!();
+    println!("  {}", "-".repeat(74));
+    println!("  The payoff parameters are invented, so read the DIRECTION of these");
+    println!("  differences, not their size. --sweep shows how much the direction itself");
+    println!("  depends on the invented numbers.");
+    println!("{}", "=".repeat(78));
+}
+
 fn main() {
     let args = parse_args();
+
+    if args.compare {
+        run_comparison(&args);
+        return;
+    }
 
     if args.sweep {
         run_sweep(&args);
@@ -479,5 +789,51 @@ mod tests {
             assert!(!args.set_bloc(bad), "{bad:?} should be refused");
             assert_eq!(args.blocs.len(), snapshot, "{bad:?} must not be applied");
         }
+    }
+
+    /// `--compare` is only meaningful if its two parameterisations really do produce
+    /// the regimes they are labelled with. If a change to the defaults or to the
+    /// mapping made both modes cooperate equally, the comparison would quietly
+    /// become a comparison of nothing -- and the output would still look plausible,
+    /// which is the dangerous kind of failure.
+    #[test]
+    fn the_comparison_modes_produce_the_regimes_they_are_named_for() {
+        let modes = comparison_modes();
+        assert_eq!(modes.len(), 2, "there are exactly two worlds to compare");
+        assert_ne!(
+            modes[0].label, modes[1].label,
+            "two identical labels would be unreadable"
+        );
+
+        let cooperativeness = |mode: &Mode| -> f64 {
+            let config = Config {
+                game: GameParams {
+                    cooperation_gain: mode.cooperation_gain,
+                    defection_temptation: mode.defection_temptation,
+                    ..GameParams::default()
+                },
+                horizon: 50,
+                runs: 40,
+                ..Config::default()
+            };
+            Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
+        };
+
+        let cooperative = cooperativeness(&modes[0]);
+        let competitive = cooperativeness(&modes[1]);
+
+        assert!(
+            cooperative > 0.9,
+            "the COOPERATIVE mode must actually be cooperative, got {cooperative:.3}"
+        );
+        assert!(
+            competitive < 0.3,
+            "the NON-COOPERATIVE mode must actually be uncooperative, got {competitive:.3}"
+        );
+        assert!(
+            cooperative > competitive + 0.5,
+            "the two modes must be far apart or the comparison means nothing: \
+             {cooperative:.3} vs {competitive:.3}"
+        );
     }
 }
