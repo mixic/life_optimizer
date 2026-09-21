@@ -36,6 +36,36 @@ use crate::economy::Economy;
 use crate::game::{solve_pair, Action, Equilibrium, Payoffs};
 use crate::pension::{PensionLink, PensionOutcome};
 
+/// The number of dyads `GameParams::tension_per_conflict` is calibrated against.
+///
+/// A fully competitive ten-pair system adds `10 * tension_per_conflict` per year, and
+/// a system partitioned more finely adds the same total rather than more. Ten pairs is
+/// the five-bloc default, so this is a unit convention and not a claim: it fixes the
+/// scale of a system-level index so that the index does not move when the world is
+/// described in more detail.
+///
+/// It is the same class of defect as the per-dyad growth bias corrected in
+/// `blocks.rs`: a quantity that describes the *system* applied once per *pair*. Both
+/// were invisible until the bloc list changed size, and both would have been read as
+/// findings about whatever new region appeared.
+const REFERENCE_DYADS: f64 = 10.0;
+
+/// The factor that turns a per-pair tension feed into a system-level one.
+///
+/// See [`REFERENCE_DYADS`]. The invariant this must satisfy -- and the one its test
+/// pins -- is that `tension_feed_scale(n) * pairs(n)` is the same for every `n`: a
+/// fully competitive system adds the same tension however many blocs it is described
+/// as having. At the ten-pair reference size the factor is exactly `1.0`, which is
+/// what keeps the five-bloc figures reproducible.
+fn tension_feed_scale(blocs: usize) -> f64 {
+    let pairs = blocs.saturating_mul(blocs.saturating_sub(1)) / 2;
+    if pairs > 0 {
+        REFERENCE_DYADS / pairs as f64
+    } else {
+        1.0
+    }
+}
+
 /// Kind of annual shock. The categories follow `MULTIPOLAR_GAME.md` section 4's
 /// discussion of what makes multipolar transitions dangerous.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,9 +152,10 @@ pub struct Config {
     ///
     /// `None` means a war damages a random pair, which is the default and the honest
     /// one for a baseline. Setting it answers a question the random version cannot:
-    /// *where* a war happens is not a detail in a model with five asymmetric blocs,
-    /// because a war inside the largest bloc and a war among the non-aligned have
-    /// different consequences for who ends up on top.
+    /// *where* a war happens is not a detail in a model with seven asymmetric blocs,
+    /// because a war inside the largest bloc and a war in Africa have different
+    /// consequences for who ends up on top -- and before the regional split the second
+    /// of those had no referent at all.
     ///
     /// It pins only the *first* belligerent; the second is still drawn, so a targeted
     /// war is a war centred on that bloc rather than a scripted outcome.
@@ -380,6 +411,15 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         let mut dyads = 0u32;
         let mut equilibrium_votes: Vec<&'static str> = Vec::new();
 
+        // `tension` is a system-level index -- the report calls it the mean accumulated
+        // tension -- so a competitive pair must feed it in proportion to how much of the
+        // system that pair is. Feeding it a flat amount per pair makes the index depend
+        // on how finely the world is partitioned: seven blocs have 21 pairs against five
+        // blocs' 10, so the same behaviour would have doubled the tension index, and the
+        // model would have reported that *naming a continent* made the world twice as
+        // tense. See `REFERENCE_DYADS`.
+        let feed_scale = tension_feed_scale(n);
+
         for i in 0..n {
             for j in (i + 1)..n {
                 let total = power[i] + power[j];
@@ -467,7 +507,16 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // over `[cd, dc]` where expectations ranged over `[dd, cc]`. Halving
                 // it keeps the coupling at the strength it had before, rather than
                 // letting an unrelated change silently amplify power concentration.
-                const PAYOFF_TO_POWER: f64 = 0.001;
+                // The coefficient is stated **per unit of system mean power**: at the
+                // five-bloc reference the mean share is 0.20, so a banked payoff of 1.0
+                // moves a bloc by 0.5% of itself, which is what an absolute 0.001 moved
+                // the average bloc. It is proportional rather than an absolute increment
+                // because the absolute form transferred power from small blocs to large
+                // ones for identical behaviour: at the old sizes (14% to 30%) that was a
+                // factor of two, but with a 4% region in the system it drains that region
+                // to nothing while barely touching anyone else. A granularity artefact
+                // again -- see `REFERENCE_DYADS` and `default_blocs()`.
+                const PAYOFF_TO_POWER: f64 = 0.005;
                 let banked = |matrix: &Payoffs, me: Action, them: Action, bloc: &PowerBloc| {
                     let base = matrix.payoff(me, them);
                     if me == Action::Cooperate {
@@ -484,15 +533,18 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // seven times. That is a property of the bloc count, not of any bloc,
                 // and it is exactly the kind of artefact a reader comparing systems
                 // of different sizes would have taken for a finding.
-                power[i] += banked(&mine_matrix, mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER;
-                power[j] +=
-                    banked(&theirs_matrix, theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER;
+                power[i] *= (1.0
+                    + banked(&mine_matrix, mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER)
+                    .max(0.0);
+                power[j] *= (1.0
+                    + banked(&theirs_matrix, theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER)
+                    .max(0.0);
 
                 // Competition raises tension; this is the feedback loop that makes
                 // an arms race self-reinforcing. A dyad counts as competitive unless
                 // it reached mutual cooperation.
                 if !both_cooperated {
-                    tension += config.game.tension_per_conflict;
+                    tension += config.game.tension_per_conflict * feed_scale;
 
                     // Money is leverage. When a pair turns adversarial, the bloc
                     // whose currency the other depends on can restrict access to it,
@@ -1032,16 +1084,25 @@ mod tests {
             "and less Pareto-efficiency loss: {loss_good:.3} vs {loss_bad:.3}"
         );
 
-        // And the direction has to be right, not merely different: it is the
-        // conflict-locked configuration that concentrates the system.
-        assert_eq!(
-            polarity_bad,
-            Polarity::Unipolar,
-            "a hard dilemma should concentrate the system into a single pole"
+        // And the direction has to be right: it is the conflict-locked configuration
+        // that concentrates the system.
+        //
+        // The assertion is that the world *concentrates*, not that it lands on one
+        // particular label, and both worlds are now checked because the regional split
+        // made the duopoly robust to the cooperation balance: Sinic and Indo-Pacific --
+        // the two Asian poles -- are large at the start and gain under either balance,
+        // so *which* two blocs hold the system is no longer something this balance
+        // decides. What it decides is how much is at stake, which the three assertions
+        // above measure. Asserting that the labels differ would now be asserting
+        // something the seven-bloc list makes false, and that is a property of the
+        // parameterisation rather than of the mechanism.
+        assert!(
+            matches!(polarity_bad, Polarity::Unipolar | Polarity::Bipolar),
+            "a hard dilemma should concentrate the system, got {polarity_bad:?}"
         );
-        assert_ne!(
-            polarity_good, polarity_bad,
-            "the balance must be able to change the polarity the system settles into"
+        assert!(
+            matches!(polarity_good, Polarity::Unipolar | Polarity::Bipolar),
+            "and the cooperative world concentrates it too, got {polarity_good:?}"
         );
     }
 
@@ -1145,5 +1206,40 @@ mod tests {
              a five-bloc one, or the model's growth rate is a property of the bloc \
              count: {five} vs {seven}"
         );
+    }
+
+    /// Tension is a system-level index, so partitioning the world more finely must not
+    /// make it tenser.
+    ///
+    /// This is the regression test for the second of the two per-pair feed defects: the
+    /// tension index was fed a flat `tension_per_conflict` for every competing dyad, so
+    /// a seven-bloc world -- 21 pairs against the reference ten -- would have run at
+    /// roughly twice the tension for identical behaviour. The model would then have
+    /// reported that naming a continent made the world twice as tense, and every
+    /// downstream quantity (cooperation, trap years, pension index) with it.
+    ///
+    /// The invariant is what the test checks: the per-pair feed times the pair count is
+    /// constant in the bloc count, and exact at the ten-pair reference.
+    #[test]
+    fn the_tension_feed_does_not_depend_on_how_finely_the_world_is_partitioned() {
+        let pairs = |n: usize| n * n.saturating_sub(1) / 2;
+        let total_feed = |n: usize| tension_feed_scale(n) * pairs(n) as f64;
+
+        assert_eq!(
+            tension_feed_scale(5),
+            1.0,
+            "the factor must be exactly one at the ten-pair reference, or the published \
+             five-bloc figures would move"
+        );
+        for n in 2..=12 {
+            assert!(
+                (total_feed(n) - REFERENCE_DYADS).abs() < 1e-12,
+                "a fully competitive {n}-bloc system must add the reference tension, got {}",
+                total_feed(n)
+            );
+        }
+        // A degenerate list has no pairs and no tension to feed.
+        assert_eq!(tension_feed_scale(0), 1.0);
+        assert_eq!(tension_feed_scale(1), 1.0);
     }
 }

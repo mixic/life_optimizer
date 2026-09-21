@@ -1,6 +1,6 @@
 # multipolar_sim
 
-A Monte Carlo simulator for a multipolar world: five power blocs, every pair
+A Monte Carlo simulator for a multipolar world: seven power blocs, every pair
 playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved
 (pure or mixed), annual shocks, and a pension-security read-out.
 Run it with `cargo run -p multipolar_sim`, and with `--sweep` for the run that
@@ -27,7 +27,7 @@ should not be read as a prediction.
 
 `--bloc` takes `Name:share:bias:volatility:affinity` with an optional sixth field,
 the bloc's **cooperation valuation**. It edits the named bloc if the system has one
-and appends it otherwise, and is repeatable — so the five-pole default can be
+and appends it otherwise, and is repeatable — so the default system can be
 reshaped a field at a time or replaced outright. The valuation is the field that
 makes the two sides of a dyad differ, because it enters that bloc's own payoff
 matrix; omitting it leaves the bloc neutral at `1.0`, which is what every bloc was
@@ -83,7 +83,7 @@ different, plus the control, and runs all three from the same shock draws:
 | ------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------- |
 | `AI AS A SIXTH POWER`  | AI is a player: it holds power of its own and plays every dyad               | Does it end a hegemon, or is it held down?    |
 | `AI AS A WIELDED TOOL` | AI is owned: no new player, but each bloc's power grows with its own AI lead | Does uneven ownership concentrate the system? |
-| `NO AI LAYER`          | The existing five-bloc model, unchanged                                      | The control both are measured against         |
+| `NO AI LAYER`          | The existing model, unchanged                                                | The control both are measured against         |
 
 They are not two answers to one question, so each is scored on its own terms
 rather than on one shared metric. The layer is a *transformation of the bloc
@@ -93,13 +93,16 @@ control the existing model rather than a reimplementation of it that could drift
 
 What the default run says, and the honest limits of it:
 
-* **As a player, AI is absorbed, not ascendant.** Grown at exactly the
-  fastest-growing conventional bloc's rate, the actor ends *below* where it
-  started. The mechanism is monetary: an actor issuing no reserve currency holds
-  no leverage over anyone while every issuer holds maximum leverage over it, so in
-  a mostly uncooperative world it absorbs the full sanction drag from every
-  direction and applies none. Growing faster than every bloc is not by itself
-  enough to hold position.
+* **As a player, AI gains ground — and that verdict is one of the things the regional
+  split changed.** Grown at exactly the fastest-growing conventional bloc's rate, the
+  actor ends at 10.7% of world power against the 4.8% it starts with. Before the
+  corrections described under "The regional split" below it ended at 2.4%, and that
+  verdict rested substantially on a defect rather than on the structure: the
+  payoff-to-power transfer was an absolute increment, so it moved the system's
+  *smallest* member — the AI actor — several times further, relatively, than anyone
+  else. The structural asymmetry the old verdict was attributed to is real and is
+  still printed (no reserve currency, maximum leverage held over it, 0.95 energy
+  exposure); what changed is that it no longer outweighs a 5%-a-year growth advantage.
 * **It becomes hegemon only on a large growth advantage, and the sweep names it.**
   The fate column turns from `ABSORBED` through `ASCENDANT` to `HEGEMON` between
   roughly 8% and 11% a year of compounded growth against a field whose weighted mean
@@ -126,29 +129,91 @@ Three limitations the mode prints rather than hides:
    because `--ai-cooperation` raised `cooperation_affinity` — a term applied
    *downstream* of the solver — and so could not change a decision. It now raises the
    owning bloc's `cooperation_valuation`, which enters the payoff matrix, and the row
-   moves: `-0.15` leaves cooperation at `0.334` and `+0.15` at `0.422`, which is the
-   realist case against the optimistic one, measured. The default row is a knife-edge
-   (see above), and the sweep says so.
+   moves: `-0.15` leaves cooperation at `0.278` and `+0.15` at `0.338`, which is the
+   realist case against the optimistic one, measured. That gap is narrower than it was
+   before the regional split — `0.334` against `0.422` — because the asymmetric branch
+   now fires less often at extreme valuations, but the sign and the ordering are
+   unchanged. The default row is a knife-edge (see above), and the sweep says so.
 2. **Adding any sixth actor changes the field, not only an AI one.** One more member
    means one more dyad for every existing bloc, and a dyad carries tension, energy
    interdependence and sanction drag. What it no longer changes is anybody's growth
-   rate — see the next item. The verdict is unaffected — it is measured on the actor
-   itself — but a per-bloc comparison against the five-bloc control is not a clean
-   isolation and is not presented as one.
-3. **Growth biases are annual rates, and that took a correction.** `simulation.rs`
-   used to add `power * growth_bias` inside the dyad loop *as well as* in the annual
-   drift step, so a nominal bias compounded once per bloc and its real meaning
-   depended on how many blocs existed. It now applies the bias once a year, and the
-   default biases were re-stated in annual terms at the same time
-   (`(1 + b)^5 - 1`, the old five-bloc convention), so that the model's *behaviour*
-   stayed as it was while the *parameter's meaning* became clear. A test pins the
-   invariant: the same bias must buy the same annual growth in a seven-bloc world as
-   in a five-bloc one. The correction is a prerequisite for comparing systems of
-   different sizes — which is what adding a region to this model is — because a
-   bloc-count artefact is exactly what such a comparison would otherwise have
-   measured. The published figures moved by about a percentage point when the
-   correction and the re-statement are taken together, which is the check that the
-   two were not compensating errors.
+   rate or the tension index — see the next item. The verdict is unaffected — it is
+   measured on the actor itself — but a per-bloc comparison against the control is not
+   a clean isolation and is not presented as one.
+3. **Growth biases are annual rates, tension is a system-level index, and the
+   payoff-to-power transfer is proportional — all three took a correction.** The
+   regional split exposed three places where the model was implicitly calibrated to a
+   world of five similarly-sized blocs: growth compounded once per pair, tension fed
+   once per pair, and a payoff transfer that moved every bloc by the same *absolute*
+   amount. Each is described, with what it did to the published figures, under "The
+   regional split" below. The summary: the aggregates barely moved (cooperation
+   `0.216` → `0.215`, tension `2.86` → `2.86`, trap years `94.8%` → `94.9%`) and the
+   hierarchy flattened (Sinic `43.8%` → `39.7%`, Non-Aligned `6.3%` → `8.7%`), which
+   is exactly what removing a regressive transfer should do. One AI verdict changed
+   with it, and the note on that bullet above says why.
+
+## The regional split, and the three places the model was calibrated to five blocs
+
+`Non-Aligned` used to be a single 0.14 residual: the Gulf exporters, most of Africa,
+Latin America, and the parts of Asia that align with no pole. It is now `Africa` (0.05),
+`Gulf` (0.05) and a residual `Non-Aligned` (0.04), which gives two things the residual
+could not. `--war-target Africa` now has a referent, and the one energy anchor the model
+actually carries for the region — Algeria at 27.4% of EU pipeline gas — stops being
+attributed to a bloc whose own description never named Africa. The three inherit the
+aggregate's parameters rather than being given a spread of their own, so the split
+changes the *network* and not the guesses; the doc comment on `default_blocs()` says why.
+
+Splitting one bloc into three is a change of *granularity*, not of substance, and that
+is what made it useful: three quantities turned out to be calibrated to a five-bloc
+world, and not one of them was visible while the bloc list never changed size.
+
+1. **Growth compounded once per pair.** `simulation.rs` added `power * growth_bias`
+   inside the dyad loop as well as in the annual drift step, so an `n`-bloc world
+   compounded every bias `n` times a year and a nominal `0.008` was really about 4.1% a
+   year. Growth is now applied once, in the drift step, and the defaults are stated as
+   annual rates on the old convention's conversion (`(1 + b)^5 - 1`). The invariant is
+   pinned by a test that measures the dynamics: the same bias must buy the same annual
+   growth in a seven-bloc world as in a five-bloc one.
+2. **Tension was fed once per pair.** `tension_per_conflict` was added for every
+   competing dyad, and tension is a *system-level* index — the report calls it the mean
+   accumulated tension. Seven blocs have 21 pairs against five blocs' 10, so the same
+   behaviour would have run at roughly twice the tension, and everything downstream of
+   tension (cooperation, trap years, the pension index) with it. The feed is now scaled
+   by the pair count against the ten-pair reference, which is exactly `1.0` at the
+   reference size and leaves the five-bloc figures untouched.
+3. **The payoff-to-power transfer was an absolute increment.** A banked payoff moved
+   every bloc by the same absolute amount, so it moved a bloc of 4% six times as far,
+   relatively, as one of 26%. That is a transfer from small blocs to large ones for
+   identical behaviour — mild at the old sizes, where the range was 14% to 30%, and
+   dominant once a 4% region existed: it drained Africa to **0.1%** of world power
+   within fifty years. The transfer is now proportional to the bloc's own power, with
+   the coefficient stated per unit of system mean power so that the average bloc behaves
+   as it did.
+
+What the corrections did to the published figures, since none of them was free. At the
+five-bloc reference size the *aggregates* are as they were — cooperation `0.216` →
+`0.215`, tension `2.86` → `2.86`, conflict-trap years `94.8%` → `94.9%`, Pareto loss
+`0.453` → `0.454`, pension index `0.506` → `0.505` — while the *hierarchy* flattens:
+Sinic `43.8%` → `39.7%`, Indo-Pacific `38.3%` → `36.6%`, Atlantic `7.3%` → `8.6%`,
+Eurasian `4.3%` → `6.4%`, Non-Aligned `6.3%` → `8.7%`. One published verdict moved and
+is worth naming: **AI as a player is now `ASCENDANT` (`4.8%` → `10.7%`) rather than
+`ABSORBED` (`4.8%` → `2.4%`)**, because the AI actor is the smallest member of the
+system and defect 3 was doing much of the work that the report attributed to its lack of
+monetary sovereignty.
+
+At the seven-bloc default the game is close to where it was and the hierarchy is not:
+baseline cooperation `0.210`, tension `2.86`, trap years `96.6%`, with Sinic at `39.7%`
+and Indo-Pacific at `36.4%` against Africa `3.1%`, Gulf `2.9%` and Non-Aligned `2.4%`.
+The three regional blocs lose ground in the baseline and *gain* it heavily in a
+cooperative world (Africa `5.0%` → `10.2%`, Gulf `5.0%` → `12.5%`), which is the
+`--compare` reading worth carrying away: who the game rewards depends on whether
+cooperation pays, and in this parameterisation it rewards the periphery.
+
+One consequence the split made visible and did *not* fix: the sanction drag is applied
+per adversarial dyad, so a bloc with more adversaries absorbs more of it. That is
+defensible — more adversaries, more sanctions — but it is a second way in which the
+number of blocs moves a bloc's trajectory, and it is stated rather than left to be
+discovered.
 
 ## Read this before using any number it prints
 
@@ -267,13 +332,19 @@ because it describes the relationship rather than either side of it.
 
 ### Outstanding
 
-An item surfaced by `--ai`, and now **fixed** rather than merely reported: a bloc's
-growth bias used to be applied once per dyad as well as once per year, so a bloc's
-growth rate depended on how many other blocs existed. It is applied once a year now,
-and the default biases were re-stated as annual rates so the model's behaviour stayed
-where it was — see limitation 3 above. The AI report used to print an *effective*
-annual growth beside the nominal one precisely because the two differed; that column
-is gone, because the two are the same number.
+Two items, both about how the *number of blocs* reaches the answer rather than about the
+blocs themselves. The first two of the three granularity defects found by the regional
+split are fixed and described above — a per-pair growth bias, a per-pair feed into a
+system-level tension index, and an absolute payoff-to-power transfer. The third is
+milder and is left in place, stated rather than hidden: the sanction drag is applied per
+adversarial dyad, so a bloc with more adversaries absorbs more of it. That is defensible
+as a mechanism, but it is one more place where changing the bloc list changes a bloc's
+trajectory, and it is the item to look at first if a future comparison across
+granularities comes out surprising.
+
+The AI report used to print an *effective* annual growth beside the nominal one, because
+the growth defect made the two differ; that column is gone, because they are the same
+number.
 
 The reserve shares are a fixed endowment held constant for all 50 years, so
 de-dollarisation remains a change in the *level* of leverage rather than a drift in

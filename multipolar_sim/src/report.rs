@@ -830,7 +830,7 @@ fn print_ai_tool(
     println!("  {}", AiRole::WieldedInstrument.intent());
     println!();
     println!("  No actor is added, so there is no AI share to report. What is measurable");
-    println!("  is what ownership does to the five blocs, so this world is scored on the");
+    println!("  is what ownership does to the blocs, so this world is scored on the");
     println!("  hierarchy rather than on AI.");
 
     let effect = instrument_effect(control.top_share, summary.top_share);

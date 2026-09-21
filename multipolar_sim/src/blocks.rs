@@ -114,7 +114,7 @@ impl PowerBloc {
     }
 }
 
-/// The default five-pole system.
+/// The default seven-pole system.
 ///
 /// The names follow `MULTIPOLAR_GAME.md` section 4's description of the current
 /// transition: a US-led Atlantic bloc, a China-centred Sinic one, a Eurasian one,
@@ -122,7 +122,31 @@ impl PowerBloc {
 /// now "pursuing independent strategic optimization rather than aligning within a
 /// single hegemonic order".
 ///
-/// Starting shares are roughly the shape a five-pole system would have, not
+/// # Why the non-aligned middle is three blocs and not one
+///
+/// `Non-Aligned` used to be a single 0.14 residual: the Gulf exporters, most of
+/// Africa, Latin America, and the parts of Asia that align with no pole. That left
+/// two questions unanswerable rather than merely unanswered. `--war-target Africa`
+/// had no referent, and the one energy anchor this model actually carries for the
+/// region -- Algeria at 27.4% of EU pipeline gas -- was attributed to a bloc whose
+/// own description never named Africa.
+///
+/// It is now `Africa`, `Gulf` and a residual `Non-Aligned`. The boundary is a
+/// modelling choice, not a sourced taxonomy: "Africa" here is the continent as the
+/// energy layer needs it, which is why the Maghreb is inside it -- Algeria is the
+/// supplier that flow is built from -- and the Gulf is the peninsula exporters. No
+/// statistical agency reports these as units, which is why `economy.rs` marks every
+/// magnitude it attaches to them illustrative.
+///
+/// The three inherit the aggregate's growth bias, volatility and affinity rather
+/// than being given a spread of their own. Nothing available here distinguishes them
+/// on those axes, and inventing a difference would make the split's own effect
+/// unreadable: the five-bloc and seven-bloc worlds should differ by what a finer
+/// partition does to the *network* -- more dyads, so more tension, and an energy
+/// flow that now leaves the right bloc -- and not by new guesses. Per-region
+/// parameters are one `--bloc` flag away, and `--scenarios` uses that route.
+///
+/// Starting shares are roughly the shape a system of this kind would have, not
 /// measured figures. They are editable, which is the point.
 ///
 /// # The growth biases are annual rates, and they were re-stated to stay that way
@@ -147,7 +171,12 @@ pub fn default_blocs() -> Vec<PowerBloc> {
         PowerBloc::new("Sinic", 0.26, 0.040, 0.025, 0.95),
         PowerBloc::new("Eurasian", 0.16, 0.010, 0.035, 0.70),
         PowerBloc::new("Indo-Pacific", 0.14, 0.050, 0.030, 0.90),
-        PowerBloc::new("Non-Aligned", 0.14, 0.020, 0.040, 1.05),
+        // The former 0.14 residual, split three ways. Same parameters, deliberately:
+        // see the note above on why a spread of new guesses would defeat the point of
+        // the split.
+        PowerBloc::new("Africa", 0.05, 0.020, 0.040, 1.05),
+        PowerBloc::new("Gulf", 0.05, 0.020, 0.040, 1.05),
+        PowerBloc::new("Non-Aligned", 0.04, 0.020, 0.040, 1.05),
     ]
 }
 
@@ -184,6 +213,13 @@ pub struct GameParams {
     pub conflict_wear: f64,
     /// Tension added per competing dyad, and how fast tension decays. Together
     /// these set whether the system can de-escalate at all.
+    ///
+    /// The magnitude is stated **per pair in a ten-pair system**, and
+    /// `simulation.rs` scales it by the actual pair count so that a system described in
+    /// more detail accumulates the same tension rather than more. Without that scaling
+    /// a seven-bloc world would be tenser than a five-bloc one for no reason but the
+    /// partition -- the same defect as the per-dyad growth bias, in the one other place
+    /// a system-level quantity was fed once per pair.
     pub tension_per_conflict: f64,
     pub tension_decay: f64,
 }
@@ -477,7 +513,24 @@ mod tests {
     #[test]
     fn default_blocs_form_a_valid_distribution() {
         let blocs = default_blocs();
-        assert_eq!(blocs.len(), 5, "the default system is five-pole");
+        assert_eq!(
+            blocs.len(),
+            7,
+            "the default system is seven-pole: five poles plus the three-way split of \
+             the non-aligned middle"
+        );
+        // The non-aligned middle is split, not enlarged: the three regional blocs must
+        // still add up to the single residual they replaced, or the split has quietly
+        // moved power.
+        let aligned: f64 = blocs
+            .iter()
+            .filter(|b| ["Africa", "Gulf", "Non-Aligned"].contains(&b.name.as_str()))
+            .map(|b| b.power_share)
+            .sum();
+        assert!(
+            (aligned - 0.14).abs() < 1e-9,
+            "the three regional blocs must sum to the 0.14 they replaced, got {aligned}"
+        );
         let total: f64 = blocs.iter().map(|b| b.power_share).sum();
         assert!(
             (total - 1.0).abs() < 1e-9,

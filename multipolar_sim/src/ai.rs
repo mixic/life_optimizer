@@ -30,7 +30,7 @@
 //!   is not who AI *is* but *whose* it is, and whether differential ownership
 //!   concentrates the system.
 //!
-//! A third world, [`AiRole::Absent`], is the control: the five blocs exactly as
+//! A third world, [`AiRole::Absent`], is the control: the blocs exactly as
 //! `blocks.rs` defines them, with no AI term at all.
 //!
 //! # Why the layer is a transformation of the bloc list
@@ -201,7 +201,7 @@ impl AiRole {
     /// Plain-language statement of what the world assumes, for the report.
     pub fn intent(self) -> &'static str {
         match self {
-            AiRole::Absent => "the five blocs as they are, with no AI term at all",
+            AiRole::Absent => "the blocs as they are, with no AI term at all",
             AiRole::SixthPower => "AI is a player: it holds power of its own and plays every dyad",
             AiRole::WieldedInstrument => {
                 "AI is owned: no new player, but each bloc's power grows with its own AI lead"
@@ -266,7 +266,10 @@ pub fn default_ai_lead(blocs: &[PowerBloc]) -> Vec<f64> {
             "Sinic" => 0.85,
             "Indo-Pacific" => 0.40,
             "Eurasian" => 0.15,
-            "Non-Aligned" => 0.10,
+            // Africa, the Gulf and the residual non-aligned middle all take the low
+            // default. Naming them explicitly at a higher figure would claim a
+            // frontier AI position for a region on no evidence, which is the same
+            // judgement this function's note above refuses to make for any bloc.
             _ => 0.10,
         })
         .collect()
@@ -421,6 +424,15 @@ fn normalise_shares(blocs: &mut [PowerBloc]) {
         }
     }
     let total: f64 = blocs.iter().map(|bloc| bloc.power_share).sum();
+    // A list that already sums to one is left exactly alone. Dividing by
+    // 1.0000000000000002 is noise, but it is noise that made `AiParams::absent()`
+    // return shares differing from the model it is the control *for* -- and a control
+    // that is merely almost identical contaminates every difference measured against
+    // it. Whether the sum lands on one exactly depends on the bloc list, so this must
+    // not be left to luck.
+    if (total - 1.0).abs() < 1e-12 {
+        return;
+    }
     if total > 0.0 {
         for bloc in blocs.iter_mut() {
             bloc.power_share /= total;
@@ -539,7 +551,7 @@ pub fn instrument_effect(baseline_top_share: f64, with_ai_top_share: f64) -> Ins
 
 /// The control world carries no AI parameters of its own.
 pub const NO_LAYER_PROVENANCE: Provenance = Provenance::Illustrative {
-    rationale: "no AI layer is applied in this world; it is the existing five-bloc model \
+    rationale: "no AI layer is applied in this world; it is the existing model \
                 and exists so the other two can be measured against something",
 };
 
@@ -622,7 +634,7 @@ mod tests {
         let applied = AiParams::absent().apply(&blocs);
         assert_eq!(
             applied, blocs,
-            "the no-AI world must be the five blocs exactly as defined"
+            "the no-AI world must be the blocs exactly as defined"
         );
     }
 
@@ -764,8 +776,17 @@ mod tests {
             actor_world, tool_world,
             "the two rival hypotheses must not describe the same system"
         );
-        assert_eq!(actor_world.len(), 6, "the player world has six actors");
-        assert_eq!(tool_world.len(), 5, "the tool world has five");
+        assert_eq!(
+            actor_world.len(),
+            blocs.len() + 1,
+            "the player world has one more actor than the control"
+        );
+        assert_eq!(
+            tool_world.len(),
+            blocs.len(),
+            "the tool world owns the capability with the existing blocs, so it adds and \
+             removes nobody"
+        );
         assert!(
             tool_world
                 .iter()

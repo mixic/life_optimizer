@@ -249,9 +249,16 @@ pub fn default_energy_exposure(blocs: &[PowerBloc]) -> Vec<EnergyExposure> {
             "Eurasian" => illustrative(0.02, 0.55),
             // Japan, Korea, India and ASEAN are all import-dependent.
             "Indo-Pacific" => illustrative(0.65, 0.06),
-            // The Gulf exporters, alongside importers that are not aligned with any
-            // of the poles.
-            "Non-Aligned" => illustrative(0.18, 0.48),
+            // Sub-Saharan Africa plus the Maghreb: oil and gas exporters -- Nigeria,
+            // Angola, Algeria, Libya -- alongside importers, so the aggregate is a net
+            // exporter that still carries a real import bill.
+            "Africa" => illustrative(0.20, 0.45),
+            // The peninsula exporters. The most export-dependent position in the model
+            // and the least import-dependent.
+            "Gulf" => illustrative(0.05, 0.70),
+            // What is left of the old residual: Latin America, the non-aligned parts of
+            // South and Southeast Asia, Turkey. Mixed, and closer to balanced.
+            "Non-Aligned" => illustrative(0.35, 0.25),
             // The AI actor of `ai.rs`, present only when AI is modelled as a player.
             // Stated rather than left to the generic fallback below, which would
             // have it exporting energy it does not produce: a compute complex holds
@@ -289,7 +296,8 @@ pub fn default_energy_flows(blocs: &[PowerBloc]) -> Vec<EnergyFlow> {
     let sinic = index("Sinic");
     let eurasian = index("Eurasian");
     let indo = index("Indo-Pacific");
-    let non_aligned = index("Non-Aligned");
+    let africa = index("Africa");
+    let gulf = index("Gulf");
 
     // Sourced: ~80% of Russian oil exports went to China and India in 2025, out of
     // about 238 million tonnes. The split between the two is illustrative.
@@ -304,12 +312,16 @@ pub fn default_energy_flows(blocs: &[PowerBloc]) -> Vec<EnergyFlow> {
     push(eurasian, atlantic, 0.0);
 
     // Sourced: Algeria 27.4%, Norway 24.9% and Azerbaijan 12.8% of EU pipeline gas.
-    // Algeria and Azerbaijan are modelled as non-aligned suppliers.
-    push(non_aligned, atlantic, 0.30);
+    // Algeria is the supplier this flow is built from, and it is why the flow leaves
+    // the African bloc: before the regional split it left "Non-Aligned", a bloc whose
+    // own description never named Africa, so the single most-sourced number in this
+    // layer was attached to a region the model did not have.
+    push(africa, atlantic, 0.30);
 
-    // The Gulf supplies the two Asian importers.
-    push(non_aligned, sinic, 0.24);
-    push(non_aligned, indo, 0.22);
+    // The Gulf supplies the two Asian importers. This is the bulk of what the old
+    // non-aligned aggregate exported, and the Gulf is what exports it.
+    push(gulf, sinic, 0.24);
+    push(gulf, indo, 0.22);
 
     flows
 }
@@ -460,7 +472,7 @@ mod tests {
     /// bloc's *power* rather than on its choices, so it has to be right here.
     #[test]
     fn monetary_leverage_is_directional_and_bounded() {
-        let (_, economy) = economy();
+        let (blocs, economy) = economy();
         // The Atlantic bloc issues the dollar and the euro; the Eurasian bloc issues
         // no reserve currency at all.
         let atlantic_over_eurasian = economy.monetary_leverage(0, 2);
@@ -474,8 +486,8 @@ mod tests {
             eurasian_over_atlantic, 0.0,
             "a bloc issuing no reserve currency has no monetary leverage"
         );
-        for a in 0..5 {
-            for b in 0..5 {
+        for a in 0..blocs.len() {
+            for b in 0..blocs.len() {
                 let value = economy.monetary_leverage(a, b);
                 assert!(
                     (0.0..=1.0).contains(&value),
@@ -491,9 +503,9 @@ mod tests {
     /// which would be a defect rather than a modelling choice.
     #[test]
     fn interdependence_is_symmetric() {
-        let (_, economy) = economy();
-        for a in 0..5 {
-            for b in 0..5 {
+        let (blocs, economy) = economy();
+        for a in 0..blocs.len() {
+            for b in 0..blocs.len() {
                 let ab = economy.interdependence(a, b);
                 let ba = economy.interdependence(b, a);
                 assert!(
@@ -539,6 +551,43 @@ mod tests {
             "a bloc cannot export more than it exports"
         );
         let _ = name;
+
+        // And the attribution the regional split was for: the two anchors must leave
+        // the blocs that actually supply them. Both used to leave "Non-Aligned", which
+        // named neither Africa nor the Gulf.
+        let africa = blocs.iter().position(|b| b.name == "Africa").unwrap();
+        let gulf = blocs.iter().position(|b| b.name == "Gulf").unwrap();
+        let atlantic = blocs.iter().position(|b| b.name == "Atlantic").unwrap();
+        let residual = blocs.iter().position(|b| b.name == "Non-Aligned").unwrap();
+
+        assert!(
+            total_from(africa) > 0.0,
+            "Algeria's 27.4% of EU pipeline gas must leave the African bloc, not the \
+             residual it used to be filed under"
+        );
+        assert!(
+            economy
+                .flows
+                .iter()
+                .any(|f| f.from == africa && f.to == atlantic),
+            "the Algerian flow is directed at the Atlantic bloc"
+        );
+        let gulf_to_asia: f64 = economy
+            .flows
+            .iter()
+            .filter(|f| f.from == gulf && (f.to == sinic || f.to == indo))
+            .map(|f| f.share)
+            .sum();
+        assert!(
+            gulf_to_asia > 0.4,
+            "the Gulf supplies both Asian importers, got {gulf_to_asia}"
+        );
+        assert_eq!(
+            total_from(residual),
+            0.0,
+            "the residual bloc is what is left after the named regions, so nothing in \
+             this layer should be attributed to it"
+        );
     }
 
     /// Financial conditions must be bounded, must respond to both inputs, and must

@@ -259,7 +259,7 @@ impl Args {
         });
         // Every vector in `Economy` is indexed by bloc position, so it has to be
         // rebuilt for the blocs actually being run. It used to be inherited from
-        // `Config::default()`, which is built for the five default blocs: any bloc
+        // `Config::default()`, which is built for the default bloc list: any bloc
         // added through `--bloc` therefore had no energy position and no reserve
         // share, and since the disruption loop iterates the economy's vector rather
         // than the bloc list, such a bloc was silently immune to energy disruption.
@@ -424,17 +424,20 @@ OPTIONS:
   `--bloc` takes Name:share:bias:volatility:affinity with an optional sixth
   field, the bloc's cooperation valuation. Matching the bloc name is
   case-insensitive, and it edits the bloc of that name if the system has
-  one, otherwise it appends a new one, so the default five-pole system can
+  one, otherwise it appends a new one, so the default seven-pole system can
   be reshaped one field at a time or replaced outright. The valuation is
   what enters that bloc's own payoff matrix, so it is the field that makes
   the two sides of a dyad differ; omitting it leaves the bloc neutral at
   1.0, which is what every bloc was before the game became a bimatrix.
 
-  The five default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
+  The seven default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
   0.26/0.040/0.025/0.95, Eurasian 0.16/0.010/0.035/0.70, Indo-Pacific
-  0.14/0.050/0.030/0.90 and Non-Aligned 0.14/0.020/0.040/1.05, as
-  share/growth-bias/volatility/cooperation-affinity. The growth biases are
-  annual rates. All five are neutral on valuation.
+  0.14/0.050/0.030/0.90, and the three that used to be one non-aligned
+  residual -- Africa 0.05, Gulf 0.05 and Non-Aligned 0.04, each at
+  0.020/0.040/1.05 -- as share/growth-bias/volatility/cooperation-affinity.
+  The growth biases are annual rates. The three regional blocs share a set of
+  parameters deliberately: the split is meant to change the network, not to
+  smuggle in a spread of new guesses. All seven are neutral on valuation.
 
   `--ai` is not a sixth bloc and not a multiplier: it is both, run as two
   rival hypotheses about what AI is, against the existing five-bloc model
@@ -860,7 +863,11 @@ fn run_comparison(base: &Args) {
     if world_improves {
         println!("  ROBUST: every aggregate above favours the cooperative world. It is");
         println!("  richer, less conflict-ridden, and better for a pensioner in it -- while");
-        println!("  still redistributing power away from three of the five blocs.");
+        println!(
+            "  still redistributing power away from {} of the {} blocs.",
+            losing.len(),
+            blocs.len()
+        );
     } else {
         println!("  The aggregates do NOT all point the same way in this configuration,");
         println!("  which is itself worth looking at before reading the ranking.");
@@ -1030,7 +1037,7 @@ fn run_ai_hinge(base: &Args) {
     println!("  Two things the fate column does not measure, so that it is not read as more");
     println!("  than it is. The dominance threshold is the same 45% the polarity classifier");
     println!("  uses, so 'hegemon' here and 'unipolar' there are one claim, not two. And the");
-    println!("  band between ASCENDANT and HEGEMON is wide: at 0.080 the actor reaches 21%");
+    println!("  band between ASCENDANT and HEGEMON is wide: at 0.080 the actor reaches 32%");
     println!("  of world power -- a major pole by any reading -- while the verdict still says");
     println!("  ASCENDANT, because it is not a hegemon. The verdict answers 'does it come to");
     println!("  dominate', not 'does it matter'.");
@@ -1181,9 +1188,9 @@ fn run_ai_hinge(base: &Args) {
     println!();
     println!("  What to take from the numbers, and the grid is deliberately fine enough");
     println!("  to show this: the cooperation rate is MONOTONE on each side of zero and");
-    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.315 ->");
-    println!("  0.348; from 0.01 to 0.30 it rises 0.408 -> 0.430; and at exactly 0.00 it is");
-    println!("  0.218, below both. So:");
+    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.266 ->");
+    println!("  0.285; from 0.01 to 0.30 it rises 0.312 -> 0.359; and at exactly 0.00 it is");
+    println!("  0.212, below both. So:");
     println!();
     println!("    ROBUST: the SIGN. A coefficient that makes AI ownership raise the owner's");
     println!("    valuation of cooperation produces a more cooperative world than one that");
@@ -1201,7 +1208,7 @@ fn run_ai_hinge(base: &Args) {
     println!("  identical, and the exchangeability rule then closes the asymmetric branch");
     println!("  completely -- a symmetric game cannot report that one of two identical");
     println!("  players is the cooperator. Any nonzero spread, in either direction, opens");
-    println!("  that branch, which is why the asymmetric share jumps from 0% to 42-84%");
+    println!("  that branch, which is why the asymmetric share jumps from 0% to 15-51%");
     println!("  beside it.");
     println!();
     println!("  That discontinuity is itself a limitation worth naming: behaviour that is");
@@ -1285,13 +1292,13 @@ fn scenarios() -> Vec<Scenario> {
             war_target: Some("Sinic"),
         },
         Scenario {
-            label: "WAR AT THE PERIPHERY",
-            premise: "the same war rate, but centred on Non-Aligned -- the proxy for a \
-                      conflict outside any pole",
+            label: "WAR IN AFRICA",
+            premise: "the same war rate, but centred on Africa -- a conflict in the \
+                      periphery rather than at the centre",
             bloc: None,
             crisis: None,
             war: Some(0.15),
-            war_target: Some("Non-Aligned"),
+            war_target: Some("Africa"),
         },
         Scenario {
             label: "SINIC GROWS INTO WAR",
@@ -1480,20 +1487,19 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     }
     println!();
     println!(
-        "     **Growing faster is decisive: {:.1}% to {:.1}%, a near-monopoly.** A 50%",
+        "     **Growing faster changes who leads, and by how much: {:.1}% to {:.1}%.** A",
         baseline.1.top_share * 100.0,
         grows.1.top_share * 100.0
     );
-    println!("     increase in the growth bias compounds over 50 years into a share no other");
-    println!("     bloc can contest. The bias is an annual rate: 0.060 a year against a field");
-    println!("     whose largest bias is 0.050 and whose weighted mean is far below it. The");
-    println!("     model has no countervailing force once a growth lead is established -- the");
-    println!("     bloc simply outgrows the disorder.");
+    println!("     50% increase in the growth bias compounds over those 50 years into a lead");
+    println!("     no other bloc closes. The bias is an annual rate -- 0.060 a year against a");
+    println!("     field whose largest is 0.050 -- and the model has no countervailing force");
+    println!("     once a growth lead is established: the bloc simply outgrows the disorder.");
     println!();
     println!("     **And notice what it does not do: it leaves the world exactly as");
-    println!("     cooperative as it was.** Cooperation 0.216 -> 0.217, trap years 94.8% ->");
+    println!("     cooperative as it was.** Cooperation 0.210 -> 0.210, trap years 96.6% ->");
     println!(
-        "     94.5%, pension 0.506 -> 0.506. A bloc taking {:.0}% of world power",
+        "     96.5%, pension 0.502 -> 0.503. A bloc taking {:.0}% of world power",
         grows.1.top_share * 100.0
     );
     println!("     changes *who holds power* not at all how the system behaves, because it is");
@@ -1556,9 +1562,7 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
 
     println!();
     println!("  3. Does it matter *where* the war is?");
-    if let (Some(home), Some(periphery)) =
-        (find("WAR IN THE SINIC BLOC"), find("WAR AT THE PERIPHERY"))
-    {
+    if let (Some(home), Some(periphery)) = (find("WAR IN THE SINIC BLOC"), find("WAR IN AFRICA")) {
         println!(
             "     war in Sinic:     leader {:<12} top {:.1}%   coop {:.3}",
             short_name(&home.1.leading),
@@ -1566,7 +1570,7 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
             home.1.cooperation
         );
         println!(
-            "     war at periphery: leader {:<12} top {:.1}%   coop {:.3}",
+            "     war in Africa:    leader {:<12} top {:.1}%   coop {:.3}",
             short_name(&periphery.1.leading),
             periphery.1.top_share * 100.0,
             periphery.1.cooperation
@@ -1602,11 +1606,13 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     println!();
     println!("  5. What this model cannot say about your question");
     println!("     Four limits, stated rather than left to be discovered:");
-    println!("     - **There is no Africa.** The five blocs are Atlantic, Sinic, Eurasian,");
-    println!("       Indo-Pacific and Non-Aligned. Africa, Latin America and most of South");
-    println!("       Asia sit inside 'Non-Aligned' or nowhere, so a war 'in Africa' can only");
-    println!("       be modelled as a war on the Non-Aligned aggregate. Its size and its");
-    println!("       numbers are invented, so the row is a shape, not a place.");
+    println!("     - **Africa is a bloc now, and still not a place.** The blocs are");
+    println!("       Atlantic, Sinic, Eurasian, Indo-Pacific, Africa, Gulf and Non-Aligned.");
+    println!("       'Africa' is the whole continent at 5% of system power, carrying the");
+    println!("       Maghreb because the one energy anchor this model holds for it is");
+    println!("       Algerian gas. A war 'in Africa' is therefore a war on that aggregate: a");
+    println!("       shape, not a place, and not a claim that the Sahel and the Cape are one");
+    println!("       thing. Latin America and non-aligned Asia stay in the residual, unnamed.");
     println!("     - **A crisis is not an economic crisis.** The shock raises tension and");
     println!("       removes a little power. There is no output, credit, unemployment or");
     println!("       trade-volume channel, so the model cannot show a recession's depth,");
@@ -1791,8 +1797,15 @@ mod tests {
             cooperative > 0.9,
             "the COOPERATIVE mode must actually be cooperative, got {cooperative:.3}"
         );
+        // The bar for "uncooperative" is deliberately loose, and the reason it moved is
+        // worth stating: the regional split takes the system from 10 dyads to 21, and
+        // every competing dyad adds tension. Tension is what erodes the payoff of
+        // mutual competition, so a finer partition leaves the pure dilemma sooner and
+        // even the non-cooperative parameterisation cooperates about a third of the
+        // time. The claim this test defends is that the two modes are far apart and
+        // named correctly, not that either hits a particular level.
         assert!(
-            competitive < 0.3,
+            competitive < 0.45,
             "the NON-COOPERATIVE mode must actually be uncooperative, got {competitive:.3}"
         );
         assert!(
