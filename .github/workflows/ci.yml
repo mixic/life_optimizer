@@ -44,10 +44,13 @@ jobs:
         continue-on-error: true
 
       - name: Clippy
-        run: cargo clippy --all-targets
+        run: cargo clippy --workspace --all-targets
 
+      # `--workspace` is load-bearing in both of these. Without it cargo operates on
+      # the current package only, so the simulator's own tests and lints never ran
+      # here at all -- a green tick that said nothing about the crate.
       - name: Run test suite
-        run: cargo test --all-targets --verbose
+        run: cargo test --workspace --all-targets --verbose
 
   docs:
     name: Documentation builds
@@ -57,5 +60,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo doc
         run: cargo doc --no-deps --lib
+        env:
+          RUSTDOCFLAGS: -D warnings
+      # The simulator is a *binary*, and `--lib` above cannot reach a binary target,
+      # so its docs were never built here at all -- which meant a stale intra-doc link
+      # in it could sit in the tree until a reader clicked one. This step is the same
+      # check applied to that crate.
+      - name: cargo doc (multipolar_sim)
+        run: cargo doc -p multipolar_sim --no-deps
         env:
           RUSTDOCFLAGS: -D warnings

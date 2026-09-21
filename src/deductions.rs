@@ -920,9 +920,12 @@ fn scale_applies(scale: &DeductionScale, household: &Household) -> bool {
 /// Exposed for display: a means-tested deduction that silently appears in a
 /// total is hard to check, and naming the scale is what makes it checkable.
 ///
-/// Takes the scale base rather than reading it off the household, for the same
-/// reason as [`means_tested`] — the scales are keyed on `Reineinkommen`, not on
-/// gross income, and that must not be easy to get wrong.
+/// `scale_base` is the **net** income, and it is a parameter rather than something
+/// read off the household for a reason worth stating on the public side of this
+/// module: the scales are keyed on `Reineinkommen`, not on gross income, and a
+/// caller that passes gross income in gets a plausible-looking wrong answer. The
+/// private helper takes it the same way, so there is no path through this module
+/// where the two can be collapsed by a later edit.
 pub fn means_tested_scale_for(
     canton_code: &str,
     household: &Household,
