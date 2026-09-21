@@ -124,13 +124,30 @@ impl PowerBloc {
 ///
 /// Starting shares are roughly the shape a five-pole system would have, not
 /// measured figures. They are editable, which is the point.
+///
+/// # The growth biases are annual rates, and they were re-stated to stay that way
+///
+/// `Sinic 0.040` means four percent a year of relative gain, and that is what the
+/// simulation applies -- once, in the annual drift step. The figures here come from
+/// converting an earlier convention: `simulation.rs` used to add
+/// `power * growth_bias` inside the dyad loop *as well as* in the drift step, so in
+/// the five-bloc default world a nominal `0.008` compounded five times a year and
+/// was really about 4.1% a year. The conversion is `(1 + b)^5 - 1`, rounded to three
+/// decimals. That is why these numbers are larger than the ones this file used to
+/// carry, and it is also why no published result moves much: what was held fixed is
+/// the *model's behaviour*, and what changed is the *meaning* of the parameter.
+///
+/// The re-parameterisation is not cosmetic. A per-dyad application makes the annual
+/// growth rate a function of how many blocs exist, so any comparison between systems
+/// of different sizes -- which is exactly what adding a region to this model is --
+/// would have been measuring the bloc count rather than the region.
 pub fn default_blocs() -> Vec<PowerBloc> {
     vec![
         PowerBloc::new("Atlantic", 0.30, 0.000, 0.020, 1.00),
-        PowerBloc::new("Sinic", 0.26, 0.008, 0.025, 0.95),
-        PowerBloc::new("Eurasian", 0.16, 0.002, 0.035, 0.70),
-        PowerBloc::new("Indo-Pacific", 0.14, 0.010, 0.030, 0.90),
-        PowerBloc::new("Non-Aligned", 0.14, 0.004, 0.040, 1.05),
+        PowerBloc::new("Sinic", 0.26, 0.040, 0.025, 0.95),
+        PowerBloc::new("Eurasian", 0.16, 0.010, 0.035, 0.70),
+        PowerBloc::new("Indo-Pacific", 0.14, 0.050, 0.030, 0.90),
+        PowerBloc::new("Non-Aligned", 0.14, 0.020, 0.040, 1.05),
     ]
 }
 

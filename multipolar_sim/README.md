@@ -79,11 +79,11 @@ a model like this cannot be read as continuous in the spread of valuations, whic
 AI" and declines to pick one. `--ai` builds the two that are structurally
 different, plus the control, and runs all three from the same shock draws:
 
-| World | What it assumes | The question it poses |
-|---|---|---|
-| `AI AS A SIXTH POWER` | AI is a player: it holds power of its own and plays every dyad | Does it end a hegemon, or is it held down? |
+| World                    | What it assumes                                                              | The question it poses                         |
+| ------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------- |
+| `AI AS A SIXTH POWER`  | AI is a player: it holds power of its own and plays every dyad               | Does it end a hegemon, or is it held down?    |
 | `AI AS A WIELDED TOOL` | AI is owned: no new player, but each bloc's power grows with its own AI lead | Does uneven ownership concentrate the system? |
-| `NO AI LAYER` | The existing five-bloc model, unchanged | The control both are measured against |
+| `NO AI LAYER`          | The existing five-bloc model, unchanged                                      | The control both are measured against         |
 
 They are not two answers to one question, so each is scored on its own terms
 rather than on one shared metric. The layer is a *transformation of the bloc
@@ -102,9 +102,11 @@ What the default run says, and the honest limits of it:
   enough to hold position.
 * **It becomes hegemon only on a large growth advantage, and the sweep names it.**
   The fate column turns from `ABSORBED` through `ASCENDANT` to `HEGEMON` between
-  roughly 8% and 11% a year of *effective* compounded growth against a field
-  compounding near 3%. That is the number worth arguing about, not the share
-  printed beside it.
+  roughly 8% and 11% a year of compounded growth against a field whose weighted mean
+  is about 2%. That is the number worth arguing about, not the share printed beside
+  it. The headline figure is robust to the growth-bias correction described in
+  limitation 3: the hinge sat at 8–11% a year *effective* before it, and at 8–11% a
+  year nominal after, which is what the re-statement was for.
 * **As a tool, uneven ownership concentrates the system a lot; equal ownership
   does nothing.** In the default run the two frontier leaders gain and all three
   laggards lose, and the control — the same lead for everyone — moves the top share
@@ -127,16 +129,26 @@ Three limitations the mode prints rather than hides:
    moves: `-0.15` leaves cooperation at `0.334` and `+0.15` at `0.422`, which is the
    realist case against the optimistic one, measured. The default row is a knife-edge
    (see above), and the sweep says so.
-2. **Adding any sixth actor changes the field, not only an AI one.** The model
-   applies a bloc's growth bias once per dyad, so going from five blocs to six gives
-   every existing bloc an extra application. The verdict is unaffected — it is
-   measured on the actor itself — but a per-bloc comparison against the five-bloc
-   control is not a clean isolation and is not presented as one.
-3. **Effective growth rates are not nominal ones**, for the same reason. A nominal
-   bias is compounded once per bloc per year, so its real meaning depends on how
-   many blocs exist. This is a property of the existing model, left alone because
-   correcting it would move every published `--compare` and `--sweep` result; the
-   sweep reports the effective figure alongside the nominal one.
+2. **Adding any sixth actor changes the field, not only an AI one.** One more member
+   means one more dyad for every existing bloc, and a dyad carries tension, energy
+   interdependence and sanction drag. What it no longer changes is anybody's growth
+   rate — see the next item. The verdict is unaffected — it is measured on the actor
+   itself — but a per-bloc comparison against the five-bloc control is not a clean
+   isolation and is not presented as one.
+3. **Growth biases are annual rates, and that took a correction.** `simulation.rs`
+   used to add `power * growth_bias` inside the dyad loop *as well as* in the annual
+   drift step, so a nominal bias compounded once per bloc and its real meaning
+   depended on how many blocs existed. It now applies the bias once a year, and the
+   default biases were re-stated in annual terms at the same time
+   (`(1 + b)^5 - 1`, the old five-bloc convention), so that the model's *behaviour*
+   stayed as it was while the *parameter's meaning* became clear. A test pins the
+   invariant: the same bias must buy the same annual growth in a seven-bloc world as
+   in a five-bloc one. The correction is a prerequisite for comparing systems of
+   different sizes — which is what adding a region to this model is — because a
+   bloc-count artefact is exactly what such a comparison would otherwise have
+   measured. The published figures moved by about a percentage point when the
+   correction and the re-statement are taken together, which is the check that the
+   two were not compensating errors.
 
 ## Read this before using any number it prints
 
@@ -186,25 +198,25 @@ A build failure in this crate must also never be able to block `life-optimizer`.
 The model is the formal counterpart of three documents that already live in the
 repository root:
 
-| Document | What it claims | What this crate does with it |
-|---|---|---|
-| `MULTIPOLAR_GAME.md` §4 | The security dilemma is the characteristic risk of a multipolar transition | `blocks.rs` builds the payoff matrix that produces it, and `game.rs` solves it rather than assuming the outcome |
-| `MULTIPOLAR_GAME.md` §8 | Imperial overstretch: an arms race eventually stops paying for itself | `GameParams::conflict_wear` — the only channel by which conflict becomes self-limiting |
-| `THEORY_OF_SPARING.md` §7d | Engineered obsolescence as a 2×2 game with a Pareto-inferior Nash equilibrium | The same solver; `efficiency_loss` is the operational measure of that inferiority |
-| `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2c | AHV is a pay-as-you-go intergenerational contract, and "optimal for the individual is not optimal for the collective" | `pension.rs` — the voice the household tool has no way to represent |
+| Document                                       | What it claims                                                                                                        | What this crate does with it                                                                                        |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `MULTIPOLAR_GAME.md` §4                     | The security dilemma is the characteristic risk of a multipolar transition                                            | `blocks.rs` builds the payoff matrix that produces it, and `game.rs` solves it rather than assuming the outcome |
+| `MULTIPOLAR_GAME.md` §8                     | Imperial overstretch: an arms race eventually stops paying for itself                                                 | `GameParams::conflict_wear` — the only channel by which conflict becomes self-limiting                           |
+| `THEORY_OF_SPARING.md` §7d                  | Engineered obsolescence as a 2×2 game with a Pareto-inferior Nash equilibrium                                        | The same solver;`efficiency_loss` is the operational measure of that inferiority                                  |
+| `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2c | AHV is a pay-as-you-go intergenerational contract, and "optimal for the individual is not optimal for the collective" | `pension.rs` — the voice the household tool has no way to represent                                              |
 
 ## Layout
 
-| Module | Responsibility |
-|---|---|
-| `game.rs` | 2×2 bimatrix game, Nash equilibrium selection (pure or mixed), efficiency loss |
-| `blocks.rs` | Power blocs and the payoff structure their interactions produce |
-| `economy.rs` | Monetary standing, energy trade, financial conditions — with provenance |
-| `ai.rs` | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts |
-| `simulation.rs` | The Monte Carlo: one run, and the ensemble over many |
-| `pension.rs` | The AHV/pension channels the simulated world implies |
-| `report.rs` | Terminal presentation |
-| `main.rs` | CLI, argument parsing, `--sweep`, `--compare`, `--ai` |
+| Module            | Responsibility                                                                  |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `game.rs`       | 2×2 bimatrix game, Nash equilibrium selection (pure or mixed), efficiency loss |
+| `blocks.rs`     | Power blocs and the payoff structure their interactions produce                 |
+| `economy.rs`    | Monetary standing, energy trade, financial conditions — with provenance        |
+| `ai.rs`         | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts     |
+| `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
+| `pension.rs`    | The AHV/pension channels the simulated world implies                            |
+| `report.rs`     | Terminal presentation                                                           |
+| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`                      |
 
 ## The economic layer, and what is measured versus invented
 
@@ -255,12 +267,13 @@ because it describes the relationship rather than either side of it.
 
 ### Outstanding
 
-A second item, surfaced by `--ai` and deliberately not fixed: a bloc's growth bias
-is applied once per dyad as well as once per year, so a bloc's growth rate depends
-on how many other blocs exist. Correcting it would move every published `--compare`
-and `--sweep` figure, so it is reported rather than changed — the AI sweep prints
-the *effective* annual growth beside the nominal figure, and the multiplier's size
-is stated in the output.
+An item surfaced by `--ai`, and now **fixed** rather than merely reported: a bloc's
+growth bias used to be applied once per dyad as well as once per year, so a bloc's
+growth rate depended on how many other blocs existed. It is applied once a year now,
+and the default biases were re-stated as annual rates so the model's behaviour stayed
+where it was — see limitation 3 above. The AI report used to print an *effective*
+annual growth beside the nominal one precisely because the two differed; that column
+is gone, because the two are the same number.
 
 The reserve shares are a fixed endowment held constant for all 50 years, so
 de-dollarisation remains a change in the *level* of leverage rather than a drift in

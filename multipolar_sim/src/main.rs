@@ -431,10 +431,10 @@ OPTIONS:
   1.0, which is what every bloc was before the game became a bimatrix.
 
   The five default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
-  0.26/0.008/0.025/0.95, Eurasian 0.16/0.002/0.035/0.70, Indo-Pacific
-  0.14/0.010/0.030/0.90 and Non-Aligned 0.14/0.004/0.040/1.05, as
-  share/growth-bias/volatility/cooperation-affinity. All five are neutral
-  on valuation.
+  0.26/0.040/0.025/0.95, Eurasian 0.16/0.010/0.035/0.70, Indo-Pacific
+  0.14/0.050/0.030/0.90 and Non-Aligned 0.14/0.020/0.040/1.05, as
+  share/growth-bias/volatility/cooperation-affinity. The growth biases are
+  annual rates. All five are neutral on valuation.
 
   `--ai` is not a sixth bloc and not a multiplier: it is both, run as two
   rival hypotheses about what AI is, against the existing five-bloc model
@@ -980,10 +980,10 @@ fn run_ai_hinge(base: &Args) {
     println!("  1. AI as a PLAYER: how far must it outgrow the field to become hegemon?");
     println!("  {}", "-".repeat(74));
     println!(
-        "  {:>8}  {:>9}  {:>8}  {:>9}  {:>8}  {:<12}",
-        "growth", "effective", "AI end", "dominance", "coop", "fate"
+        "  {:>8}  {:>9}  {:>9}  {:>8}  {:<12}",
+        "growth", "AI end", "dominance", "coop", "fate"
     );
-    for value in [0.000, 0.004, 0.007, 0.010, 0.013, 0.017, 0.025, 0.040] {
+    for value in [0.000, 0.020, 0.040, 0.060, 0.080, 0.110, 0.150, 0.220] {
         let mut args = base.clone();
         args.ai_growth = value;
         let layer = args.ai_params(AiRole::SixthPower);
@@ -992,7 +992,6 @@ fn run_ai_hinge(base: &Args) {
         let ensemble = Ensemble::run(&config);
         let actor = layer.actor_index(&config.blocs);
         let point = hinge_point(&config, &ensemble, actor);
-        let n = config.blocs.len();
 
         let (Some(start), Some(end), Some(dominance)) =
             (point.actor_start, point.actor_share, point.actor_dominance)
@@ -1001,9 +1000,8 @@ fn run_ai_hinge(base: &Args) {
         };
         let fate = ai::actor_fate(start, end, dominance);
         println!(
-            "  {:>8.4}  {:>8.2}%  {:>7.1}%  {:>8.1}%  {:>8.3}  {:<12}",
+            "  {:>8.3}  {:>8.1}%  {:>8.1}%  {:>8.3}  {:<12}",
             value,
-            ai::effective_annual_advantage(value, n) * 100.0,
             end * 100.0,
             dominance * 100.0,
             point.cooperation,
@@ -1011,14 +1009,14 @@ fn run_ai_hinge(base: &Args) {
         );
     }
     println!();
-    println!("  `effective` is the annual growth the nominal bias actually buys. The model");
-    println!("  applies a bloc's growth bias once per dyad *and* once more in the annual");
-    println!("  drift step, so a nominal rate is compounded once per bloc per year and its");
-    println!("  real meaning depends on how many blocs exist. The conventional blocs land");
-    println!("  near 3% a year, which is the column's comparison point. That multiplicity");
-    println!("  is a property of the existing model, not of this layer, and it is reported");
-    println!("  here rather than silently corrected, because correcting it would move every");
-    println!("  published --compare and --sweep result.");
+    println!("  `growth` is the actor's annual growth bias, and it now means that in the");
+    println!("  plain sense: each bloc's bias is applied once a year. It used to be applied");
+    println!("  once per dyad as well, so a nominal rate compounded once per bloc and the");
+    println!("  same figure meant different things in systems of different sizes -- which");
+    println!("  would have made the regional split in `blocks.rs` a measurement of the bloc");
+    println!("  count rather than of the regions. The default biases were re-stated in");
+    println!("  annual terms when that was corrected (see `default_blocs()`), so this column");
+    println!("  is comparable across worlds and there is no second 'effective' figure.");
     println!();
     println!("  Read the fate column for the answer. Where it turns from ABSORBED or");
     println!("  ASCENDANT into HEGEMON is the growth advantage the hypothesis requires --");
@@ -1032,7 +1030,7 @@ fn run_ai_hinge(base: &Args) {
     println!("  Two things the fate column does not measure, so that it is not read as more");
     println!("  than it is. The dominance threshold is the same 45% the polarity classifier");
     println!("  uses, so 'hegemon' here and 'unipolar' there are one claim, not two. And the");
-    println!("  band between ASCENDANT and HEGEMON is wide: at 0.0130 the actor reaches 14%");
+    println!("  band between ASCENDANT and HEGEMON is wide: at 0.080 the actor reaches 21%");
     println!("  of world power -- a major pole by any reading -- while the verdict still says");
     println!("  ASCENDANT, because it is not a hegemon. The verdict answers 'does it come to");
     println!("  dominate', not 'does it matter'.");
@@ -1183,9 +1181,9 @@ fn run_ai_hinge(base: &Args) {
     println!();
     println!("  What to take from the numbers, and the grid is deliberately fine enough");
     println!("  to show this: the cooperation rate is MONOTONE on each side of zero and");
-    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.314 ->");
-    println!("  0.346; from 0.01 to 0.30 it rises 0.408 -> 0.430; and at exactly 0.00 it is");
-    println!("  0.217, below both. So:");
+    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.315 ->");
+    println!("  0.348; from 0.01 to 0.30 it rises 0.408 -> 0.430; and at exactly 0.00 it is");
+    println!("  0.218, below both. So:");
     println!();
     println!("    ROBUST: the SIGN. A coefficient that makes AI ownership raise the owner's");
     println!("    valuation of cooperation produces a more cooperative world than one that");
@@ -1248,10 +1246,11 @@ fn scenarios() -> Vec<Scenario> {
         Scenario {
             label: "SINIC GROWS FASTER",
             premise: "Sinic compounds 50% faster than it does now, and nothing else changes",
-            // Growth bias 0.008 -> 0.012, keeping Sinic the fastest-growing bloc. This
-            // is the pure compounding route: no military term, no change to what Sinic
-            // wants, only how fast its position accumulates.
-            bloc: Some(("Sinic", 0.26, 0.012, 0.025, 0.95, 1.00)),
+            // Growth bias 0.040 -> 0.060, which makes Sinic the fastest-growing bloc --
+            // it is not at the moment, Indo-Pacific is. This is the pure compounding
+            // route: no military term, no change to what Sinic wants, only how fast its
+            // position accumulates.
+            bloc: Some(("Sinic", 0.26, 0.060, 0.025, 0.95, 1.00)),
             crisis: None,
             war: None,
             war_target: None,
@@ -1264,7 +1263,7 @@ fn scenarios() -> Vec<Scenario> {
             // result was a slight *decline*, which describes neither mechanism. Split
             // apart they turn out to pull in opposite directions, and that contrast is
             // the most useful thing this mode produces.
-            bloc: Some(("Sinic", 0.26, 0.008, 0.025, 1.25, 1.25)),
+            bloc: Some(("Sinic", 0.26, 0.040, 0.025, 1.25, 1.25)),
             crisis: None,
             war: None,
             war_target: None,
@@ -1297,7 +1296,7 @@ fn scenarios() -> Vec<Scenario> {
         Scenario {
             label: "SINIC GROWS INTO WAR",
             premise: "Sinic compounds faster while a war runs on its own territory",
-            bloc: Some(("Sinic", 0.26, 0.012, 0.025, 0.95, 1.00)),
+            bloc: Some(("Sinic", 0.26, 0.060, 0.025, 0.95, 1.00)),
             crisis: None,
             war: Some(0.15),
             war_target: Some("Sinic"),
@@ -1486,17 +1485,17 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
         grows.1.top_share * 100.0
     );
     println!("     increase in the growth bias compounds over 50 years into a share no other");
-    println!("     bloc can contest. Note what the nominal figure hides: a bias is applied");
-    println!(
-        "     once per dyad as well as once a year, so 0.012 compounds to about {:.1}% a",
-        crate::ai::effective_annual_advantage(0.012, 5) * 100.0
-    );
-    println!("     year against a field near 3%. A row with 0.020 in it reaches 97.7% -- the");
-    println!("     model has no countervailing force once a growth lead is established.");
+    println!("     bloc can contest. The bias is an annual rate: 0.060 a year against a field");
+    println!("     whose largest bias is 0.050 and whose weighted mean is far below it. The");
+    println!("     model has no countervailing force once a growth lead is established -- the");
+    println!("     bloc simply outgrows the disorder.");
     println!();
     println!("     **And notice what it does not do: it leaves the world exactly as");
-    println!("     cooperative as it was.** Cooperation 0.215 -> 0.216, trap years 94.7% ->");
-    println!("     94.5%, pension 0.505 -> 0.506. A bloc taking three quarters of world power");
+    println!("     cooperative as it was.** Cooperation 0.216 -> 0.217, trap years 94.8% ->");
+    println!(
+        "     94.5%, pension 0.506 -> 0.506. A bloc taking {:.0}% of world power",
+        grows.1.top_share * 100.0
+    );
     println!("     changes *who holds power* not at all how the system behaves, because it is");
     println!("     still playing the same uncooperative game against everyone. That is worth");
     println!("     stating because the intuitive expectation runs the other way -- that a");

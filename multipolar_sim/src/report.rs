@@ -685,7 +685,6 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
     println!("  {}", AiRole::SixthPower.intent());
     println!();
     let n = config.blocs.len();
-    let effective = crate::ai::effective_annual_advantage(params.actor.growth_bias, n);
     let starting = config
         .blocs
         .iter()
@@ -696,10 +695,8 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
     println!();
     println!("  {:<16} {:>8}  what it means", "AI parameter", "value");
     println!(
-        "  {:<16} {:>8.4}  applied {n}x a year, so {:.2}% a year compounded",
-        "growth bias",
-        params.actor.growth_bias,
-        effective * 100.0
+        "  {:<16} {:>8.4}  an annual rate, applied once a year",
+        "growth bias", params.actor.growth_bias
     );
     println!(
         "  {:<16} {:>8.4}  share of the {n}-actor system it starts with",
@@ -809,12 +806,14 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
     }
     println!();
     println!("  One confound to know about before reading this table against the control:");
-    println!("  adding *any* sixth actor changes the field, not only an AI one. The model");
-    println!("  applies a bloc's growth bias once per dyad, so going from five blocs to six");
-    println!("  gives every existing bloc an extra application of its own growth rate. The");
-    println!("  verdict above is not affected -- it is measured on the actor itself -- but");
-    println!("  a per-bloc comparison against the five-bloc control is not a clean");
-    println!("  isolation of the actor's effect, and is not presented as one.");
+    println!("  adding *any* sixth actor changes the field, not only an AI one. One more");
+    println!("  member means one more dyad for every existing bloc, and a dyad carries");
+    println!("  tension, energy interdependence and sanction drag. What it no longer changes");
+    println!("  is anybody's growth rate -- each bloc's bias is applied once a year, and a");
+    println!("  test pins that, because the opposite used to be true. The verdict above is");
+    println!("  unaffected either way -- it is measured on the actor itself -- but a per-bloc");
+    println!("  comparison against the five-bloc control is not a clean isolation of the");
+    println!("  actor's effect, and is not presented as one.");
 }
 
 /// World 3: AI is owned. Does owning it move the hierarchy, and in whose favour?

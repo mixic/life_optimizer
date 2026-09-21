@@ -476,10 +476,17 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                         base
                     }
                 };
-                power[i] += power[i] * config.blocs[i].growth_bias
-                    + banked(&mine_matrix, mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER;
-                power[j] += power[j] * config.blocs[j].growth_bias
-                    + banked(&theirs_matrix, theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER;
+                // Only the realized payoff acts here. `growth_bias` deliberately does
+                // **not**: it is an *annual* rate and is applied once, in the drift
+                // step below. Applying it per dyad as well made a bloc's growth
+                // depend on how many other blocs existed -- a five-bloc world
+                // compounded every bias five times a year and a seven-bloc world
+                // seven times. That is a property of the bloc count, not of any bloc,
+                // and it is exactly the kind of artefact a reader comparing systems
+                // of different sizes would have taken for a finding.
+                power[i] += banked(&mine_matrix, mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER;
+                power[j] +=
+                    banked(&theirs_matrix, theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER;
 
                 // Competition raises tension; this is the feedback loop that makes
                 // an arms race self-reinforcing. A dyad counts as competitive unless
@@ -512,6 +519,10 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             .unwrap_or("none");
 
         // --- drift and stabilisation ----------------------------------------
+        //
+        // The **one** place a bloc's growth bias is applied, so that it means what
+        // its name says: an annual rate, independent of how many blocs exist. See
+        // the note in the dyad loop for what it used to do instead.
         for (bloc, share) in config.blocs.iter().zip(power.iter_mut()) {
             let noise = Normal::new(0.0, bloc.volatility)
                 .map(|d| d.sample(&mut rng))
@@ -1046,7 +1057,11 @@ mod tests {
         };
         let mut tilted = baseline.clone();
         let edited = tilted.blocs.len() - 1;
-        tilted.blocs[edited].growth_bias = 0.03;
+        // The bias is an annual rate, so "decisive over 50 years" means a large annual
+        // number: 0.30 a year is 1.3^50, which no share difference survives. A figure
+        // like 0.03 would be decisive only under the old per-dyad compounding this
+        // model used to do, and would now lose to the blocs that start ahead.
+        tilted.blocs[edited].growth_bias = 0.30;
 
         let (before, _) = simulate_run(&baseline, 11);
         let (after, _) = simulate_run(&tilted, 11);
@@ -1068,6 +1083,67 @@ mod tests {
             strongest,
             Some(edited),
             "a bloc given a decisive compounding advantage should end up the strongest"
+        );
+    }
+
+    /// A bloc's growth bias must buy exactly the annual rate it names, and that rate
+    /// must not depend on how many blocs share the system.
+    ///
+    /// This is the regression test for the per-dyad multiplicity: `simulate_run` used
+    /// to add `power * growth_bias` inside the dyad loop *and* in the annual drift
+    /// step, so a nominal bias of `b` compounded `n` times a year in an `n`-bloc
+    /// world. The exponent was a property of the system's size rather than of the
+    /// bloc, so any comparison across different bloc counts -- which is what adding a
+    /// region to the model is -- would have been measuring the artefact.
+    ///
+    /// The measurement is of the *dynamics* rather than of a helper: two worlds differ
+    /// only in how many blocs they contain, and the bloc under test must grow at the
+    /// same annual rate in both. The residual difference is what the extra dyads do
+    /// to tension and to the payoff feedback, which is second-order at this bias and
+    /// is why the tolerance is stated rather than assumed.
+    #[test]
+    fn growth_bias_is_an_annual_rate_in_systems_of_any_size() {
+        let growth = 0.05;
+
+        let rate_in = |extra: usize| -> f64 {
+            let mut config = Config {
+                horizon: 1,
+                runs: 1,
+                ..Config::default()
+            };
+            for bloc in config.blocs.iter_mut() {
+                bloc.volatility = 0.0;
+                bloc.growth_bias = 0.0;
+            }
+            // The bloc under test is a mid-sized one rather than the first, so the
+            // result cannot come from an ordering accident.
+            let tested = 2;
+            config.blocs[tested].growth_bias = growth;
+            let start = config.blocs[tested].power_share;
+            for k in 0..extra {
+                // A zero-share, zero-volatility, zero-bias bloc: it adds dyads and
+                // nothing else, which is the smallest possible change in bloc count.
+                config
+                    .blocs
+                    .push(PowerBloc::new(&format!("Filler{k}"), 0.0, 0.0, 0.0, 1.0));
+            }
+            config.economy = Economy::for_blocs(&config.blocs);
+            let (outcome, _) = simulate_run(&config, 3);
+            outcome.final_shares[tested] / start
+        };
+
+        let five = rate_in(0);
+        let seven = rate_in(2);
+
+        assert!(
+            five > 1.0 + growth * 0.5 && five < 1.0 + growth * 1.5,
+            "one year at a {growth} bias must be roughly one application, got {five}"
+        );
+        assert!(
+            (five - seven).abs() < 0.02,
+            "the same bias must buy the same annual growth in a seven-bloc world as in \
+             a five-bloc one, or the model's growth rate is a property of the bloc \
+             count: {five} vs {seven}"
         );
     }
 }

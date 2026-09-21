@@ -113,12 +113,15 @@ pub const AI_STARTING_SHARE: f64 = 0.05;
 /// Illustrative annual growth bias for the AI actor.
 ///
 /// Set to exactly the fastest-growing conventional bloc's bias in `default_blocs()`
-/// (Indo-Pacific at 0.010), so the *default* world claims only that AI grows like the
+/// (Indo-Pacific at 0.050), so the *default* world claims only that AI grows like the
 /// fastest-growing bloc -- not that it outgrows everything. Whether the actor becomes
 /// the hegemon at that rate is then a result of the dynamics rather than an
 /// assumption baked into the parameter, and the hinge sweep shows how much faster it
 /// would have to grow to get there.
-pub const AI_GROWTH_BIAS: f64 = 0.010;
+///
+/// The value was re-stated from `0.010` when growth biases became true annual rates;
+/// see the note on `default_blocs()`. Both numbers model the same actor.
+pub const AI_GROWTH_BIAS: f64 = 0.050;
 
 /// Illustrative volatility for the AI actor.
 ///
@@ -141,7 +144,11 @@ pub const AI_COOPERATION_AFFINITY: f64 = 1.10;
 /// The mechanism -- a bloc that leads in a general-purpose technology converts that
 /// lead into economic and military capability -- is not in doubt. The conversion
 /// rate is unmeasurable, and this number is a placeholder for it.
-pub const DEFAULT_LEAD_GROWTH_EFFECT: f64 = 0.010;
+///
+/// Re-stated from `0.010` alongside the growth biases, so that one unit of lead still
+/// buys about five percent a year rather than the same nominal figure now meaning a
+/// fifth of that. See the note on `default_blocs()`.
+pub const DEFAULT_LEAD_GROWTH_EFFECT: f64 = 0.050;
 
 /// Illustrative: how much AI leadership changes what cooperation is worth.
 ///
@@ -426,21 +433,6 @@ fn normalise_shares(blocs: &mut [PowerBloc]) {
     }
 }
 
-/// The annual growth advantage a nominal bias actually buys.
-///
-/// `simulation.rs` applies `growth_bias` once per *dyad* and once more in the
-/// annual drift step, so a bloc in an `n`-bloc system has its bias applied `n`
-/// times a year. A nominal 0.005 is therefore not half a percent a year but
-/// `(1.005)^n - 1`, and the exponent depends on how many blocs exist. That is a
-/// property of the existing model rather than of this layer, and it is left alone
-/// here because changing it would move every published `--compare` and `--sweep`
-/// result. What this function does is make the multiplicity *visible*, so the
-/// hinge can be reported in the effective terms the dynamics actually turn on
-/// instead of in nominal terms whose meaning depends on the bloc count.
-pub fn effective_annual_advantage(nominal_bias: f64, blocs: usize) -> f64 {
-    (1.0 + nominal_bias).max(0.0).powi(blocs.max(1) as i32) - 1.0
-}
-
 /// What became of AI when it is a player.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActorFate {
@@ -559,9 +551,8 @@ pub const AI_SHARE_PROVENANCE: Provenance = Provenance::Illustrative {
 
 pub const AI_GROWTH_PROVENANCE: Provenance = Provenance::Illustrative {
     rationale: "set to exactly the fastest-growing conventional bloc's bias, so the default \
-                world claims only that AI grows like the fastest-growing bloc. The \
-                effective annual advantage is printed, because simulation.rs applies the \
-                bias once per dyad as well as once per year",
+                world claims only that AI grows like the fastest-growing bloc. Both are \
+                annual rates, applied once a year",
 };
 
 pub const AI_VOLATILITY_PROVENANCE: Provenance = Provenance::Illustrative {
@@ -988,44 +979,6 @@ mod tests {
         assert_eq!(instrument_effect(0.30, 0.305), InstrumentEffect::Neutral);
         assert_eq!(instrument_effect(0.30, 0.30), InstrumentEffect::Neutral);
         assert_eq!(instrument_effect(0.30, 0.295), InstrumentEffect::Neutral);
-    }
-
-    /// The effective-advantage helper must account for the per-dyad application, or
-    /// the report's explanation of the hinge would understate what the hinge turns
-    /// on by a factor of the bloc count.
-    #[test]
-    fn effective_advantage_accounts_for_the_per_dyad_application() {
-        // One bloc means one application, which is the nominal rate itself.
-        let one = effective_annual_advantage(0.01, 1);
-        assert!(
-            (one - 0.01).abs() < 1e-12,
-            "a single application must return the nominal rate, got {one}"
-        );
-        // Six blocs: the bias is applied once per dyad (five) plus once per year.
-        let six = effective_annual_advantage(0.01, 6);
-        assert!((six - (1.01_f64.powi(6) - 1.0)).abs() < 1e-12, "got {six}");
-        assert!(
-            six > 0.06,
-            "nominal 1% is over 6% a year in a six-bloc system: {six}"
-        );
-        assert!(
-            six > 6.0 * one,
-            "the multiplicity must compound rather than merely multiply"
-        );
-
-        // A degenerate count falls back to one application rather than panicking.
-        assert!(
-            (effective_annual_advantage(0.01, 0) - one).abs() < 1e-12,
-            "zero blocs must behave like one, not divide by zero"
-        );
-        assert_eq!(effective_annual_advantage(0.0, 6), 0.0);
-        // A bias at or below -100% annihilates the bloc; the base is clamped at zero,
-        // so the result is a total loss rather than a complex number.
-        let annihilated = effective_annual_advantage(-5.0, 6);
-        assert!(
-            annihilated.is_finite() && annihilated >= -1.0,
-            "a negative base must be clamped, got {annihilated}"
-        );
     }
 
     /// Every AI parameter must say where it came from, and *none* of them may claim
