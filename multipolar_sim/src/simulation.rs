@@ -118,6 +118,17 @@ pub struct Config {
     pub trap_tension_threshold: f64,
     /// Cooperation below which a year counts as a "conflict trap".
     pub trap_cooperation_threshold: f64,
+    /// Bloc that regional wars are pinned to, if any.
+    ///
+    /// `None` means a war damages a random pair, which is the default and the honest
+    /// one for a baseline. Setting it answers a question the random version cannot:
+    /// *where* a war happens is not a detail in a model with five asymmetric blocs,
+    /// because a war inside the largest bloc and a war among the non-aligned have
+    /// different consequences for who ends up on top.
+    ///
+    /// It pins only the *first* belligerent; the second is still drawn, so a targeted
+    /// war is a war centred on that bloc rather than a scripted outcome.
+    pub war_target: Option<usize>,
 }
 
 /// The default ensemble base seed.
@@ -138,6 +149,7 @@ impl Default for Config {
             seed: DEFAULT_SEED,
             trap_tension_threshold: 0.6,
             trap_cooperation_threshold: 0.5,
+            war_target: None,
         }
     }
 }
@@ -301,9 +313,16 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             year_shocks.push(ShockKind::RegionalWar);
             shock_counts.2 += 1;
             tension += config.shocks.war_tension;
-            // A war damages a random pair, not everyone equally.
+            // A war damages a pair, not everyone equally.
             if n >= 2 {
-                let a = rng.gen_range(0..n);
+                // The random pair is drawn *unconditionally*, even when a target is
+                // pinned, so that a targeted scenario consumes exactly the same random
+                // numbers as the baseline. Otherwise the two worlds would diverge for a
+                // reason that has nothing to do with the war -- the whole downstream
+                // stream shifts -- and the comparison would be contaminated by luck
+                // rather than by the scenario.
+                let random_a = rng.gen_range(0..n);
+                let a = config.war_target.unwrap_or(random_a).min(n - 1);
                 let mut b = rng.gen_range(0..n);
                 if b == a {
                     b = (b + 1) % n;

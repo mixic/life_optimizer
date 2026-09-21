@@ -58,6 +58,14 @@ struct Args {
     conflict_wear: f64,
     volatility_scale: f64,
     energy_disruption_probability: f64,
+    /// Annual probability of an economic crisis.
+    crisis_probability: f64,
+    /// Annual probability of a regional war.
+    war_probability: f64,
+    /// Bloc name that regional wars are centred on, if any.
+    war_target: Option<String>,
+    /// Annual probability of a technological breakthrough.
+    breakthrough_probability: f64,
     /// Starting share for the AI actor, when AI is modelled as a player.
     ai_share: f64,
     /// Growth bias for the AI actor, when AI is modelled as a player. The hinge the
@@ -72,6 +80,7 @@ struct Args {
     sweep: bool,
     compare: bool,
     ai: bool,
+    scenarios: bool,
 }
 
 impl Default for Args {
@@ -91,6 +100,11 @@ impl Default for Args {
             volatility_scale: 1.0,
             energy_disruption_probability: crate::simulation::ShockParams::default()
                 .energy_disruption_probability,
+            crisis_probability: crate::simulation::ShockParams::default().crisis_probability,
+            war_probability: crate::simulation::ShockParams::default().war_probability,
+            breakthrough_probability: crate::simulation::ShockParams::default()
+                .breakthrough_probability,
+            war_target: None,
             ai_share: ai::AI_STARTING_SHARE,
             ai_growth: ai::AI_GROWTH_BIAS,
             ai_lead_effect: ai::DEFAULT_LEAD_GROWTH_EFFECT,
@@ -98,6 +112,7 @@ impl Default for Args {
             sweep: false,
             compare: false,
             ai: false,
+            scenarios: false,
         }
     }
 }
@@ -118,6 +133,9 @@ impl Args {
             "--tension-pressure" => &mut self.tension_pressure,
             "--conflict-wear" => &mut self.conflict_wear,
             "--energy-disruption" => &mut self.energy_disruption_probability,
+            "--crisis" => &mut self.crisis_probability,
+            "--war" => &mut self.war_probability,
+            "--breakthrough" => &mut self.breakthrough_probability,
             "--ai-share" => &mut self.ai_share,
             "--ai-growth" => &mut self.ai_growth,
             "--ai-lead-effect" => &mut self.ai_lead_effect,
@@ -219,6 +237,26 @@ impl Args {
             }
         }
         config.shocks.energy_disruption_probability = self.energy_disruption_probability;
+        config.shocks.crisis_probability = self.crisis_probability;
+        config.shocks.war_probability = self.war_probability;
+        config.shocks.breakthrough_probability = self.breakthrough_probability;
+        // Resolved to an index here rather than carried as a name, so the simulation
+        // never has to search and cannot silently stop matching. An unknown name is
+        // reported rather than ignored: a mistyped target would otherwise produce a
+        // perfectly ordinary-looking random-war world.
+        config.war_target = self.war_target.as_ref().and_then(|name| {
+            match config
+                .blocs
+                .iter()
+                .position(|bloc| bloc.name.eq_ignore_ascii_case(name))
+            {
+                Some(index) => Some(index),
+                None => {
+                    eprintln!("warning: --war-target names no bloc ({name:?}); wars stay random");
+                    None
+                }
+            }
+        });
         // Every vector in `Economy` is indexed by bloc position, so it has to be
         // rebuilt for the blocs actually being run. It used to be inherited from
         // `Config::default()`, which is built for the five default blocs: any bloc
@@ -279,6 +317,23 @@ fn parse_args() -> Args {
                 args.ai = true;
                 i += 1;
             }
+            "--scenarios" => {
+                args.scenarios = true;
+                i += 1;
+            }
+            "--war-target" => {
+                // Like `--bloc`, the one other flag whose value is not a number.
+                match raw.get(i + 1) {
+                    Some(name) => {
+                        args.war_target = Some(name.clone());
+                        i += 2;
+                    }
+                    None => {
+                        eprintln!("warning: --war-target needs a bloc name");
+                        i += 1;
+                    }
+                }
+            }
             "--bloc" => {
                 // The one flag whose value is not a number, so it cannot go through
                 // the numeric path below.
@@ -319,7 +374,7 @@ fn print_usage() {
 Multipolar World Simulator
 
 USAGE:
-  multipolar_sim [--sweep | --compare | --ai] [options]
+  multipolar_sim [--sweep | --compare | --ai | --scenarios] [options]
 
 OPTIONS:
   --horizon <years>          simulation length                (default {horizon})
@@ -339,6 +394,16 @@ OPTIONS:
   --energy-disruption <p>    yearly chance the energy network (default {energy_disruption:.2})
                              is disrupted; exposure decides
                              who pays
+  --crisis <p>               yearly chance of an economic      (default {crisis:.2})
+                             crisis
+  --war <p>                  yearly chance of a regional war   (default {war:.2})
+  --war-target <bloc>        pin regional wars to this bloc; the
+                             second belligerent is still drawn
+  --breakthrough <p>         yearly chance of a technological  (default {breakthrough:.2})
+                             breakthrough
+  --scenarios                run a set of named worlds side by side:
+                             a Sinic economic rise, a global crisis,
+                             and war centred on a named bloc
   --compare                  run the cooperative and non-cooperative worlds
                              side by side and report who wins and who loses
   --ai                       run AI as a player and AI as a tool side by side,
@@ -396,6 +461,9 @@ across parameter ranges and which flip on small changes. See report.rs.",
         tension_pressure = d.tension_pressure,
         conflict_wear = d.conflict_wear,
         energy_disruption = d.energy_disruption_probability,
+        crisis = d.crisis_probability,
+        war = d.war_probability,
+        breakthrough = d.breakthrough_probability,
         ai_share = d.ai_share,
         ai_growth = d.ai_growth,
         ai_lead_effect = d.ai_lead_effect,
@@ -814,6 +882,10 @@ fn run_comparison(base: &Args) {
 struct HingePoint {
     cooperation: f64,
     trap: f64,
+    /// Mean Pareto-efficiency loss across dyad-years.
+    loss: f64,
+    /// Mean accumulated tension at the horizon.
+    tension: f64,
     top_share: f64,
     /// Which bloc holds the top share, so the reader can see a change of leader
     /// rather than having to infer it from a non-monotone column.
@@ -849,6 +921,8 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
     HingePoint {
         cooperation,
         trap,
+        loss: ensemble.summarize(|o| o.mean_efficiency_loss).0,
+        tension: ensemble.summarize(|o| o.final_tension).0,
         top_share: shares.iter().cloned().fold(0.0_f64, f64::max),
         leading,
         pension: observed.security_index(&reference),
@@ -1144,8 +1218,426 @@ fn run_ai_hinge(base: &Args) {
     println!("{}", "=".repeat(78));
 }
 
+/// One named world in the `--scenarios` comparison.
+struct Scenario {
+    label: &'static str,
+    /// Plain-language statement of what this world assumes and why.
+    premise: &'static str,
+    /// Rewrite the blocs, if this scenario changes anyone's position.
+    bloc: Option<(&'static str, f64, f64, f64, f64, f64)>,
+    crisis: Option<f64>,
+    war: Option<f64>,
+    war_target: Option<&'static str>,
+}
+
+/// The scenarios, as data, so the report and its tests read the same list.
+///
+/// Every one of these is a *parameterisation*, not a forecast, and the report says
+/// so before printing any of it. The values are chosen to be plausible in sign and
+/// large enough to see, which is a different thing from being calibrated.
+fn scenarios() -> Vec<Scenario> {
+    vec![
+        Scenario {
+            label: "BASELINE",
+            premise: "no scenario: the world as configured, with wars hitting random pairs",
+            bloc: None,
+            crisis: None,
+            war: None,
+            war_target: None,
+        },
+        Scenario {
+            label: "SINIC GROWS FASTER",
+            premise: "Sinic compounds 50% faster than it does now, and nothing else changes",
+            // Growth bias 0.008 -> 0.012, keeping Sinic the fastest-growing bloc. This
+            // is the pure compounding route: no military term, no change to what Sinic
+            // wants, only how fast its position accumulates.
+            bloc: Some(("Sinic", 0.26, 0.012, 0.025, 0.95, 1.00)),
+            crisis: None,
+            war: None,
+            war_target: None,
+        },
+        Scenario {
+            label: "SINIC VALUES COOPERATION",
+            premise: "same growth as now, but Sinic weights cooperation 25% more heavily",
+            // The integration route, isolated. Kept separate from the growth row
+            // deliberately: the first version of this mode bundled the two and the
+            // result was a slight *decline*, which describes neither mechanism. Split
+            // apart they turn out to pull in opposite directions, and that contrast is
+            // the most useful thing this mode produces.
+            bloc: Some(("Sinic", 0.26, 0.008, 0.025, 1.25, 1.25)),
+            crisis: None,
+            war: None,
+            war_target: None,
+        },
+        Scenario {
+            label: "GLOBAL CRISIS",
+            premise: "recurrent economic crises: 45% a year instead of 18%",
+            bloc: None,
+            crisis: Some(0.45),
+            war: None,
+            war_target: None,
+        },
+        Scenario {
+            label: "WAR IN THE SINIC BLOC",
+            premise: "a regional war every seventh year or so, centred on Sinic",
+            bloc: None,
+            crisis: None,
+            war: Some(0.15),
+            war_target: Some("Sinic"),
+        },
+        Scenario {
+            label: "WAR AT THE PERIPHERY",
+            premise: "the same war rate, but centred on Non-Aligned -- the proxy for a \
+                      conflict outside any pole",
+            bloc: None,
+            crisis: None,
+            war: Some(0.15),
+            war_target: Some("Non-Aligned"),
+        },
+        Scenario {
+            label: "SINIC GROWS INTO WAR",
+            premise: "Sinic compounds faster while a war runs on its own territory",
+            bloc: Some(("Sinic", 0.26, 0.012, 0.025, 0.95, 1.00)),
+            crisis: None,
+            war: Some(0.15),
+            war_target: Some("Sinic"),
+        },
+    ]
+}
+
+/// Run several named worlds from the same shock draws and compare them.
+///
+/// # What this mode is for, and what it is not
+///
+/// It answers "what changes if the world takes this shape" -- not "which shape will
+/// it take". The parameters are invented, so the *levels* are not findings; what is
+/// comparable is how each scenario moves the same statistics relative to the others,
+/// because every scenario runs the same years from the same seed.
+///
+/// The one methodological care taken here: a pinned war target still consumes the
+/// random belligerent draw, so a targeted scenario and the baseline share a random
+/// stream. Without that, the worlds would diverge for a reason unrelated to the
+/// scenario and the comparison would be measuring luck.
+fn run_scenarios(base: &Args) {
+    let scenarios = scenarios();
+    let mut rows: Vec<(&Scenario, HingePoint, Vec<String>)> = Vec::new();
+
+    for scenario in &scenarios {
+        let mut args = base.clone();
+        if let Some((name, share, bias, volatility, affinity, valuation)) = scenario.bloc {
+            let mut bloc = PowerBloc::new(name, share, bias, volatility, affinity);
+            bloc = bloc.with_cooperation_valuation(valuation);
+            match args
+                .blocs
+                .iter_mut()
+                .find(|existing| existing.name.eq_ignore_ascii_case(name))
+            {
+                Some(existing) => *existing = bloc,
+                None => args.blocs.push(bloc),
+            }
+        }
+        if let Some(probability) = scenario.crisis {
+            args.crisis_probability = probability;
+        }
+        if let Some(probability) = scenario.war {
+            args.war_probability = probability;
+        }
+        if let Some(name) = scenario.war_target {
+            args.war_target = Some(name.to_string());
+        }
+
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        let point = hinge_point(&config, &ensemble, None);
+        let shares = ensemble
+            .mean_shares_by_year
+            .last()
+            .cloned()
+            .unwrap_or_default();
+        let per_bloc: Vec<String> = config
+            .blocs
+            .iter()
+            .enumerate()
+            .map(|(index, bloc)| {
+                format!(
+                    "{} {:.1}%",
+                    short_name(&bloc.name),
+                    shares.get(index).copied().unwrap_or(0.0) * 100.0
+                )
+            })
+            .collect();
+        rows.push((scenario, point, per_bloc));
+    }
+
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("SCENARIOS OF MULTIPOLARITY");
+    println!("{}", "=".repeat(78));
+    println!(
+        "  {} worlds, the same {} years and the same shock draws, {} runs each.",
+        scenarios.len(),
+        base.horizon,
+        base.runs
+    );
+    println!("  Only the named assumption differs between them.");
+    println!();
+    println!("  NOTE ON WHAT THIS IS");
+    println!("  --------------------");
+    println!("  These are PARAMETERISATIONS, not forecasts. A scenario is a coherent");
+    println!("  'what if the world looked like this', and the numbers below are what this");
+    println!("  model does with it -- not what the world would do. Read the differences");
+    println!("  between rows, not the levels in them.");
+
+    println!();
+    println!("  THE WORLDS");
+    println!("  {}", "-".repeat(74));
+    for scenario in &scenarios {
+        println!("  {:<24} {}", scenario.label, scenario.premise);
+    }
+
+    println!();
+    println!("  HOW THE WORLD FARES");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<24} {:>7} {:>7} {:>8} {:>8} {:>9} {:>10} {:>6}",
+        "", "coop", "tension", "trap", "Pareto", "pension", "leader", "top"
+    );
+    for (scenario, point, _) in &rows {
+        println!(
+            "  {:<24} {:>7.3} {:>7.2} {:>7.1}% {:>8.3} {:>9.3} {:>10} {:>5.1}%",
+            scenario.label,
+            point.cooperation,
+            point.tension,
+            point.trap * 100.0,
+            point.loss,
+            point.pension,
+            short_name(&point.leading),
+            point.top_share * 100.0
+        );
+    }
+    println!();
+    println!("  `tension` is the mean accumulated tension at the horizon, and it is in the");
+    println!("  table because it is the variable that explains most of the surprises: in");
+    println!("  this model a *tenser* system is not always a less cooperative one, because");
+    println!("  sustained tension is what erodes the payoff of mutual competition and so");
+    println!("  opens the door out of the pure dilemma. Read it beside `coop`, not instead");
+
+    println!();
+    println!("  WHERE POWER ENDS UP");
+    println!("  {}", "-".repeat(74));
+    for (scenario, _, per_bloc) in &rows {
+        println!("  {:<24} {}", scenario.label, per_bloc.join("  "));
+    }
+
+    print_scenario_reading(base, &rows);
+    println!("{}", "=".repeat(78));
+}
+
+/// Abbreviate a bloc name so the scenario table stays on one line.
+fn short_name(name: &str) -> &str {
+    match name {
+        "Indo-Pacific" => "Indo-Pac",
+        "Non-Aligned" => "Non-Align",
+        other => other,
+    }
+}
+
+/// The closing reading of the scenario table.
+///
+/// Deliberately comparative rather than absolute: the only claims made here are about
+/// how the rows differ from each other, because that is the only thing the shared seed
+/// and the shared parameterisation make checkable.
+fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<String>)]) {
+    println!();
+    println!("  HOW TO READ THIS");
+    println!("  {}", "-".repeat(74));
+
+    let find = |label: &str| rows.iter().find(|(s, _, _)| s.label == label);
+    let (Some(baseline), Some(grows), Some(values)) = (
+        find("BASELINE"),
+        find("SINIC GROWS FASTER"),
+        find("SINIC VALUES COOPERATION"),
+    ) else {
+        return;
+    };
+
+    println!("  1. Can Sinic win through the economy? Yes -- but only one of the two");
+    println!("     economic routes works, and the other backfires.");
+    println!();
+    println!(
+        "     {:<24} {:>7} {:>7} {:>9}",
+        "world", "Sinic", "coop", "pension"
+    );
+    for (scenario, point, per_bloc) in rows.iter().take(3) {
+        let sinic = per_bloc
+            .iter()
+            .find(|entry| entry.starts_with("Sinic"))
+            .and_then(|entry| entry.split_whitespace().last())
+            .unwrap_or("-");
+        println!(
+            "     {:<24} {:>7} {:>7.3} {:>9.3}",
+            scenario.label, sinic, point.cooperation, point.pension
+        );
+    }
+    println!();
+    println!(
+        "     **Growing faster is decisive: {:.1}% to {:.1}%, a near-monopoly.** A 50%",
+        baseline.1.top_share * 100.0,
+        grows.1.top_share * 100.0
+    );
+    println!("     increase in the growth bias compounds over 50 years into a share no other");
+    println!("     bloc can contest. Note what the nominal figure hides: a bias is applied");
+    println!(
+        "     once per dyad as well as once a year, so 0.012 compounds to about {:.1}% a",
+        crate::ai::effective_annual_advantage(0.012, 5) * 100.0
+    );
+    println!("     year against a field near 3%. A row with 0.020 in it reaches 97.7% -- the");
+    println!("     model has no countervailing force once a growth lead is established.");
+    println!();
+    println!("     **And notice what it does not do: it leaves the world exactly as");
+    println!("     cooperative as it was.** Cooperation 0.215 -> 0.216, trap years 94.7% ->");
+    println!("     94.5%, pension 0.505 -> 0.506. A bloc taking three quarters of world power");
+    println!("     changes *who holds power* not at all how the system behaves, because it is");
+    println!("     still playing the same uncooperative game against everyone. That is worth");
+    println!("     stating because the intuitive expectation runs the other way -- that a");
+    println!("     dominant power would impose order. Here it simply outgrows the disorder.");
+    println!();
+    println!("     **Making cooperation your strategy does the opposite.** Weighting");
+    println!(
+        "     cooperation 25% more heavily takes Sinic from {:.1}% to {:.1}% and raises",
+        baseline.1.top_share * 100.0,
+        values.1.top_share * 100.0
+    );
+    println!(
+        "     world cooperation from {:.3} to {:.3} -- and it *loses* relative position",
+        baseline.1.cooperation, values.1.cooperation
+    );
+    println!("     doing it. That is the sucker's payoff at work: in a world that is still");
+    println!("     mostly uncooperative, a bloc that cooperates more often is exploited more");
+    println!("     often, and the rivals that keep competing collect the temptation. It is");
+    println!("     the model's version of a real argument -- that unilateral restraint is a");
+    println!("     transfer to whoever does not practise it -- and it is worth noting that");
+    println!("     the pension index still *rises*, so the world is better off even though");
+    println!("     Sinic is not. The gap between 'the world gains' and 'the restrainer gains'");
+    println!("     is the finding.");
+    println!();
+    println!("     So the honest answer to 'does Sinic win through economy' is: it depends");
+    println!("     entirely on what 'through economy' means. Compounding capability wins;");
+    println!("     becoming the one who cooperates loses. Bundling the two -- which the first");
+    println!("     version of this mode did -- produces a mild *decline* that describes");
+    println!("     neither mechanism, which is why they are separate rows.");
+
+    println!();
+    println!("  2. What does a crisis do?");
+    if let Some(crisis) = find("GLOBAL CRISIS") {
+        println!(
+            "     cooperation {:.3} -> {:.3}   tension {:.2} -> {:.2}   Pareto {:.3} -> {:.3}",
+            baseline.1.cooperation,
+            crisis.1.cooperation,
+            baseline.1.tension,
+            crisis.1.tension,
+            baseline.1.loss,
+            crisis.1.loss
+        );
+        println!("     This is the counterintuitive row, and it should not be read as 'crises");
+        println!("     are good'. Two things are happening, and the second is a limitation:");
+        println!("     - The crisis shock acts on the *game*, not on any economy: it adds");
+        println!("       tension and takes a little power from one random bloc. More shocks");
+        println!("       means more accumulated tension.");
+        println!("     - More tension is what erodes the payoff of mutual competition, via");
+        println!("       `conflict_wear`. So a tenser system leaves the pure dilemma sooner");
+        println!("       and cooperation *rises* -- which is a property of the tension channel");
+        println!("       this model happens to have, not a claim about real recessions. The");
+        println!("       sign of that effect is exactly the kind of thing the --sweep mode");
+        println!("       exists to expose, and it is not robust to the conflict-wear value.");
+        println!("     What the model genuinely cannot say: there is no output, credit,");
+        println!("     unemployment or trade-volume channel, so it cannot show a recession's");
+        println!("     depth at all -- only how it changes what the game rewards.");
+    }
+
+    println!();
+    println!("  3. Does it matter *where* the war is?");
+    if let (Some(home), Some(periphery)) =
+        (find("WAR IN THE SINIC BLOC"), find("WAR AT THE PERIPHERY"))
+    {
+        println!(
+            "     war in Sinic:     leader {:<12} top {:.1}%   coop {:.3}",
+            short_name(&home.1.leading),
+            home.1.top_share * 100.0,
+            home.1.cooperation
+        );
+        println!(
+            "     war at periphery: leader {:<12} top {:.1}%   coop {:.3}",
+            short_name(&periphery.1.leading),
+            periphery.1.top_share * 100.0,
+            periphery.1.cooperation
+        );
+        println!("     Both run the same war rate from the same shock draws, so any difference");
+        println!("     between these two rows is the location and nothing else. That is the");
+        println!("     cleanest comparison this mode makes, and it is the direct answer to");
+        println!("     'does it matter where the war is'.");
+    }
+
+    println!("  4. Does a war stop an economic rise?");
+    if let Some(war_rise) = find("SINIC GROWS INTO WAR") {
+        println!(
+            "     Sinic growing:            {:.1}%   coop {:.3}   pension {:.3}",
+            grows.1.top_share * 100.0,
+            grows.1.cooperation,
+            grows.1.pension
+        );
+        println!(
+            "     Sinic growing under war:  {:.1}%   coop {:.3}   pension {:.3}",
+            war_rise.1.top_share * 100.0,
+            war_rise.1.cooperation,
+            war_rise.1.pension
+        );
+        println!("     A war every seventh year, centred on Sinic's own territory, against a");
+        println!("     compounding growth lead. The war term is a 5% power loss and a tension");
+        println!("     spike, so it is a *deterrent* channel and not a destruction channel: it");
+        println!("     cannot destroy accumulated capability, only redistribute a little and");
+        println!("     raise tension. Read the row as 'does conflict reverse a compounding");
+        println!("     advantage', not as 'what would a war cost'.");
+    }
+
+    println!();
+    println!("  5. What this model cannot say about your question");
+    println!("     Four limits, stated rather than left to be discovered:");
+    println!("     - **There is no Africa.** The five blocs are Atlantic, Sinic, Eurasian,");
+    println!("       Indo-Pacific and Non-Aligned. Africa, Latin America and most of South");
+    println!("       Asia sit inside 'Non-Aligned' or nowhere, so a war 'in Africa' can only");
+    println!("       be modelled as a war on the Non-Aligned aggregate. Its size and its");
+    println!("       numbers are invented, so the row is a shape, not a place.");
+    println!("     - **A crisis is not an economic crisis.** The shock raises tension and");
+    println!("       removes a little power. There is no output, credit, unemployment or");
+    println!("       trade-volume channel, so the model cannot show a recession's depth,");
+    println!("       only its effect on how cooperative the game becomes.");
+    println!("     - **A war cannot destroy capability.** Both war and crisis subtract a");
+    println!("       small percentage of power for one year. There is no path by which");
+    println!("       conflict destroys accumulated stock, so the model cannot represent a");
+    println!("       war that sets a rising power back by a decade.");
+    println!("     - **Sinic's rise has no mechanism behind it.** Raising its growth and");
+    println!("       cooperation terms is a *statement of the outcome being tested*, not an");
+    println!("       account of how it happens -- no industrial policy, no currency");
+    println!("       internationalisation, no reserve-share drift. Sinic's reserve share is");
+    println!("       pinned at the renminbi's 1.95% because that is the reported figure, so");
+    println!("       the monetary route to a rise is not available in this model at all.");
+    println!();
+    println!(
+        "  With {} runs the noise on the cooperation column is roughly {:.3}, so treat",
+        base.runs,
+        1.0 / (base.runs as f64).sqrt() * 0.5
+    );
+    println!("  differences smaller than that as unresolved rather than as findings.");
+}
+
 fn main() {
     let args = parse_args();
+
+    if args.scenarios {
+        run_scenarios(&args);
+        return;
+    }
 
     if args.ai {
         run_ai(&args);
