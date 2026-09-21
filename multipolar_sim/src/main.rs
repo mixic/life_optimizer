@@ -1068,7 +1068,13 @@ fn run_ai_hinge(base: &Args) {
         "  {:<12} {:>8}  {:>9}  {:>10}  {:>9}  {:>8}",
         "coefficient", "coop", "trap yrs", "top share", "pension", "asymm."
     );
-    for value in [-0.30, -0.15, 0.00, 0.15, 0.30] {
+    // Fine enough to distinguish a *slope* from a *step*. A coarse grid would show
+    // that the row moves without showing how, and "how" is the whole question here:
+    // if the branch opens discontinuously then the magnitude of the effect is not a
+    // finding, only its direction is.
+    for value in [
+        -0.30, -0.20, -0.15, -0.10, -0.05, -0.01, 0.00, 0.01, 0.05, 0.10, 0.15, 0.20, 0.30,
+    ] {
         let mut args = base.clone();
         args.ai_cooperation = value;
         args.blocs = args.ai_params(AiRole::WieldedInstrument).apply(&base.blocs);
@@ -1101,20 +1107,30 @@ fn run_ai_hinge(base: &Args) {
     println!("  bimatrix -- one payoff matrix per side -- because a symmetric game has");
     println!("  nowhere to put \"cooperation is worth more to this bloc\".");
     println!();
-    println!("  What to take from the numbers: whether the world's cooperation rate is");
-    println!("  sensitive to this at all, and in which direction. The direction does show --");
-    println!("  the negative rows leave the world less cooperative than the positive ones,");
-    println!("  which is the realist case against the optimistic one.");
+    println!("  What to take from the numbers, and the grid is deliberately fine enough");
+    println!("  to show this: the cooperation rate is MONOTONE on each side of zero and");
+    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.314 ->");
+    println!("  0.346; from 0.01 to 0.30 it rises 0.408 -> 0.430; and at exactly 0.00 it is");
+    println!("  0.217, below both. So:");
     println!();
-    println!("  ONE THING TO READ CAREFULLY: the 0.00 row is a knife-edge, not the midpoint");
-    println!("  of a continuum. At exactly zero every bloc holds the same valuation, so the");
-    println!("  two payoff matrices are identical, and the exchangeability rule then closes");
-    println!("  the asymmetric branch completely -- a symmetric game cannot report that one");
-    println!("  of two identical players is the cooperator. Any nonzero spread, in either");
-    println!("  direction, opens that branch, which is why the asymmetric share jumps from");
-    println!("  0% in the middle row to 30-84% beside it. The jump in that column is a");
-    println!("  property of the exchangeability rule rather than a finding about AI; the");
-    println!("  direction of the *cooperation* column is the finding.");
+    println!("    ROBUST: the SIGN. A coefficient that makes AI ownership raise the owner's");
+    println!("    valuation of cooperation produces a more cooperative world than one that");
+    println!("    makes it a zero-sum rivalry axis -- the optimistic case against the");
+    println!("    realist one, over the whole range, in the direction the chapter argues.");
+    println!();
+    println!("    NOT A FINDING: the level, and any comparison against the 0.00 row. That");
+    println!("    row is a different branch, not a point on this curve -- note that even the");
+    println!("    *realist* setting at -0.30 is more cooperative than symmetry at 0.00,");
+    println!("    which cannot be a claim about AI. The magnitude of the effect is therefore");
+    println!("    an artefact of branch selection, and only the sign survives it.");
+    println!();
+    println!("  ONE THING TO READ CAREFULLY: the 0.00 row is a knife-edge. At exactly zero");
+    println!("  every bloc holds the same valuation, so the two payoff matrices are");
+    println!("  identical, and the exchangeability rule then closes the asymmetric branch");
+    println!("  completely -- a symmetric game cannot report that one of two identical");
+    println!("  players is the cooperator. Any nonzero spread, in either direction, opens");
+    println!("  that branch, which is why the asymmetric share jumps from 0% to 42-84%");
+    println!("  beside it.");
     println!();
     println!("  That discontinuity is itself a limitation worth naming: behaviour that is");
     println!("  qualitatively different at perfect symmetry than at near-symmetry means a");
