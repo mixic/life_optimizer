@@ -88,11 +88,21 @@ pub struct Config {
     pub pension: PensionLink,
     pub horizon: u32,
     pub runs: usize,
+    /// Base seed for the ensemble. Run `n` uses `seed + n * 2_654_435_761`, so the
+    /// whole ensemble is reproducible and two parameter settings can be compared
+    /// against the *same* shock draws rather than against different luck. That
+    /// matters here more than usual: with illustrative parameters, most of the
+    /// difference between two configurations is noise unless the seeds are held
+    /// fixed.
+    pub seed: u64,
     /// Tension above which a year counts as a "conflict trap".
     pub trap_tension_threshold: f64,
     /// Cooperation below which a year counts as a "conflict trap".
     pub trap_cooperation_threshold: f64,
 }
+
+/// The default ensemble base seed.
+pub const DEFAULT_SEED: u64 = 0x5EED_0000;
 
 impl Default for Config {
     fn default() -> Self {
@@ -103,6 +113,7 @@ impl Default for Config {
             pension: PensionLink::default(),
             horizon: 50,
             runs: 400,
+            seed: DEFAULT_SEED,
             trap_tension_threshold: 0.6,
             trap_cooperation_threshold: 0.5,
         }
@@ -494,9 +505,11 @@ impl Ensemble {
         let mut mean_shares_by_year = vec![vec![0.0; n]; horizon];
 
         for run in 0..config.runs {
-            // Distinct, reproducible seeds: the user can re-run and get the same
-            // ensemble, which matters for comparing parameter settings.
-            let seed = 0x5EED_0000_u64.wrapping_add(run as u64 * 2_654_435_761);
+            // Distinct, reproducible seeds derived from the configured base, so two
+            // parameter settings can be compared against the same shock draws.
+            let seed = config
+                .seed
+                .wrapping_add(run as u64 * 2_654_435_761);
             let (outcome, records) = simulate_run(config, seed);
 
             for (year, record) in records.iter().enumerate() {
@@ -813,5 +826,111 @@ mod tests {
         let (outcome, _) = simulate_run(&single_bloc, 1);
         assert!(outcome.final_shares[0].is_finite());
         assert!((outcome.final_shares[0] - 1.0).abs() < 1e-9);
+    }
+
+    /// The finding this simulator exists to produce.
+    ///
+    /// The parameters are invented, so no single trajectory is informative. What
+    /// *is* informative is how strongly the qualitative outcome depends on the
+    /// cooperation/competition payoff balance -- the balance that decides whether
+    /// the security dilemma binds at all, and the question `MULTIPOLAR_GAME.md`
+    /// section 4 says the literature is split on. This asserts that dependence end
+    /// to end, on the same quantities the report prints.
+    ///
+    /// Both configurations share the default seed, so they are compared against the
+    /// same shock draws rather than against different luck.
+    #[test]
+    fn outcomes_are_sensitive_to_the_cooperation_competition_balance() {
+        let at = |cooperation_gain: f64, defection_temptation: f64| {
+            let config = Config {
+                game: GameParams {
+                    cooperation_gain,
+                    defection_temptation,
+                    ..GameParams::default()
+                },
+                horizon: 50,
+                runs: 40,
+                ..Config::default()
+            };
+            let ensemble = Ensemble::run(&config);
+            let (cooperation, _, _) = ensemble.summarize(|o| o.mean_cooperation);
+            let (trap, _, _) = ensemble.summarize(|o| o.trap_fraction);
+            let (loss, _, _) = ensemble.summarize(|o| o.mean_efficiency_loss);
+            let polarity = ensemble
+                .polarity_distribution()
+                .into_iter()
+                .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                .map(|(polarity, _)| polarity)
+                .expect("a 40-run ensemble must classify at least one polarity");
+            (cooperation, trap, loss, polarity)
+        };
+
+        // Cooperation is worth clearly more than defecting: the dilemma need not bind.
+        let (coop_good, trap_good, loss_good, polarity_good) = at(8.0, 4.2);
+        // Defecting is worth clearly more than cooperating: the dilemma binds hard.
+        let (coop_bad, trap_bad, loss_bad, polarity_bad) = at(1.0, 8.0);
+
+        assert!(
+            coop_good > coop_bad + 0.3,
+            "a cooperative payoff balance must produce materially more cooperation: \
+             {coop_good:.3} vs {coop_bad:.3}"
+        );
+        assert!(
+            trap_good < trap_bad - 0.3,
+            "and materially fewer conflict-trap years: {trap_good:.3} vs {trap_bad:.3}"
+        );
+        assert!(
+            loss_good < loss_bad,
+            "and less Pareto-efficiency loss: {loss_good:.3} vs {loss_bad:.3}"
+        );
+
+        // And the direction has to be right, not merely different: it is the
+        // conflict-locked configuration that concentrates the system.
+        assert_eq!(
+            polarity_bad,
+            Polarity::Unipolar,
+            "a hard dilemma should concentrate the system into a single pole"
+        );
+        assert_ne!(
+            polarity_good, polarity_bad,
+            "the balance must be able to change the polarity the system settles into"
+        );
+    }
+
+    /// "Five editable power blocs" only means something if editing one changes what
+    /// happens. This edits the weakest bloc into the strongest and checks the run
+    /// notices, which is the concrete form of the editability claim.
+    #[test]
+    fn editing_a_bloc_changes_the_outcome() {
+        let baseline = Config {
+            horizon: 50,
+            runs: 20,
+            ..Config::default()
+        };
+        let mut tilted = baseline.clone();
+        let edited = tilted.blocs.len() - 1;
+        tilted.blocs[edited].growth_bias = 0.03;
+
+        let (before, _) = simulate_run(&baseline, 11);
+        let (after, _) = simulate_run(&tilted, 11);
+
+        assert!(
+            after.final_shares[edited] > before.final_shares[edited],
+            "raising a bloc's growth bias must raise its share: {:.4} vs {:.4}",
+            after.final_shares[edited],
+            before.final_shares[edited]
+        );
+
+        let strongest = after
+            .final_shares
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(index, _)| index);
+        assert_eq!(
+            strongest,
+            Some(edited),
+            "a bloc given a decisive compounding advantage should end up the strongest"
+        );
     }
 }

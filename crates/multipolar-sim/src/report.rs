@@ -34,6 +34,34 @@ fn bar(fraction: f64, width: usize) -> String {
     )
 }
 
+/// Describe a cooperation trajectory from an early and a late value.
+///
+/// The slope alone is not enough to characterise a trajectory, and reading only the
+/// slope produced a plainly false statement: a system pinned at 0.00 cooperation
+/// from start to finish is flat, and "neither lock-in nor breakdown" says the
+/// opposite of what is happening. Flatness has to be qualified by *level*.
+///
+/// The level thresholds are documented conventions, like the polarity ones, not
+/// derived quantities.
+fn trajectory_verdict(early: f64, late: f64) -> &'static str {
+    /// Change smaller than this counts as flat.
+    const FLAT: f64 = 0.05;
+    const LOW: f64 = 1.0 / 3.0;
+    const HIGH: f64 = 2.0 / 3.0;
+
+    if late < early - FLAT {
+        "a downward drift, the arms-race path"
+    } else if late > early + FLAT {
+        "an upward drift, cooperation strengthening"
+    } else if late < LOW {
+        "flat and pinned near zero: a conflict lock-in, not a plateau"
+    } else if late > HIGH {
+        "flat and pinned near one: a cooperative lock-in, not a plateau"
+    } else {
+        "broadly flat: neither lock-in nor breakdown"
+    }
+}
+
 /// Print the whole report.
 pub fn print_report(config: &Config, ensemble: &Ensemble) {
     println!();
@@ -96,14 +124,8 @@ fn print_trajectory(ensemble: &Ensemble) {
     let last = ensemble.cooperation_by_year.last().copied().unwrap_or(0.0);
     println!();
     println!(
-        "  Cooperation moves {first:.2} -> {last:.2} over the horizon{}",
-        if last < first - 0.05 {
-            " -- a downward drift, the arms-race path."
-        } else if last > first + 0.05 {
-            " -- an upward drift, cooperation strengthening."
-        } else {
-            " -- broadly flat, neither lock-in nor breakdown."
-        }
+        "  Cooperation moves {first:.2} -> {last:.2} over the horizon -- {}.",
+        trajectory_verdict(first, last)
     );
 }
 
@@ -303,11 +325,31 @@ fn print_decades(config: &Config, ensemble: &Ensemble) {
     };
     let late = ensemble.cooperation_by_year.last().copied().unwrap_or(0.0);
     println!();
-    if late < early - 0.05 {
-        println!("  The system trends toward competition over the horizon.");
-    } else if late > early + 0.05 {
-        println!("  The system trends toward cooperation over the horizon.");
-    } else {
-        println!("  The system is roughly stationary -- neither lock-in nor breakdown.");
+    println!("  Over the horizon: {}.", trajectory_verdict(early, late));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::trajectory_verdict;
+
+    /// The verdict must distinguish a plateau from a lock-in. The first version read
+    /// the slope alone, so a system pinned at zero cooperation from start to finish
+    /// -- total, permanent conflict -- was reported as "neither lock-in nor
+    /// breakdown", which is the opposite of what is happening.
+    #[test]
+    fn trajectory_verdict_distinguishes_a_lock_in_from_a_plateau() {
+        // Flat at the bottom is a conflict lock-in, not a plateau.
+        assert!(trajectory_verdict(0.0, 0.0).contains("conflict lock-in"));
+        assert!(trajectory_verdict(0.30, 0.31).contains("conflict lock-in"));
+        // Flat at the top is the cooperative mirror of it.
+        assert!(trajectory_verdict(1.0, 1.0).contains("cooperative lock-in"));
+        assert!(trajectory_verdict(0.70, 0.69).contains("cooperative lock-in"));
+        // Flat in the middle really is neither.
+        assert!(trajectory_verdict(0.5, 0.51).contains("neither lock-in"));
+        // A genuine trend outranks the level test, including a drift that starts at
+        // the bottom: the movement is the more informative fact.
+        assert!(trajectory_verdict(0.0, 0.9).contains("upward drift"));
+        assert!(trajectory_verdict(0.9, 0.0).contains("downward drift"));
+        assert!(trajectory_verdict(0.0, 0.2).contains("upward drift"));
     }
 }
