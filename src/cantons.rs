@@ -472,21 +472,46 @@ fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
         // the municipal cell — so there is nothing for the bulk import to read,
         // and a comment in the source spreadsheet does not explain why.
         //
-        // The reason is structural, and it is why the figure is determinate
-        // despite the blank: BL does not adjust its multiplier annually. The
-        // Steuerfussdekret (SGS 331.2) fixes the cantonal Steuerfuss at 100% of
-        // the normal state tax, and when revenue must change the canton amends
-        // the **tariff brackets** instead of the multiplier. That is consistent
-        // with BL's tariff being the only one in this repository published as
-        // algebraic formulas rather than a band table.
+        // The figure is determinate despite the blank: BL holds its cantonal
+        // multiplier at 100% of the normal state tax. That is stated verbatim in a
+        // Landrat *Vorlage* restating the decree: *"Der kantonale
+        // Einkommenssteuerfuss fuer das Steuerjahr ... betraegt 100 Prozent der
+        // normalen Staatsteuer vom Einkommen der natuerlichen Personen"*.
         //
-        // The 100% figure is stated verbatim in a Landrat *Vorlage* restating the
-        // decree: *"Der kantonale Einkommenssteuerfuss fuer das Steuerjahr ...
-        // betraegt 100 Prozent der normalen Staatsteuer vom Einkommen der
-        // natuerlichen Personen"*. The user supplied the Steuerfussdekret itself
-        // (SGS 331.2, in force 01.01.2022) as the legal source; its body text is
-        // image-only, so the decree's identity is machine-verifiable from that
-        // file but its article text is not quoted from here.
+        // What the supplied document does, and does not, establish
+        //
+        // The file the user supplied (`annex-25544-2.pdf`) is the **Vademecum page**
+        // for SGS 331.2, not the decree's body text. Two pages, plainly
+        // text-extractable, carrying the decree's identity and its full amendment
+        // history — and **no percentage of any kind**. So it corroborates the
+        // *citation* and cannot corroborate the *figure*.
+        //
+        // An earlier note here called that document "image-only". That was wrong,
+        // and the tooling was at fault: `tools/pdf_text.py` required `]` and `TJ` to
+        // be adjacent, but a PDF may split content streams *between tokens*, so it
+        // silently dropped the last line of every stream. The extractor is fixed;
+        // the document is ordinary text and merely happens not to contain the
+        // decree body.
+        //
+        // What it does establish:
+        //
+        //  * SGS 331.2 is indeed "Dekret ueber den Steuerfuss (Steuerfussdekret BL)",
+        //    GS-Nr. 2022.001, enacted 16.12.2021 and in force since 01.01.2022.
+        //  * The decree is **amended or re-enacted every year** from 2008 to 2024,
+        //    and every one of those amendments is an Aufgaben- und Finanzplan,
+        //    Budget, Voranschlag or Jahresplanung. The version in force today is the
+        //    one of 12.12.2024 (GS 2024.081, in force 01.01.2025, 2024/461, AFP
+        //    2025-2028). The 01.01.2022 date is the re-enactment, not the current
+        //    amendment.
+        //
+        // The distinction that matters: BL does not *change* its multiplier
+        // annually, but the decree fixing it is nonetheless *amended* annually. So
+        // `year = SELF_ASSESSMENT_YEAR` implies a 2026 amendment that the supplied
+        // document cannot show, because it stops at the 2024 AFP. Whether each
+        // annual amendment re-fixes 100% — consistent with everything available
+        // here — or the figure has moved at some point is **not resolved by
+        // anything in this repository**, and is recorded as an open question rather
+        // than assumed in either direction.
         //
         // Liestal's municipal multiplier is 65%, from a cantonal tax comparison
         // rather than from an ESTV publication — the weakest source of the four
@@ -496,7 +521,10 @@ fn hand_entered_tax_data(canton: Canton) -> CantonTaxData {
             steuerfuss: Some(1.00),
             steuerfuss_provenance: Provenance::Official {
                 source: "SGS 331.2, Dekret ueber den Steuerfuss (Steuerfussdekret BL) — \
-                         cantonal multiplier fixed at 100% of the normal state tax",
+                         cantonal multiplier 100% of the normal state tax, quoted in a \
+                         Landrat Vorlage restating the decree. The decree is amended \
+                         annually by the AFP; the supplied Vademecum page records its \
+                         identity and history but carries no percentage",
                 year: SELF_ASSESSMENT_YEAR,
             },
             base_scale: None,
@@ -1511,11 +1539,17 @@ mod tests {
     ///
     /// It was blocked for a while on its Steuerfuss, and the reason is worth
     /// keeping: the ESTV workbook leaves the Liestal row **entirely blank for all
-    /// 32 years it covers**, both cells. BL does not adjust its multiplier
-    /// annually — the Steuerfussdekret (SGS 331.2) fixes it at 100% of the normal
-    /// state tax, and revenue is changed by amending the tariff brackets instead.
-    /// That is precisely why the workbook cell is empty, and it is the structural
-    /// fact that makes the sourced figure determinate rather than absent.
+    /// 32 years it covers**, both cells. BL holds its cantonal multiplier at 100%
+    /// of the normal state tax and changes revenue by amending the tariff brackets
+    /// instead -- which is also why BL is the only canton here whose tariff is
+    /// published as algebraic formulas rather than a band table.
+    ///
+    /// The Vademecum for SGS 331.2 forces one distinction on that story, and it is
+    /// worth stating because the loose version of it is misleading: BL does not
+    /// *change* its multiplier annually, but the Steuerfussdekret fixing it is
+    /// *amended* annually alongside the Aufgaben- und Finanzplan, every year from
+    /// 2008 to 2024. An empty workbook cell is consistent with a constant
+    /// multiplier; it is not evidence that the canton never legislates on it.
     ///
     /// This test pins the whole chain: an imported formula tariff, a
     /// legally-fixed multiplier, and a figure.
