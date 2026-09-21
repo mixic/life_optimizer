@@ -84,7 +84,67 @@ repository root:
 |---|---|
 | `game.rs` | Symmetric 2×2 game, Nash equilibrium selection (pure or mixed), efficiency loss |
 | `blocks.rs` | Power blocs and the payoff structure their interactions produce |
+| `economy.rs` | Monetary standing, energy trade, financial conditions — with provenance |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many |
 | `pension.rs` | The AHV/pension channels the simulated world implies |
 | `report.rs` | Terminal presentation |
 | `main.rs` | CLI, argument parsing, `--sweep` |
+
+## The economic layer, and what is measured versus invented
+
+`economy.rs` supplies the economics that decides what the strategic structure
+*costs*: who issues the money others hold, who depends on whose energy, and how
+strained the financial system is.
+
+Every quantity carries a `Provenance`, either `Sourced { source, vintage }` or
+`Illustrative { rationale }`, and the report prints the table so a reader can see
+which is which without reading the prose. The split is:
+
+* **Sourced**: reserve-currency composition (IMF COFER, 2025 Q4 — USD 56.77%, EUR
+  20.25%, CNY 1.95%, 6.13% in currencies COFER does not identify, a category that
+  has more than doubled since 2021); the direction and aggregate size of energy
+  flows (about 80% of Russian oil exports went to China and India in 2025; Russian
+  gas was 16.1% of EU LNG and 16.3% of EU pipeline-gas imports, against a US share
+  of 52.5% of LNG).
+* **Illustrative**: *every* transmission elasticity, without exception. Nobody can
+  measure how a one-point shift in reserve share changes sanction leverage, because
+  the counterfactual does not exist. Also illustrative: the split of a published
+  aggregate across this model's blocs, because the blocs are political groupings
+  that no statistical agency reports as a unit.
+
+That second category is the honest part. A test enforces that no parameter ships
+without a provenance that actually says something, and that every `Sourced` entry
+names both a source and a vintage.
+
+### Two doors into the model
+
+The 2×2 is *symmetric* — one payoff matrix describes both sides — but bloc-specific
+economics are inherently asymmetric, since the issuer of a reserve currency is not
+in the same position as a bloc that issues none. So the layer enters twice:
+
+* **Into the game**: the pair's interdependence raises what mutual cooperation is
+  worth. Both sides feel it, so it belongs in the matrix. It deliberately does *not*
+  touch the temptation to defect: a richer relationship is worth more to capture as
+  well as more to sustain, and picking a sign for that would be hiding a judgement.
+* **Into the simulation**: energy disruption and monetary leverage hit individual
+  blocs differently, so they act on that bloc's own power — the importer loses
+  supply, the exporter loses revenue, and the bloc with less monetary leverage
+  absorbs more of an adversarial turn.
+
+### Outstanding
+
+Making the 2×2 *itself* asymmetric is the next structural step. Until then,
+de-dollarisation enters through pair averages and through power, not through a
+bloc-specific payoff matrix. The reserve shares are also a fixed endowment held
+constant for all 50 years, so de-dollarisation is a change in the *level* of
+leverage rather than a drift in it. Both are noted in the report's own output.
+
+Not yet built, in the agreed order: AI's effect on growth, European
+deindustrialisation, and the crypto channel. That last one is planned as a
+*falsifiable* test rather than an assumed buffer, because the observed record runs
+the other way: in the March 2020 panic bitcoin fell about 56%, worse than the S&P
+500, and its correlation to equities **rose above 0.5 during turbulence** while
+decaying toward zero in calm markets — the correlation strengthens exactly when a
+buffer would be needed. (Sources: IMF COFER for reserves; Deputy PM Novak via
+OilPrice and Eurostat via TASS for energy; The Block via ForkLog for the crypto
+record.)

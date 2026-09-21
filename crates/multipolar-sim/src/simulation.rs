@@ -32,6 +32,7 @@ use rand::{Rng, SeedableRng};
 use rand_distr::{Distribution, Normal};
 
 use crate::blocks::{GameParams, PowerBloc};
+use crate::economy::Economy;
 use crate::game::{solve, Action};
 use crate::pension::{PensionLink, PensionOutcome};
 
@@ -62,6 +63,16 @@ pub struct ShockParams {
     pub war_power_loss: f64,
     /// Power gained by the beneficiary of a breakthrough.
     pub breakthrough_gain: f64,
+    /// Probability that the energy network is disrupted in a given year, and how
+    /// much of its power a fully exposed bloc loses when it is.
+    ///
+    /// These two are **illustrative**. The mechanism is the reported one -- an
+    /// importer loses supply, an exporter loses revenue -- and *which* blocs pay is
+    /// taken from the sourced exposure figures in `economy.rs`. What is invented is
+    /// the scale that connects a modelled disruption to a change in relative power,
+    /// because no such relationship is measurable.
+    pub energy_disruption_probability: f64,
+    pub energy_disruption_damage: f64,
 }
 
 impl Default for ShockParams {
@@ -75,6 +86,8 @@ impl Default for ShockParams {
             crisis_power_loss: 0.01,
             war_power_loss: 0.05,
             breakthrough_gain: 0.05,
+            energy_disruption_probability: 0.10,
+            energy_disruption_damage: 0.04,
         }
     }
 }
@@ -86,6 +99,12 @@ pub struct Config {
     pub game: GameParams,
     pub shocks: ShockParams,
     pub pension: PensionLink,
+    /// Monetary standing, energy trade and financial conditions.
+    ///
+    /// Defaults are built for `blocs`; a caller that replaces the bloc set should
+    /// rebuild this with [`Economy::for_blocs`] rather than reuse a stale one,
+    /// because every vector in it is indexed by bloc position.
+    pub economy: Economy,
     pub horizon: u32,
     pub runs: usize,
     /// Base seed for the ensemble. Run `n` uses `seed + n * 2_654_435_761`, so the
@@ -106,11 +125,14 @@ pub const DEFAULT_SEED: u64 = 0x5EED_0000;
 
 impl Default for Config {
     fn default() -> Self {
+        let blocs = crate::blocks::default_blocs();
+        let economy = Economy::for_blocs(&blocs);
         Config {
-            blocs: crate::blocks::default_blocs(),
             game: GameParams::default(),
             shocks: ShockParams::default(),
             pension: PensionLink::default(),
+            economy,
+            blocs,
             horizon: 50,
             runs: 400,
             seed: DEFAULT_SEED,
@@ -157,6 +179,10 @@ pub struct YearRecord {
     /// The most common equilibrium type among this year's dyads.
     pub dominant_equilibrium: &'static str,
     pub shocks: Vec<ShockKind>,
+    /// Whether the energy network was disrupted this year: 0.0 or 1.0.
+    pub energy_disruption: f64,
+    /// Global financial-conditions index at year end, in [0, 1].
+    pub recession_risk: f64,
 }
 
 /// What one complete run produced.
@@ -179,6 +205,8 @@ pub struct RunOutcome {
     pub final_shares: Vec<f64>,
     /// Share index of the leading bloc at the horizon.
     pub top_share: f64,
+    /// Financial-conditions index at the horizon, in [0, 1].
+    pub final_recession_risk: f64,
     /// How many shocks of each kind occurred.
     pub shock_counts: (u32, u32, u32),
 }
@@ -243,6 +271,10 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
     renormalise(&mut power);
 
     let mut tension = 0.1_f64;
+    // A local copy: financial conditions evolve during the run, and `config` is
+    // borrowed immutably. The initial state comes from the configuration, so two
+    // configurations still differ only in what the caller set.
+    let mut economy = config.economy.clone();
     let mut records: Vec<YearRecord> = Vec::with_capacity(config.horizon as usize);
 
     let mut total_cooperation = 0.0;
@@ -288,6 +320,29 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             }
         }
 
+        // --- energy disruption ----------------------------------------------
+        //
+        // Financial strain makes a disruption more likely, and the sourced exposure
+        // figures decide who pays. This is the asymmetric door into the model: an
+        // importer loses supply and an exporter loses revenue, so one event moves
+        // blocs in opposite directions in a way the symmetric 2x2 cannot express.
+        let disruption_probability = (config.shocks.energy_disruption_probability
+            * (1.0 + economy.recession_risk))
+            .clamp(0.0, 1.0);
+        let energy_disruption = if rng.gen::<f64>() < disruption_probability {
+            1.0
+        } else {
+            0.0
+        };
+        if energy_disruption > 0.0 {
+            for (index, exposure) in economy.energy.iter().enumerate() {
+                if index < n {
+                    power[index] *= 1.0
+                        - exposure.disruption_exposure() * config.shocks.energy_disruption_damage;
+                }
+            }
+        }
+
         // --- play every dyad ------------------------------------------------
         let mut year_cooperation = 0.0;
         let mut year_loss = 0.0;
@@ -303,7 +358,12 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                     0.0
                 };
 
-                let payoffs = config.game.payoffs(gap, tension);
+                // Interdependence is the economic layer's contribution to the game
+                // itself: a pair that trades heavily has more to lose from a
+                // rupture, which raises what cooperation is worth to both sides.
+                let payoffs = config
+                    .game
+                    .payoffs_with(gap, tension, economy.interdependence(i, j));
                 let solution = solve(&payoffs);
 
                 // Realize the equilibrium. A pure equilibrium is deterministic; at a
@@ -369,6 +429,15 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // it reached mutual cooperation.
                 if !both_cooperated {
                     tension += config.game.tension_per_conflict;
+
+                    // Money is leverage. When a pair turns adversarial, the bloc
+                    // whose currency the other depends on can restrict access to it,
+                    // so the bloc with less monetary leverage absorbs more of the
+                    // cost. `monetary_leverage(j, i)` is j's leverage *over* i, which
+                    // is why it is the drag on i.
+                    const SANCTION_DRAG: f64 = 0.004;
+                    power[i] *= 1.0 - economy.monetary_leverage(j, i) * SANCTION_DRAG;
+                    power[j] *= 1.0 - economy.monetary_leverage(i, j) * SANCTION_DRAG;
                 }
             }
         }
@@ -395,6 +464,9 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             *share *= (1.0 + bloc.growth_bias + noise).max(0.0);
         }
         tension = (tension * (1.0 - config.game.tension_decay)).max(0.0);
+        // Financial conditions carry into next year, where they gate how likely a
+        // disruption is -- which is what makes this a mechanism rather than a figure.
+        economy.step_financial_conditions(tension, energy_disruption);
         renormalise(&mut power);
 
         let year_coop_rate = if dyads > 0 {
@@ -425,6 +497,8 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             efficiency_loss: year_loss_rate,
             dominant_equilibrium: dominant,
             shocks: year_shocks,
+            energy_disruption,
+            recession_risk: economy.recession_risk,
         });
     }
 
@@ -474,6 +548,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         pension: config.pension.assess(mean_cooperation, mean_efficiency_loss),
         final_shares,
         top_share,
+        final_recession_risk: economy.recession_risk,
         shock_counts,
     };
 

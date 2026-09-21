@@ -169,13 +169,42 @@ impl GameParams {
     ///   dilemma; see `conflict_wear`.
     /// * **Exploitation gets worse as the gap widens.** Cooperating against a much
     ///   stronger competitor is more costly than against a peer.
-    pub fn payoffs(&self, power_gap: f64, tension: f64) -> Payoffs {
-        let parity = (1.0 - power_gap).clamp(0.0, 1.0);
+    /// * **Interdependence raises what cooperation is worth.** Two blocs that trade
+    ///   heavily have more to lose from a rupture, which is the standard argument
+    ///   that commerce dampens conflict.
+    ///
+    /// `interdependence` comes from `economy.rs` and is `0.0` for a pair that trades
+    /// no energy. It multiplies the cooperation payoff, so a valuable trading
+    /// relationship makes mutual cooperation worth more.
+    ///
+    /// # What interdependence deliberately does *not* do
+    ///
+    /// It leaves the temptation to defect alone, and that is a judgement worth
+    /// stating rather than burying. A richer relationship is worth more to *capture*
+    /// as well as more to sustain, so the sign of its effect on `dc` is genuinely
+    /// ambiguous. Pushing it up would make trade a source of predation; pushing it
+    /// down would make trade a source of restraint. This model picks neither, which
+    /// means the `--sweep` output shows the restraint channel on its own rather than
+    /// the sum of two opposing ones.
+    ///
+    /// The coefficient is **illustrative**: nobody has measured how a one-point
+    /// change in an energy-trade share changes the value of cooperation in a
+    /// 50-year counterfactual.
+    pub fn payoffs_with(&self, power_gap: f64, tension: f64, interdependence: f64) -> Payoffs {
+        /// Illustrative: how strongly a fully interdependent pair values cooperation.
+        const INTERDEPENDENCE_GAIN: f64 = 0.6;
 
-        // Cooperation is worth more between equals and worth less as tension
-        // accumulates. Floored at zero: cooperation cannot become actively
-        // harmful, which would be a different game.
-        let cc = (self.cooperation_gain * (0.55 + 0.45 * parity) - self.tension_pressure * tension)
+        let parity = (1.0 - power_gap).clamp(0.0, 1.0);
+        let interdependence = interdependence.clamp(0.0, 1.0);
+
+        // Cooperation is worth more between equals, worth more between trading
+        // partners, and worth less as tension accumulates. Floored at zero:
+        // cooperation cannot become actively harmful, which would be a different
+        // game.
+        let cc = (self.cooperation_gain
+            * (0.55 + 0.45 * parity)
+            * (1.0 + INTERDEPENDENCE_GAIN * interdependence)
+            - self.tension_pressure * tension)
             .max(0.0);
 
         // Mutual competition is the arms-race outcome. It is not zero -- blocs
@@ -194,6 +223,16 @@ impl GameParams {
         let cd = self.exploitation_cost * (0.5 + 0.5 * power_gap);
 
         Payoffs { cc, cd, dc, dd }
+    }
+
+    /// The base case: no economic interdependence at all.
+    ///
+    /// Test-only. The simulator always carries an economic layer, so the binary has
+    /// no use for a two-argument form, but the payoff tests read considerably better
+    /// without a third argument that is always zero.
+    #[cfg(test)]
+    pub fn payoffs(&self, power_gap: f64, tension: f64) -> Payoffs {
+        self.payoffs_with(power_gap, tension, 0.0)
     }
 }
 

@@ -80,8 +80,105 @@ pub fn print_report(config: &Config, ensemble: &Ensemble) {
     print_power_trajectories(config, ensemble);
     print_polarity(config, ensemble);
     print_dominance(config, ensemble);
+    print_economy(config, ensemble);
     print_pension(config, ensemble);
     print_decades(config, ensemble);
+}
+
+/// Wrap text to a width on word boundaries, for the provenance notes.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        if !current.is_empty() && current.len() + 1 + word.len() > width {
+            lines.push(std::mem::take(&mut current));
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
+}
+
+/// The economic layer: monetary standing, energy exposure, financial conditions.
+///
+/// Every row is labelled `sourced` or `illustrative`, because the point of this
+/// section is that the two are mixed in one model and a reader has to be able to
+/// tell which is which. The caveat at the top says so in prose; this says it per
+/// figure, which is the version that can be checked.
+fn print_economy(config: &Config, ensemble: &Ensemble) {
+    let economy = &config.economy;
+
+    println!();
+    println!("  MONETARY AND ENERGY EXPOSURE AT THE START");
+    println!("  -----------------------------------------");
+    println!(
+        "  {:<16} {:>10}  {:>13}  {:>12}",
+        "bloc", "reserves", "energy import", "exports"
+    );
+    for (index, bloc) in config.blocs.iter().enumerate() {
+        let reserves = economy.reserve_shares.get(index).copied().unwrap_or(0.0);
+        let exposure = economy.energy.get(index);
+        println!(
+            "  {:<16} {:>9.2}%  {:>13.2}  {:>12.2}",
+            bloc.name,
+            reserves * 100.0,
+            exposure.map(|e| e.import_dependence).unwrap_or(0.0),
+            exposure.map(|e| e.export_dependence).unwrap_or(0.0),
+        );
+    }
+    println!(
+        "  {:<16} {:>9.2}%  (held in currencies belonging to no bloc)",
+        "unattributed",
+        economy.unattributed_reserves * 100.0
+    );
+    println!();
+    println!("  Reserves are the share of world official FX reserves *issued* by each");
+    println!("  bloc, so a bloc that issues none holds no monetary leverage over others,");
+    println!("  whatever it holds itself. Energy columns are dependence, not volume.");
+
+    let (risk, low, high) = ensemble.summarize(|o| o.final_recession_risk);
+    println!();
+    println!(
+        "  Financial conditions at horizon: {risk:.3} mean  (10th {low:.3} .. 90th {high:.3})  {}",
+        bar(risk, 24)
+    );
+    println!("  0 is calm, 1 is acute. Strain accumulates from tension and from energy");
+    println!("  disruption, decays on its own, and gates how likely a disruption is.");
+
+    println!();
+    println!("  WHERE THESE NUMBERS COME FROM");
+    println!("  -----------------------------");
+    let table = economy.provenance_table();
+    let mut seen: Vec<&str> = Vec::new();
+    for (what, provenance) in &table {
+        let detail = provenance.detail();
+        if seen.contains(&detail) {
+            continue;
+        }
+        seen.push(detail);
+        println!("  [{}] {what}", provenance.label());
+        for line in wrap(detail, 68) {
+            println!("        {line}");
+        }
+    }
+    let sourced = table.iter().filter(|(_, p)| p.is_sourced()).count();
+    println!();
+    println!(
+        "  {sourced} of {} entries {} sourced; the rest are invented, and every",
+        table.len(),
+        if sourced == 1 { "is" } else { "are" }
+    );
+    println!("  transmission elasticity is in the invented group. Run --sweep to see");
+    println!("  which conclusions depend on them.");
+    println!();
+    println!("  One limitation worth knowing: the reserve shares are a fixed endowment,");
+    println!("  held constant for all 50 years. De-dollarisation is therefore a change");
+    println!("  in the *level* of leverage, not yet a drift in it.");
 }
 
 /// The caveat goes first, not last.

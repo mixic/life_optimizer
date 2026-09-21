@@ -31,6 +31,7 @@
 //! caveat before any numbers.
 
 mod blocks;
+mod economy;
 mod game;
 mod pension;
 mod report;
@@ -53,6 +54,7 @@ struct Args {
     tension_pressure: f64,
     conflict_wear: f64,
     volatility_scale: f64,
+    energy_disruption_probability: f64,
     sweep: bool,
 }
 
@@ -71,6 +73,8 @@ impl Default for Args {
             tension_pressure: params.tension_pressure,
             conflict_wear: params.conflict_wear,
             volatility_scale: 1.0,
+            energy_disruption_probability: crate::simulation::ShockParams::default()
+                .energy_disruption_probability,
             sweep: false,
         }
     }
@@ -91,6 +95,7 @@ impl Args {
             "--parity-pressure" => &mut self.parity_pressure,
             "--tension-pressure" => &mut self.tension_pressure,
             "--conflict-wear" => &mut self.conflict_wear,
+            "--energy-disruption" => &mut self.energy_disruption_probability,
             "--volatility" => &mut self.volatility_scale,
             "--seed" => {
                 self.seed = value.max(0.0) as u64;
@@ -179,6 +184,7 @@ impl Args {
                 bloc.volatility *= self.volatility_scale;
             }
         }
+        config.shocks.energy_disruption_probability = self.energy_disruption_probability;
         config
     }
 }
@@ -256,6 +262,9 @@ OPTIONS:
                              fatigue that lets conflict end
   --bloc <spec>              add or edit a power bloc; repeatable
   --volatility <scale>       multiply every bloc's volatility (default 1.0)
+  --energy-disruption <p>    yearly chance the energy network (default {energy_disruption:.2})
+                             is disrupted; exposure decides
+                             who pays
   --sweep                    run the sensitivity sweep instead of one report
   --help                     this message
 
@@ -283,6 +292,7 @@ across parameter ranges and which flip on small changes. See report.rs.",
         parity_pressure = d.parity_pressure,
         tension_pressure = d.tension_pressure,
         conflict_wear = d.conflict_wear,
+        energy_disruption = d.energy_disruption_probability,
     );
 }
 
@@ -302,7 +312,7 @@ fn run_sweep(base: &Args) {
     println!();
 
     type Apply = fn(&mut Args, f64);
-    let sweeps: [(&str, Apply, [f64; 6]); 4] = [
+    let sweeps: [(&str, Apply, [f64; 6]); 5] = [
         (
             "cooperation gain",
             |a: &mut Args, v: f64| a.cooperation_gain = v,
@@ -317,6 +327,11 @@ fn run_sweep(base: &Args) {
             "conflict wear (arms-race fatigue)",
             |a: &mut Args, v: f64| a.conflict_wear = v,
             [0.0, 0.3, 0.6, 0.9, 1.5, 3.0],
+        ),
+        (
+            "energy disruption probability",
+            |a: &mut Args, v: f64| a.energy_disruption_probability = v,
+            [0.0, 0.05, 0.10, 0.20, 0.35, 0.50],
         ),
         (
             "bloc volatility (scale)",
@@ -353,7 +368,7 @@ fn run_sweep(base: &Args) {
                 .unwrap_or_else(|| "-".to_string());
 
             println!(
-                "  {:>8.1}  {:>8.3}  {:>8.1}%  {:>8.3}  {:>13}  {:>8.3}",
+                "  {:>8.2}  {:>8.3}  {:>8.1}%  {:>8.3}  {:>13}  {:>8.3}",
                 value,
                 coop,
                 trap * 100.0,
