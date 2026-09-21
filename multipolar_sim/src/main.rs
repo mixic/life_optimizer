@@ -30,6 +30,7 @@
 //! which is why `--sweep` is the most useful mode and why the report prints its
 //! caveat before any numbers.
 
+mod ai;
 mod blocks;
 mod economy;
 mod game;
@@ -37,7 +38,9 @@ mod pension;
 mod report;
 mod simulation;
 
+use ai::{AiParams, AiRole, AI_ACTOR_NAME};
 use blocks::{GameParams, PowerBloc};
+use economy::Economy;
 use simulation::{Config, Ensemble};
 
 /// Options, parsed from `--flag value` pairs without an argument-parsing crate.
@@ -55,8 +58,20 @@ struct Args {
     conflict_wear: f64,
     volatility_scale: f64,
     energy_disruption_probability: f64,
+    /// Starting share for the AI actor, when AI is modelled as a player.
+    ai_share: f64,
+    /// Growth bias for the AI actor, when AI is modelled as a player. The hinge the
+    /// player hypothesis turns on.
+    ai_growth: f64,
+    /// Annual power growth bought by one unit of AI lead, when AI is modelled as a
+    /// capability the blocs own. The hinge the tool hypothesis turns on.
+    ai_lead_effect: f64,
+    /// How much AI leadership changes what cooperation is worth. Zero by default,
+    /// deliberately -- see `ai.rs`.
+    ai_cooperation: f64,
     sweep: bool,
     compare: bool,
+    ai: bool,
 }
 
 impl Default for Args {
@@ -76,8 +91,13 @@ impl Default for Args {
             volatility_scale: 1.0,
             energy_disruption_probability: crate::simulation::ShockParams::default()
                 .energy_disruption_probability,
+            ai_share: ai::AI_STARTING_SHARE,
+            ai_growth: ai::AI_GROWTH_BIAS,
+            ai_lead_effect: ai::DEFAULT_LEAD_GROWTH_EFFECT,
+            ai_cooperation: ai::DEFAULT_LEAD_COOPERATION_EFFECT,
             sweep: false,
             compare: false,
+            ai: false,
         }
     }
 }
@@ -98,6 +118,10 @@ impl Args {
             "--tension-pressure" => &mut self.tension_pressure,
             "--conflict-wear" => &mut self.conflict_wear,
             "--energy-disruption" => &mut self.energy_disruption_probability,
+            "--ai-share" => &mut self.ai_share,
+            "--ai-growth" => &mut self.ai_growth,
+            "--ai-lead-effect" => &mut self.ai_lead_effect,
+            "--ai-cooperation" => &mut self.ai_cooperation,
             "--volatility" => &mut self.volatility_scale,
             "--seed" => {
                 self.seed = value.max(0.0) as u64;
@@ -129,9 +153,7 @@ impl Args {
     fn set_bloc(&mut self, spec: &str) -> bool {
         let parts: Vec<&str> = spec.split(':').collect();
         if parts.len() != 5 {
-            eprintln!(
-                "warning: --bloc expects Name:share:bias:volatility:affinity, got {spec:?}"
-            );
+            eprintln!("warning: --bloc expects Name:share:bias:volatility:affinity, got {spec:?}");
             return false;
         }
         let name = parts[0].trim();
@@ -187,7 +209,39 @@ impl Args {
             }
         }
         config.shocks.energy_disruption_probability = self.energy_disruption_probability;
+        // Every vector in `Economy` is indexed by bloc position, so it has to be
+        // rebuilt for the blocs actually being run. It used to be inherited from
+        // `Config::default()`, which is built for the five default blocs: any bloc
+        // added through `--bloc` therefore had no energy position and no reserve
+        // share, and since the disruption loop iterates the economy's vector rather
+        // than the bloc list, such a bloc was silently immune to energy disruption.
+        config.economy = Economy::for_blocs(&config.blocs);
         config
+    }
+
+    /// Apply this run's CLI overrides to an AI layer.
+    ///
+    /// Kept separate from the world constructors so the sweep can move one parameter
+    /// at a time while everything else stays at the documented default, exactly as
+    /// `run_sweep` does for the game parameters.
+    fn apply_ai_overrides(&self, layer: &mut AiParams) {
+        layer.actor.power_share = self.ai_share;
+        layer.actor.growth_bias = self.ai_growth;
+        layer.lead_growth_effect = self.ai_lead_effect;
+        layer.lead_cooperation_effect = self.ai_cooperation;
+    }
+
+    /// Build an AI layer of the given role with this run's overrides applied.
+    ///
+    /// The three worlds come from `ai::ai_worlds` rather than being rebuilt here, so
+    /// there is exactly one definition of what each hypothesis is.
+    fn ai_params(&self, role: AiRole) -> AiParams {
+        let mut layer = ai::ai_worlds(&self.blocs)
+            .into_iter()
+            .find(|layer| layer.role == role)
+            .expect("every AI role is one of the three worlds");
+        self.apply_ai_overrides(&mut layer);
+        layer
     }
 }
 
@@ -209,6 +263,10 @@ fn parse_args() -> Args {
             }
             "--compare" => {
                 args.compare = true;
+                i += 1;
+            }
+            "--ai" => {
+                args.ai = true;
                 i += 1;
             }
             "--bloc" => {
@@ -251,7 +309,7 @@ fn print_usage() {
 Multipolar World Simulator
 
 USAGE:
-  multipolar_sim [--sweep] [options]
+  multipolar_sim [--sweep | --compare | --ai] [options]
 
 OPTIONS:
   --horizon <years>          simulation length                (default {horizon})
@@ -273,6 +331,15 @@ OPTIONS:
                              who pays
   --compare                  run the cooperative and non-cooperative worlds
                              side by side and report who wins and who loses
+  --ai                       run AI as a player and AI as a tool side by side,
+                             then sweep for the hinge the answer turns on
+  --ai-share <x>             AI actor's starting share            (default {ai_share:.3})
+  --ai-growth <x>            AI actor's growth bias               (default {ai_growth:.3})
+  --ai-lead-effect <x>       power per unit of AI lead, when AI   (default {ai_lead_effect:.3})
+                             is a capability the blocs own
+  --ai-cooperation <x>       how much AI leadership changes what  (default {ai_cooperation:.2})
+                             cooperation is worth; zero by default
+                             because the sign is genuinely disputed
   --sweep                    run the sensitivity sweep instead of one report
   --help                     this message
 
@@ -289,6 +356,19 @@ OPTIONS:
   0.14/0.010/0.030/0.90 and Non-Aligned 0.14/0.004/0.040/1.05, as
   share/growth-bias/volatility/cooperation-affinity.
 
+  `--ai` is not a sixth bloc and not a multiplier: it is both, run as two
+  rival hypotheses about what AI is, against the existing five-bloc model
+  as a control. MULTIPOLAR_GAME.md section 7 lists four live answers to who
+  captures the gains from AI and declines to pick one; this mode builds the
+  two that are structurally different and reports which one the numbers
+  support, and how much that depends on parameters nobody has measured.
+
+  When AI is modelled as a player it is added as a bloc named {ai_actor},
+  so `--bloc {ai_actor}:...` edits it like any other bloc. The layer
+  rebuilds that actor from the `--ai-*` flags, so those win where the two
+  disagree; and the control and tool worlds contain no actor at all, since
+  a stray one would contradict the premise they are reported under.
+
 The sweep is the informative mode: it shows which qualitative outcomes are robust
 across parameter ranges and which flip on small changes. See report.rs.",
         horizon = d.horizon,
@@ -301,6 +381,11 @@ across parameter ranges and which flip on small changes. See report.rs.",
         tension_pressure = d.tension_pressure,
         conflict_wear = d.conflict_wear,
         energy_disruption = d.energy_disruption_probability,
+        ai_share = d.ai_share,
+        ai_growth = d.ai_growth,
+        ai_lead_effect = d.ai_lead_effect,
+        ai_cooperation = d.ai_cooperation,
+        ai_actor = AI_ACTOR_NAME,
     );
 }
 
@@ -592,7 +677,10 @@ fn run_comparison(base: &Args) {
     println!();
     println!("  PROBABILITY OF ENDING DOMINANT (above 45% of world power)");
     println!("  {}", "-".repeat(74));
-    println!("  {:<16} {:>14} {:>18}", "", "cooperative", "non-cooperative");
+    println!(
+        "  {:<16} {:>14} {:>18}",
+        "", "cooperative", "non-cooperative"
+    );
     for (index, bloc) in blocs.iter().enumerate() {
         let with = dominance[0].get(index).copied().unwrap_or(0.0);
         let without = dominance[1].get(index).copied().unwrap_or(0.0);
@@ -637,13 +725,17 @@ fn run_comparison(base: &Args) {
     let gaining: Vec<&str> = blocs
         .iter()
         .enumerate()
-        .filter(|&(index, bloc)| ends[0].get(index).copied().unwrap_or(0.0) > bloc.power_share + 0.01)
+        .filter(|&(index, bloc)| {
+            ends[0].get(index).copied().unwrap_or(0.0) > bloc.power_share + 0.01
+        })
         .map(|(_, bloc)| bloc.name.as_str())
         .collect();
     let losing: Vec<&str> = blocs
         .iter()
         .enumerate()
-        .filter(|&(index, bloc)| ends[0].get(index).copied().unwrap_or(0.0) < bloc.power_share - 0.01)
+        .filter(|&(index, bloc)| {
+            ends[0].get(index).copied().unwrap_or(0.0) < bloc.power_share - 0.01
+        })
         .map(|(_, bloc)| bloc.name.as_str())
         .collect();
 
@@ -677,10 +769,8 @@ fn run_comparison(base: &Args) {
 
     // Which bloc finishes first is the least robust thing on this page, and it would
     // be easy to read as the headline. Say what actually drives it.
-    let world_improves = coop[0] > coop[1]
-        && trap[0] < trap[1]
-        && loss[0] < loss[1]
-        && pension[0] > pension[1];
+    let world_improves =
+        coop[0] > coop[1] && trap[0] < trap[1] && loss[0] < loss[1] && pension[0] > pension[1];
     println!();
     println!("  Which claim here is worth carrying away");
     println!("  {}", "-".repeat(74));
@@ -705,8 +795,305 @@ fn run_comparison(base: &Args) {
     println!("{}", "=".repeat(78));
 }
 
+/// The figures every hinge row reports, so the rows differ only in what they vary.
+struct HingePoint {
+    cooperation: f64,
+    trap: f64,
+    top_share: f64,
+    /// Which bloc holds the top share, so the reader can see a change of leader
+    /// rather than having to infer it from a non-monotone column.
+    leading: String,
+    pension: f64,
+    /// Present only when the world has an AI actor.
+    actor_share: Option<f64>,
+    actor_start: Option<f64>,
+    actor_dominance: Option<f64>,
+}
+
+/// Extract the hinge figures from one finished world.
+fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> HingePoint {
+    let (cooperation, _, _) = ensemble.summarize(|o| o.mean_cooperation);
+    let (trap, _, _) = ensemble.summarize(|o| o.trap_fraction);
+    let (observed, reference) = ensemble.pension_summary(&config.pension);
+    let shares = ensemble
+        .mean_shares_by_year
+        .last()
+        .cloned()
+        .unwrap_or_default();
+    let leading = shares
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .and_then(|(index, _)| config.blocs.get(index))
+        .map(|bloc| bloc.name.clone())
+        .unwrap_or_else(|| "-".to_string());
+
+    HingePoint {
+        cooperation,
+        trap,
+        top_share: shares.iter().cloned().fold(0.0_f64, f64::max),
+        leading,
+        pension: observed.security_index(&reference),
+        actor_share: actor.and_then(|index| shares.get(index).copied()),
+        actor_start: actor.and_then(|index| config.blocs.get(index).map(|bloc| bloc.power_share)),
+        actor_dominance: actor.and_then(|index| {
+            ensemble
+                .dominance_probabilities(config.blocs.len())
+                .get(index)
+                .copied()
+        }),
+    }
+}
+
+/// Run the three AI worlds from the same shock draws, then locate the hinge.
+fn run_ai(base: &Args) {
+    let mut params = Vec::new();
+    let mut configs = Vec::new();
+    let mut ensembles = Vec::new();
+
+    for mut layer in ai::ai_worlds(&base.blocs) {
+        base.apply_ai_overrides(&mut layer);
+        let mut args = base.clone();
+        args.blocs = layer.apply(&base.blocs);
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        params.push(layer);
+        configs.push(config);
+        ensembles.push(ensemble);
+    }
+
+    report::print_ai_report(&params, &configs, &ensembles);
+    run_ai_hinge(base);
+}
+
+/// Where each hypothesis's answer flips.
+///
+/// This is the half of `--ai` that respects the honesty constraint. The worlds above
+/// are illustrative by construction, so their levels carry no information; what
+/// carries information is how far a parameter has to move before the verdict changes.
+fn run_ai_hinge(base: &Args) {
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("WHERE THE ANSWER FLIPS");
+    println!("{}", "=".repeat(78));
+    println!("  Every parameter in this layer is invented, so the level of any outcome is");
+    println!("  not a finding. What follows is: how much the ANSWER depends on the one");
+    println!("  parameter each hypothesis actually turns on. A verdict that holds across");
+    println!("  the whole range is one worth taking seriously; one that flips in the middle");
+    println!("  of it is one that rests on a guess.");
+    println!();
+
+    // ---- 1. the player's growth advantage ----------------------------------
+    println!("  1. AI as a PLAYER: how far must it outgrow the field to become hegemon?");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:>8}  {:>9}  {:>8}  {:>9}  {:>8}  {:<12}",
+        "growth", "effective", "AI end", "dominance", "coop", "fate"
+    );
+    for value in [0.000, 0.004, 0.007, 0.010, 0.013, 0.017, 0.025, 0.040] {
+        let mut args = base.clone();
+        args.ai_growth = value;
+        let layer = args.ai_params(AiRole::SixthPower);
+        args.blocs = layer.apply(&base.blocs);
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        let actor = layer.actor_index(&config.blocs);
+        let point = hinge_point(&config, &ensemble, actor);
+        let n = config.blocs.len();
+
+        let (Some(start), Some(end), Some(dominance)) =
+            (point.actor_start, point.actor_share, point.actor_dominance)
+        else {
+            continue;
+        };
+        let fate = ai::actor_fate(start, end, dominance);
+        println!(
+            "  {:>8.4}  {:>8.2}%  {:>7.1}%  {:>8.1}%  {:>8.3}  {:<12}",
+            value,
+            ai::effective_annual_advantage(value, n) * 100.0,
+            end * 100.0,
+            dominance * 100.0,
+            point.cooperation,
+            fate.label()
+        );
+    }
+    println!();
+    println!("  `effective` is the annual growth the nominal bias actually buys. The model");
+    println!("  applies a bloc's growth bias once per dyad *and* once more in the annual");
+    println!("  drift step, so a nominal rate is compounded once per bloc per year and its");
+    println!("  real meaning depends on how many blocs exist. The conventional blocs land");
+    println!("  near 3% a year, which is the column's comparison point. That multiplicity");
+    println!("  is a property of the existing model, not of this layer, and it is reported");
+    println!("  here rather than silently corrected, because correcting it would move every");
+    println!("  published --compare and --sweep result.");
+    println!();
+    println!("  Read the fate column for the answer. Where it turns from ABSORBED or");
+    println!("  ASCENDANT into HEGEMON is the growth advantage the hypothesis requires --");
+    println!("  and it is that number, not the share printed next to it, that is worth");
+    println!("  arguing about. Note what the default row says on the way there: at the");
+    println!("  fastest-growing bloc's own growth rate the actor is ABSORBED, ending below");
+    println!("  where it started, because in a mostly uncooperative world it absorbs the");
+    println!("  maximum sanction drag from every currency issuer in the system and applies");
+    println!("  none. Growing faster than every bloc is not by itself enough to hold.");
+    println!();
+    println!("  Two things the fate column does not measure, so that it is not read as more");
+    println!("  than it is. The dominance threshold is the same 45% the polarity classifier");
+    println!("  uses, so 'hegemon' here and 'unipolar' there are one claim, not two. And the");
+    println!("  band between ASCENDANT and HEGEMON is wide: at 0.0130 the actor reaches 14%");
+    println!("  of world power -- a major pole by any reading -- while the verdict still says");
+    println!("  ASCENDANT, because it is not a hegemon. The verdict answers 'does it come to");
+    println!("  dominate', not 'does it matter'.");
+
+    // ---- 2. the tool's ownership payoff ------------------------------------
+    println!();
+    println!("  2. AI as a TOOL: how uneven must ownership be to move the hierarchy?");
+    println!("  {}", "-".repeat(74));
+
+    let control_config = {
+        let mut args = base.clone();
+        args.blocs = base.ai_params(AiRole::Absent).apply(&base.blocs);
+        args.to_config()
+    };
+    let control_ensemble = Ensemble::run(&control_config);
+    let control = hinge_point(&control_config, &control_ensemble, None);
+
+    println!(
+        "  {:<12} {:>10}  {:>10}  {:>8}  {:<14} leader",
+        "lead effect", "top share", "vs no AI", "coop", "effect"
+    );
+    for value in [0.000, 0.005, 0.010, 0.020, 0.040, 0.080] {
+        let mut args = base.clone();
+        args.ai_lead_effect = value;
+        args.blocs = args.ai_params(AiRole::WieldedInstrument).apply(&base.blocs);
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        let point = hinge_point(&config, &ensemble, None);
+        let effect = ai::instrument_effect(control.top_share, point.top_share);
+        println!(
+            "  {:<12.4} {:>9.1}%  {:>+9.1}pp  {:>8.3}  {:<14} {}",
+            value,
+            point.top_share * 100.0,
+            (point.top_share - control.top_share) * 100.0,
+            point.cooperation,
+            effect.label(),
+            point.leading
+        );
+    }
+    println!();
+    println!("  The 0.000 row reproduces the control exactly, which is what makes the rest of",);
+    println!("  the column readable: every other row is that same world with the lead term");
+    println!(
+        "  switched on. The comparison point is the no-AI top share of {:.1}%.",
+        control.top_share * 100.0
+    );
+
+    // The control the whole hypothesis rests on, measured rather than asserted: a
+    // lead every bloc holds equally should leave the hierarchy almost exactly where
+    // it was, because a common lift to everyone's growth is very nearly a no-op once
+    // shares are renormalised.
+    let uniform = {
+        let mut args = base.clone();
+        let mut layer = ai::AiParams::uniform_lead(&base.blocs);
+        args.apply_ai_overrides(&mut layer);
+        args.blocs = layer.apply(&base.blocs);
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        hinge_point(&config, &ensemble, None)
+    };
+    println!();
+    println!("  CONTROL -- every bloc given the SAME lead of 1.00:");
+    println!(
+        "    top share {:.1}%  ({:+.1}pp against no AI at all), cooperation {:.3}",
+        uniform.top_share * 100.0,
+        (uniform.top_share - control.top_share) * 100.0,
+        uniform.cooperation
+    );
+    println!("  A lead that everyone holds equally barely moves the hierarchy, which is the");
+    println!("  finding the column above depends on: what AI ownership buys is decided by");
+    println!("  the *spread* of the lead vector, not by its level. It is barely rather than");
+    println!("  exactly, because the payoff feedback inside a year is not proportional");
+    println!("  across blocs, so a common lift is not perfectly neutral.");
+    println!();
+    println!("  One caveat on the top-share column: it is NOT a dose-response curve, and it");
+    println!("  is not monotone. Two different things can make it fall while the lead term");
+    println!("  grows, and the leader column only shows the second of them.");
+    println!();
+    println!("  First, top share measures *concentration*, not inequality. A bigger lead");
+    println!("  effect lets the two frontier leaders both pull away from the laggards, so");
+    println!("  the leaders converge on each other while the spread between leaders and");
+    println!("  the rest widens -- and the top share falls, because the gap between the top");
+    println!("  two has closed. That is what happens between 0.0200 and 0.0400, where the");
+    println!("  leader is unchanged and the top share drops by 17 points: nothing has gone");
+    println!("  wrong, the measure is simply answering a different question than the one it");
+    println!("  looks like it answers.");
+    println!();
+    println!("  Second, past a large enough lead the ranking itself flips -- at 0.0800 the");
+    println!("  leader becomes Atlantic, whose lead is the largest -- and the new winner's");
+    println!("  trajectory is then computed from a different path altogether.");
+    println!();
+    println!("  So read this column as 'uneven AI ownership moves the hierarchy a great");
+    println!("  deal', which the whole range shows, and not as 'this much ownership buys");
+    println!("  this much concentration', which it does not show at any point.");
+
+    // ---- 3. the disputed sign ----------------------------------------------
+    println!();
+    println!("  3. AI as a TOOL: can this model even express 'AI makes cooperation worth more'?");
+    println!("  {}", "-".repeat(74));
+    println!("  This is a NULL TEST, and it is included because it fails.");
+    println!();
+    println!(
+        "  {:<12} {:>8}  {:>9}  {:>10}  {:>9}",
+        "coefficient", "coop", "trap yrs", "top share", "pension"
+    );
+    for value in [-0.30, -0.15, 0.00, 0.15, 0.30] {
+        let mut args = base.clone();
+        args.ai_cooperation = value;
+        args.blocs = args.ai_params(AiRole::WieldedInstrument).apply(&base.blocs);
+        let config = args.to_config();
+        let ensemble = Ensemble::run(&config);
+        let point = hinge_point(&config, &ensemble, None);
+        println!(
+            "  {:<12.2} {:>8.3}  {:>8.1}%  {:>9.1}%  {:>9.3}",
+            value,
+            point.cooperation,
+            point.trap * 100.0,
+            point.top_share * 100.0,
+            point.pension
+        );
+    }
+    println!();
+    println!("  The cooperation column does not move at all, and that is not a null result");
+    println!("  about AI -- it is a limitation of this model, which is worth stating plainly");
+    println!("  rather than dressing up as a finding. `cooperation_affinity` scales the");
+    println!("  payoff a bloc *banks* when it cooperates. It never enters the solved payoff");
+    println!("  matrix, because the 2x2 is symmetric: one matrix describes both sides, so");
+    println!("  there is nowhere to put 'cooperation is worth more to this bloc'. Changing");
+    println!("  the coefficient therefore moves how power is distributed after the fact and");
+    println!("  cannot move whether a dyad cooperates in the first place.");
+    println!();
+    println!("  So MULTIPOLAR_GAME.md section 4's disputed sign -- realist AI as one more");
+    println!("  axis of zero-sum rivalry versus AI competition that need not be zero-sum --");
+    println!("  is not currently expressible in this model. Making the 2x2 itself");
+    println!("  asymmetric is what would make it expressible, and that is the structural");
+    println!("  step README.md already records as outstanding. The coefficient defaults to");
+    println!("  zero because the sign is disputed, and the row is here because a flag that");
+    println!("  silently cannot do what its name suggests is worse than one that says so.");
+
+    println!();
+    println!("  {}", "-".repeat(74));
+    println!("  Every number in this sweep comes from invented parameters. Its value is not");
+    println!("  that any row is right, but that the rows show which claims are load-bearing");
+    println!("  and which are free.");
+    println!("{}", "=".repeat(78));
+}
+
 fn main() {
     let args = parse_args();
+
+    if args.ai {
+        run_ai(&args);
+        return;
+    }
 
     if args.compare {
         run_comparison(&args);
@@ -834,6 +1221,123 @@ mod tests {
             cooperative > competitive + 0.5,
             "the two modes must be far apart or the comparison means nothing: \
              {cooperative:.3} vs {competitive:.3}"
+        );
+    }
+
+    /// `cooperation_affinity` must not be able to move the cooperation rate.
+    ///
+    /// The 2x2 is symmetric -- one payoff matrix describes both sides -- so there is
+    /// nowhere in the solved matrix to put "cooperation is worth more to this bloc".
+    /// Affinity scales the payoff a bloc *banks* when it cooperates, downstream of the
+    /// solver, so it can redistribute power after the fact but cannot change whether a
+    /// dyad cooperates in the first place.
+    ///
+    /// This is the invariant that makes `--ai`'s third sweep row a *proof* of a
+    /// limitation rather than a null result. If it ever stopped holding, that flat
+    /// column would become a bug report, and the mode's explanation of why
+    /// MULTIPOLAR_GAME.md section 4's disputed sign is not currently expressible would
+    /// become false.
+    #[test]
+    fn cooperation_affinity_cannot_move_the_cooperation_rate() {
+        let blocs = blocks::default_blocs();
+        let cooperativeness = |effect: f64| -> f64 {
+            let mut layer = ai::AiParams::wielded_instrument(&blocs);
+            layer.lead_cooperation_effect = effect;
+            let config = Config {
+                blocs: layer.apply(&blocs),
+                // One year: the shares entering the solver are identical between the
+                // two runs, so any difference would have to come from affinity itself.
+                horizon: 1,
+                runs: 20,
+                ..Config::default()
+            };
+            Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
+        };
+
+        let suppressed = cooperativeness(-0.50);
+        let amplified = cooperativeness(2.00);
+        assert!(
+            (suppressed - amplified).abs() < 1e-12,
+            "affinity has no route into the payoff matrix, so it cannot move the \
+             cooperation rate: {suppressed} vs {amplified}"
+        );
+
+        // Over a full horizon it can move it only through the power feedback, which is
+        // an indirect and much weaker path -- so the near-invariance must survive, but
+        // as near rather than exact.
+        let long_run = |effect: f64| -> f64 {
+            let mut layer = ai::AiParams::wielded_instrument(&blocs);
+            layer.lead_cooperation_effect = effect;
+            let config = Config {
+                blocs: layer.apply(&blocs),
+                horizon: 50,
+                runs: 20,
+                ..Config::default()
+            };
+            Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
+        };
+        let over_time = (long_run(-0.50) - long_run(2.00)).abs();
+        assert!(
+            over_time < 0.02,
+            "even over 50 years the indirect path must stay weak, got a difference of \
+             {over_time}"
+        );
+    }
+
+    /// `--ai` is only meaningful if its hypotheses produce different *outcomes*, not
+    /// merely different bloc lists.
+    ///
+    /// If a change to the model made the worlds behave identically, the mode would
+    /// quietly become a comparison of nothing while still printing a plausible report
+    /// -- the dangerous kind of failure, and the same one `--compare` guards against.
+    #[test]
+    fn the_ai_hypotheses_produce_different_outcomes() {
+        let base = Args {
+            horizon: 30,
+            runs: 30,
+            ..Args::default()
+        };
+        let measure = |role: AiRole| -> (f64, f64) {
+            let layer = base.ai_params(role);
+            let mut args = base.clone();
+            args.blocs = layer.apply(&base.blocs);
+            let config = args.to_config();
+            let ensemble = Ensemble::run(&config);
+            let shares = ensemble
+                .mean_shares_by_year
+                .last()
+                .cloned()
+                .unwrap_or_default();
+            (
+                ensemble.summarize(|o| o.mean_cooperation).0,
+                shares.iter().cloned().fold(0.0_f64, f64::max),
+            )
+        };
+
+        let (coop_control, top_control) = measure(AiRole::Absent);
+        let (_, top_tool) = measure(AiRole::WieldedInstrument);
+        let (coop_player, top_player) = measure(AiRole::SixthPower);
+
+        // The tool world's claimed effect, measured rather than assumed: uneven
+        // ownership must actually concentrate the system.
+        assert!(
+            top_tool > top_control + 0.02,
+            "owning AI unevenly must concentrate power: {top_tool:.3} vs {top_control:.3}"
+        );
+        // And the player world must differ from the control, or it is not a world.
+        assert!(
+            (coop_player - coop_control).abs() > 1e-6,
+            "the player world must not behave exactly like the control: \
+             {coop_player:.3} vs {coop_control:.3}"
+        );
+        // The two hypotheses must lead to materially different hierarchies, which is
+        // the comparison the mode exists to make. If they converged, the report's
+        // headline claim -- that the difference between them is structural -- would be
+        // false.
+        assert!(
+            (top_player - top_tool).abs() > 0.02,
+            "the two hypotheses must not end with the same hierarchy: \
+             {top_player:.3} as a player vs {top_tool:.3} as a tool"
         );
     }
 }

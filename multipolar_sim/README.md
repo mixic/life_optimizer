@@ -9,6 +9,7 @@ actually matters.
 
 ```
 cargo run -p multipolar_sim -- --compare               # who wins, and who loses
+cargo run -p multipolar_sim -- --ai                    # AI as a player, or as a tool?
 cargo run -p multipolar_sim -- --sweep                  # the informative mode
 cargo run -p multipolar_sim -- --seed 42 --runs 1000    # reproducible ensemble
 cargo run -p multipolar_sim -- --bloc "Atlantic:0.50:0.02:0.010:1.0"
@@ -32,6 +33,71 @@ whole ensemble reproducible, which is what lets two parameter settings be compar
 against the same shock draws instead of against different luck. `--help` prints
 every flag with its real default, derived from the code rather than written out by
 hand.
+
+## AI in the game: player, or tool?
+
+`MULTIPOLAR_GAME.md` §7 lists four live answers to "who captures the gains from
+AI" and declines to pick one. `--ai` builds the two that are structurally
+different, plus the control, and runs all three from the same shock draws:
+
+| World | What it assumes | The question it poses |
+|---|---|---|
+| `AI AS A SIXTH POWER` | AI is a player: it holds power of its own and plays every dyad | Does it end a hegemon, or is it held down? |
+| `AI AS A WIELDED TOOL` | AI is owned: no new player, but each bloc's power grows with its own AI lead | Does uneven ownership concentrate the system? |
+| `NO AI LAYER` | The existing five-bloc model, unchanged | The control both are measured against |
+
+They are not two answers to one question, so each is scored on its own terms
+rather than on one shared metric. The layer is a *transformation of the bloc
+list* — one world appends an actor, the other adds a term to `growth_bias` — which
+keeps the Monte Carlo, the solver and the pension channel untouched, and makes the
+control the existing model rather than a reimplementation of it that could drift.
+
+What the default run says, and the honest limits of it:
+
+* **As a player, AI is absorbed, not ascendant.** Grown at exactly the
+  fastest-growing conventional bloc's rate, the actor ends *below* where it
+  started. The mechanism is monetary: an actor issuing no reserve currency holds
+  no leverage over anyone while every issuer holds maximum leverage over it, so in
+  a mostly uncooperative world it absorbs the full sanction drag from every
+  direction and applies none. Growing faster than every bloc is not by itself
+  enough to hold position.
+* **It becomes hegemon only on a large growth advantage, and the sweep names it.**
+  The fate column turns from `ABSORBED` through `ASCENDANT` to `HEGEMON` between
+  roughly 8% and 11% a year of *effective* compounded growth against a field
+  compounding near 3%. That is the number worth arguing about, not the share
+  printed beside it.
+* **As a tool, uneven ownership concentrates the system a lot; equal ownership
+  does nothing.** In the default run the two frontier leaders gain and all three
+  laggards lose, and the control — the same lead for everyone — moves the top share
+  by under half a point. A general-purpose capability that lifts every bloc equally
+  is very nearly invisible in a model of *relative* power. The *sizes* do not order
+  by lead, though, and the mode does not claim they do: the lead term sits on top of
+  each bloc's pre-existing starting share and growth bias, so a bloc with a smaller
+  lead can gain more than one with a larger lead.
+* **Which bloc owns AI is not a prediction.** The lead vector's *shape* follows
+  widely reported capability concentration; its magnitudes are invented, and the
+  ranking it produces is a property of the parameterisation.
+
+Three limitations the mode prints rather than hides:
+
+1. **The cooperation question is not expressible.** `--ai-cooperation` scales the
+   payoff a bloc banks when it cooperates, and never enters the solved payoff
+   matrix, because the 2×2 is symmetric — there is nowhere to put "cooperation is
+   worth more to this bloc". The third sweep row is a *null test* and is included
+   because it fails: the coefficient cannot move the cooperation rate, so
+   `MULTIPOLAR_GAME.md` §4's disputed sign cannot currently be modelled. A test
+   pins that invariant, so the flat column stays a proof of a limitation rather
+   than becoming a silent bug.
+2. **Adding any sixth actor changes the field, not only an AI one.** The model
+   applies a bloc's growth bias once per dyad, so going from five blocs to six gives
+   every existing bloc an extra application. The verdict is unaffected — it is
+   measured on the actor itself — but a per-bloc comparison against the five-bloc
+   control is not a clean isolation and is not presented as one.
+3. **Effective growth rates are not nominal ones**, for the same reason. A nominal
+   bias is compounded once per bloc per year, so its real meaning depends on how
+   many blocs exist. This is a property of the existing model, left alone because
+   correcting it would move every published `--compare` and `--sweep` result; the
+   sweep reports the effective figure alongside the nominal one.
 
 ## Read this before using any number it prints
 
@@ -95,10 +161,11 @@ repository root:
 | `game.rs` | Symmetric 2×2 game, Nash equilibrium selection (pure or mixed), efficiency loss |
 | `blocks.rs` | Power blocs and the payoff structure their interactions produce |
 | `economy.rs` | Monetary standing, energy trade, financial conditions — with provenance |
+| `ai.rs` | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many |
 | `pension.rs` | The AHV/pension channels the simulated world implies |
 | `report.rs` | Terminal presentation |
-| `main.rs` | CLI, argument parsing, `--sweep` |
+| `main.rs` | CLI, argument parsing, `--sweep`, `--compare`, `--ai` |
 
 ## The economic layer, and what is measured versus invented
 
@@ -143,18 +210,27 @@ in the same position as a bloc that issues none. So the layer enters twice:
 
 ### Outstanding
 
-Making the 2×2 *itself* asymmetric is the next structural step. Until then,
-de-dollarisation enters through pair averages and through power, not through a
-bloc-specific payoff matrix. The reserve shares are also a fixed endowment held
-constant for all 50 years, so de-dollarisation is a change in the *level* of
-leverage rather than a drift in it. Both are noted in the report's own output.
+Making the 2×2 *itself* asymmetric is the next structural step, and `--ai` gives it
+a sharp motivation: until it is asymmetric, the claim that AI makes cooperation
+worth more to one bloc than another is not expressible at all, which the third
+sweep row demonstrates by failing. De-dollarisation has the same dependency — until
+then it enters through pair averages and through power, not through a bloc-specific
+payoff matrix. The reserve shares are also a fixed endowment held constant for all
+50 years, so de-dollarisation is a change in the *level* of leverage rather than a
+drift in it. All of these are noted in the report's own output.
 
-Not yet built, in the agreed order: AI's effect on growth, European
-deindustrialisation, and the crypto channel. That last one is planned as a
-*falsifiable* test rather than an assumed buffer, because the observed record runs
-the other way: in the March 2020 panic bitcoin fell about 56%, worse than the S&P
-500, and its correlation to equities **rose above 0.5 during turbulence** while
-decaying toward zero in calm markets — the correlation strengthens exactly when a
-buffer would be needed. (Sources: IMF COFER for reserves; Deputy PM Novak via
-OilPrice and Eurostat via TASS for energy; The Block via ForkLog for the crypto
-record.)
+A second item, surfaced by `--ai` and deliberately not fixed: a bloc's growth bias
+is applied once per dyad as well as once per year, so a bloc's growth rate depends
+on how many other blocs exist. Correcting it would move every published `--compare`
+and `--sweep` figure, so it is reported rather than changed — the AI sweep prints
+the *effective* annual growth beside the nominal figure, and the multiplier's size
+is stated in the output.
+
+Not yet built: European deindustrialisation, and the crypto channel. That last one
+is planned as a *falsifiable* test rather than an assumed buffer, because the
+observed record runs the other way: in the March 2020 panic bitcoin fell about 56%,
+worse than the S&P 500, and its correlation to equities **rose above 0.5 during
+turbulence** while decaying toward zero in calm markets — the correlation
+strengthens exactly when a buffer would be needed. (Sources: IMF COFER for
+reserves; Deputy PM Novak via OilPrice and Eurostat via TASS for energy; The Block
+via ForkLog for the crypto record.)

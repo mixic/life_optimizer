@@ -249,6 +249,12 @@ pub fn default_energy_exposure(blocs: &[PowerBloc]) -> Vec<EnergyExposure> {
             // The Gulf exporters, alongside importers that are not aligned with any
             // of the poles.
             "Non-Aligned" => illustrative(0.18, 0.48),
+            // The AI actor of `ai.rs`, present only when AI is modelled as a player.
+            // Stated rather than left to the generic fallback below, which would
+            // have it exporting energy it does not produce: a compute complex holds
+            // no oil or gas, and runs on purchased electricity rather than on its
+            // own generation.
+            "AI-Compute" => illustrative(0.95, 0.00),
             _ => illustrative(0.40, 0.20),
         };
         out.push(EnergyExposure {
@@ -565,7 +571,8 @@ mod tests {
     /// Every parameter this layer exposes must carry a provenance that says
     /// something. A blank or placeholder would defeat the point of having the enum.
     #[test]
-    fn every_parameter_declares_where_it_came_from() {        let (_, economy) = economy();
+    fn every_parameter_declares_where_it_came_from() {
+        let (_, economy) = economy();
         let rows = economy.provenance_table();
         assert!(
             rows.len() >= 7,
