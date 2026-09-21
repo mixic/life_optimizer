@@ -31,6 +31,16 @@
 //! | [`monte_carlo`] | Pension projection, conversion-rate scenarios, stress tests |
 //! | [`economic_regimes`] | Markov regime-switching return/inflation model |
 //! | [`display`] / [`mc_display`] | Terminal presentation |
+//!
+//! # Sibling crate
+//!
+//! The workspace also contains `crates/multipolar-sim`, a Monte Carlo simulator for a
+//! multipolar world and what its equilibria imply for pension security. It is
+//! deliberately *not* a module of this crate: every figure here is sourced or
+//! explicitly flagged as unsourced, while the simulator's figures are illustrative by
+//! construction, and separate crates make that boundary a `use` statement that does
+//! not exist. A build failure there cannot block this library either. See
+//! `crates/multipolar-sim/README.md`.
 
 pub mod tax;
 pub mod federal_tax;

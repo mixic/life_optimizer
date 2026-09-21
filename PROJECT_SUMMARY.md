@@ -65,6 +65,29 @@ Unlike simple inflation calculators or financial tools, this optimizer addresses
    - Interactive questionnaire
    - Flexible parameter inputs
 
+### Companion crate: `crates/multipolar-sim`
+
+A second, independent tool in the same workspace: a Monte Carlo simulator for a
+multipolar world. Five power blocs, every pair of them playing a 2×2 Cooperate/Compete
+game each year with its Nash equilibrium solved (pure or mixed), random annual shocks,
+and what the resulting world implies for pension security.
+
+```bash
+cargo run -p multipolar_sim -- --sweep
+```
+
+It exists because the optimizer above answers "what is best for *you*" and cannot
+represent "what happens if everyone does this" — the question about AHV as a
+pay-as-you-go intergenerational contract raised in
+`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` section 2c.
+
+**Its parameters are illustrative, not calibrated, and nothing it prints is a
+forecast.** `--sweep` is the informative mode. It is a separate crate rather than a
+module here because every figure this project reports is sourced or explicitly flagged
+as unsourced, while the simulator's figures are invented by construction; separate
+crates keep an illustrative number from reaching a reported tax or pension figure by
+accident. See `crates/multipolar-sim/README.md`.
+
 ### Documentation (6 comprehensive guides)
 
 1. **README.md** - Overview, features, usage examples
@@ -308,7 +331,9 @@ cargo test
 
 ## 📄 License
 
-MIT License - Free to use, modify, distribute
+GNU General Public License v3.0 (GPL-3.0) - Free to use, modify, distribute
+
+See the [LICENSE](LICENSE) file.
 
 ## Acknowledgments
 

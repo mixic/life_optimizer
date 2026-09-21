@@ -103,6 +103,43 @@ the right answer at 28 (single, building a foundation) is not the right answer a
 
 ---
 
+## Companion tool: the multipolar world simulator
+
+This repository contains a second and independent tool. `crates/multipolar-sim` is a
+Monte Carlo simulator for a multipolar world: five power blocs, every pair of them
+playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved (pure
+or mixed), random annual shocks, and what the resulting world implies for pension
+security.
+
+```bash
+cargo run -p multipolar_sim -- --sweep     # the informative mode
+cargo run -p multipolar_sim -- --help
+```
+
+It exists because the optimizer above answers "what is best for *you*" and has no way
+to represent "what happens if everyone does this" — the question
+[`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
+section 2c raises about AHV as a pay-as-you-go intergenerational contract. The theory
+it operationalises is in [`MULTIPOLAR_GAME.md`](MULTIPOLAR_GAME.md) section 4 and
+[`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) section 7d.
+
+> **Its parameters are illustrative, not calibrated, and nothing it prints is a
+> forecast.** Run `--sweep`, which shows which conclusions hold across parameter
+> ranges and which flip on small changes; that comparison is the result, not any
+> single 50-year trajectory.
+
+It is a **separate crate** rather than a module of `life-optimizer`, and that is
+deliberate. Every figure the optimizer reports is either traced to an official source
+or explicitly flagged as unsourced, with no fallback path by construction; the
+simulator's figures are invented by construction. Keeping them in separate crates
+means an illustrative number cannot reach a reported tax or pension figure by
+accident — the boundary is a `use` statement that does not exist. The same separation
+means a build failure in the simulator cannot block the optimizer. See
+[`crates/multipolar-sim/README.md`](crates/multipolar-sim/README.md) for the model and
+its module map.
+
+---
+
 ## Example output
 
 ```
@@ -151,6 +188,11 @@ cargo build --release
 ```
 
 The binary will be at `target/release/life-optimizer` (or `.exe` on Windows).
+
+This is a Cargo workspace. A bare `cargo build --release` builds only the
+`life-optimizer` package, which is what the commands below use; the companion
+simulator is a separate crate, so build both with `cargo build --release --workspace`
+or just run it with `cargo run -p multipolar_sim`.
 
 ---
 
@@ -263,22 +305,32 @@ inflation-adjusted needs through your planning horizon. See
 
 ```
 life-optimizer/
-├── Cargo.toml
+├── Cargo.toml                    Workspace manifest (root package: life-optimizer)
+├── crates/
+│   └── multipolar-sim/           Companion Monte Carlo world simulator (see above)
 ├── src/
-│   ├── main.rs               CLI, command dispatch, orchestration
-│   ├── tax.rs                Swiss progressive tax lookup tables
-│   ├── requirements.rs       Personal budget, life stages, preference weights
-│   ├── optimizer.rs          Multi-objective utility optimization engine
-│   ├── monte_carlo.rs        Pension Monte Carlo + regime-switching simulation
-│   ├── economic_regimes.rs   Markov chain economic regime model
-│   ├── display.rs            Work-life balance result formatting
-│   └── mc_display.rs         Pension simulation result formatting
-├── MATHEMATICS.md            Full mathematical formulation
-├── ECONOMIC_SCENARIOS.md     Regime-switching model & stress test details
-├── PENSION_OPTIMIZATION.md   Pension sustainability methodology
-├── EXAMPLES.md                Worked usage examples
-├── QUICKSTART.md              Getting-started guide
-└── PROJECT_SUMMARY.md         Executive overview
+│   ├── main.rs                   CLI, command dispatch, orchestration
+│   ├── lib.rs                    Library surface and module map
+│   ├── tax.rs                    Swiss tax: federal + cantonal + social security
+│   ├── federal_tax.rs            Federal tariff, including closed-form formulas
+│   ├── cantons.rs                Cantonal schedules, Steuerfuss, provenance rules
+│   ├── deductions.rs             Deduction engine (rules, applicability, scales)
+│   ├── requirements.rs           Personal budget, life stages, preference weights
+│   ├── consumption.rs            Consumption basket and cost model
+│   ├── optimizer.rs              Multi-objective utility optimization engine
+│   ├── monte_carlo.rs            Pension Monte Carlo + regime-switching simulation
+│   ├── economic_regimes.rs       Markov chain economic regime model
+│   ├── display.rs                Work-life balance result formatting
+│   ├── mc_display.rs             Pension simulation result formatting
+│   └── *_data.rs                 GENERATED tables (ESTV scales, deductions, Steuerfuss)
+├── MATHEMATICS.md                Full mathematical formulation
+├── ECONOMIC_SCENARIOS.md         Regime-switching model & stress test details
+├── PENSION_OPTIMIZATION.md       Pension sustainability methodology
+├── SWISS_TAX_DATA.md             Tax data provenance, coverage and known defects
+├── MULTIPOLAR_GAME.md            Theory the companion simulator operationalises
+├── EXAMPLES.md                   Worked usage examples
+├── QUICKSTART.md                 Getting-started guide
+└── PROJECT_SUMMARY.md            Executive overview
 ```
 
 ---
