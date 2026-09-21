@@ -36,12 +36,13 @@ mod pension;
 mod report;
 mod simulation;
 
-use blocks::GameParams;
+use blocks::{GameParams, PowerBloc};
 use simulation::{Config, Ensemble};
 
 /// Options, parsed from `--flag value` pairs without an argument-parsing crate.
 #[derive(Debug, Clone)]
 struct Args {
+    blocs: Vec<PowerBloc>,
     horizon: u32,
     runs: usize,
     seed: u64,
@@ -59,6 +60,7 @@ impl Default for Args {
     fn default() -> Self {
         let params = GameParams::default();
         Args {
+            blocs: blocks::default_blocs(),
             horizon: 50,
             runs: 400,
             seed: simulation::DEFAULT_SEED,
@@ -108,8 +110,56 @@ impl Args {
         true
     }
 
+    /// Apply a `--bloc Name:share:bias:volatility:affinity` definition.
+    ///
+    /// Replaces the bloc of that name if the system has one, otherwise adds it, so
+    /// the default five-pole system can be edited field by field as well as
+    /// replaced. Names match case-insensitively so the report's capitalisation does
+    /// not have to be reproduced exactly.
+    ///
+    /// A malformed definition is reported and refused rather than half-applied: a
+    /// bloc silently missing one field would look like a modelling result.
+    fn set_bloc(&mut self, spec: &str) -> bool {
+        let parts: Vec<&str> = spec.split(':').collect();
+        if parts.len() != 5 {
+            eprintln!(
+                "warning: --bloc expects Name:share:bias:volatility:affinity, got {spec:?}"
+            );
+            return false;
+        }
+        let name = parts[0].trim();
+        if name.is_empty() {
+            eprintln!("warning: --bloc needs a non-empty name: {spec:?}");
+            return false;
+        }
+        let parsed: Option<Vec<f64>> = parts[1..]
+            .iter()
+            .map(|field| field.trim().parse::<f64>().ok())
+            .collect();
+        let Some(numbers) = parsed else {
+            eprintln!("warning: --bloc has a non-numeric field: {spec:?}");
+            return false;
+        };
+        if numbers.iter().any(|value| !value.is_finite()) {
+            eprintln!("warning: --bloc has a non-finite field: {spec:?}");
+            return false;
+        }
+
+        let bloc = PowerBloc::new(name, numbers[0], numbers[1], numbers[2], numbers[3]);
+        match self
+            .blocs
+            .iter_mut()
+            .find(|existing| existing.name.eq_ignore_ascii_case(name))
+        {
+            Some(existing) => *existing = bloc,
+            None => self.blocs.push(bloc),
+        }
+        true
+    }
+
     fn to_config(&self) -> Config {
         let mut config = Config {
+            blocs: self.blocs.clone(),
             horizon: self.horizon,
             runs: self.runs,
             seed: self.seed,
@@ -148,6 +198,20 @@ fn parse_args() -> Args {
             "--sweep" => {
                 args.sweep = true;
                 i += 1;
+            }
+            "--bloc" => {
+                // The one flag whose value is not a number, so it cannot go through
+                // the numeric path below.
+                match raw.get(i + 1) {
+                    Some(spec) => {
+                        args.set_bloc(spec);
+                        i += 2;
+                    }
+                    None => {
+                        eprintln!("warning: --bloc needs a value");
+                        i += 1;
+                    }
+                }
             }
             _ => {
                 let parsed = raw.get(i + 1).and_then(|v| v.parse::<f64>().ok());
@@ -190,12 +254,23 @@ OPTIONS:
   --conflict-wear <x>        how much tension erodes mutual   (default {conflict_wear:.1})
                              competition -- the arms-race
                              fatigue that lets conflict end
+  --bloc <spec>              add or edit a power bloc; repeatable
   --volatility <scale>       multiply every bloc's volatility (default 1.0)
   --sweep                    run the sensitivity sweep instead of one report
   --help                     this message
 
   `--seed` is printed above in the decimal form it is parsed from, so the value
   can be copied straight back onto the command line.
+
+  `--bloc` takes Name:share:bias:volatility:affinity, matching the bloc name
+  case-insensitively. It edits the bloc of that name if the system has one,
+  otherwise it appends a new one, so the default five-pole system can be
+  reshaped one field at a time or replaced outright.
+
+  The five default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
+  0.26/0.008/0.025/0.95, Eurasian 0.16/0.002/0.035/0.70, Indo-Pacific
+  0.14/0.010/0.030/0.90 and Non-Aligned 0.14/0.004/0.040/1.05, as
+  share/growth-bias/volatility/cooperation-affinity.
 
 The sweep is the informative mode: it shows which qualitative outcomes are robust
 across parameter ranges and which flip on small changes. See report.rs.",
@@ -327,4 +402,67 @@ fn main() {
     println!("  Run with --sweep to see how much of the above depends on parameters");
     println!("  that were invented rather than measured. That is the more useful run.");
     println!("{}", "=".repeat(78));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `--bloc` must edit the named bloc rather than duplicating it, must append an
+    /// unknown one, and must refuse a malformed spec outright. "Editable power
+    /// blocs" is only a real property if editing one behaves predictably, and a bloc
+    /// silently missing a field would look like a modelling result.
+    #[test]
+    fn bloc_definitions_edit_or_append_but_never_half_apply() {
+        let mut args = Args::default();
+        let before = args.blocs.len();
+
+        // Editing an existing bloc replaces it in place, field for field.
+        assert!(args.set_bloc("Atlantic:0.40:0.001:0.030:0.80"));
+        assert_eq!(args.blocs.len(), before, "an edit must not add a bloc");
+        let atlantic = args
+            .blocs
+            .iter()
+            .find(|bloc| bloc.name == "Atlantic")
+            .expect("Atlantic is one of the default blocs");
+        assert_eq!(atlantic.power_share, 0.40);
+        assert_eq!(atlantic.growth_bias, 0.001);
+        assert_eq!(atlantic.volatility, 0.030);
+        assert_eq!(atlantic.cooperation_affinity, 0.80);
+
+        // Matching is case-insensitive and tolerates surrounding whitespace, so the
+        // report's capitalisation does not have to be reproduced exactly.
+        assert!(args.set_bloc("  sInIc : 0.20 : 0.002 : 0.020 : 0.90"));
+        assert_eq!(
+            args.blocs.len(),
+            before,
+            "a case-different name is still an edit, not an addition"
+        );
+        assert_eq!(
+            args.blocs
+                .iter()
+                .filter(|bloc| bloc.name.eq_ignore_ascii_case("sinic"))
+                .count(),
+            1,
+            "the edit must not have created a second Sinic"
+        );
+
+        // An unknown name appends, which is how a sixth pole is introduced.
+        assert!(args.set_bloc("Antarctic:0.05:0.000:0.010:1.00"));
+        assert_eq!(args.blocs.len(), before + 1);
+
+        // Malformed specs are refused and change nothing.
+        let snapshot = args.blocs.len();
+        for bad in [
+            "Atlantic",
+            "Atlantic:0.3:0.0:0.02",
+            "Atlantic:0.3:0.0:0.02:1.0:extra",
+            ":0.3:0.0:0.02:1.0",
+            "Atlantic:share:0.0:0.02:1.0",
+            "Atlantic:inf:0.0:0.02:1.0",
+        ] {
+            assert!(!args.set_bloc(bad), "{bad:?} should be refused");
+            assert_eq!(args.blocs.len(), snapshot, "{bad:?} must not be applied");
+        }
+    }
 }

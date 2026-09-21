@@ -7,6 +7,22 @@ playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved
 Run it with `cargo run -p multipolar_sim`, and with `--sweep` for the run that
 actually matters.
 
+```
+cargo run -p multipolar_sim -- --sweep                  # the informative mode
+cargo run -p multipolar_sim -- --seed 42 --runs 1000    # reproducible ensemble
+cargo run -p multipolar_sim -- --bloc "Atlantic:0.50:0.02:0.010:1.0"
+cargo run -p multipolar_sim -- --bloc "Antarctic:0.06:0.010:0.020:1.00"
+cargo run -p multipolar_sim -- --help
+```
+
+`--bloc` takes `Name:share:bias:volatility:affinity`, edits the named bloc if the
+system has one and appends it otherwise, and is repeatable — so the five-pole
+default can be reshaped a field at a time or replaced outright. `--seed` makes a
+whole ensemble reproducible, which is what lets two parameter settings be compared
+against the same shock draws instead of against different luck. `--help` prints
+every flag with its real default, derived from the code rather than written out by
+hand.
+
 ## Read this before using any number it prints
 
 **Nothing in this crate is calibrated.** The growth rates, volatilities,
