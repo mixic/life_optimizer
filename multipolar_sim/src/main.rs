@@ -33,6 +33,7 @@
 mod ai;
 mod blocks;
 mod economy;
+mod export;
 mod game;
 mod pension;
 mod report;
@@ -81,6 +82,8 @@ struct Args {
     compare: bool,
     ai: bool,
     scenarios: bool,
+    /// Directory to write plotting CSVs into, when `--export` was given.
+    export: Option<std::path::PathBuf>,
 }
 
 impl Default for Args {
@@ -113,6 +116,7 @@ impl Default for Args {
             compare: false,
             ai: false,
             scenarios: false,
+            export: None,
         }
     }
 }
@@ -321,6 +325,19 @@ fn parse_args() -> Args {
                 args.scenarios = true;
                 i += 1;
             }
+            "--export" => {
+                // Like `--bloc` and `--war-target`, this flag's value is not a number.
+                match raw.get(i + 1) {
+                    Some(path) => {
+                        args.export = Some(std::path::PathBuf::from(path));
+                        i += 2;
+                    }
+                    None => {
+                        eprintln!("warning: --export needs a directory path");
+                        i += 1;
+                    }
+                }
+            }
             "--war-target" => {
                 // Like `--bloc`, the one other flag whose value is not a number.
                 match raw.get(i + 1) {
@@ -404,6 +421,12 @@ OPTIONS:
   --scenarios                run a set of named worlds side by side:
                              a Sinic economic rise, a global crisis,
                              and war centred on a named bloc
+  --export <dir>             write CSV for plotting into <dir>: per-year
+                             quantiles across runs, one row per run, the
+                             pension channel, and the exposure and leverage
+                             each bloc faces. With --scenarios it also writes
+                             the scenario comparison. Draw it with
+                             tools/plot_multipolar.py
   --compare                  run the cooperative and non-cooperative worlds
                              side by side and report who wins and who loses
   --ai                       run AI as a player and AI as a tool side by side,
@@ -430,14 +453,15 @@ OPTIONS:
   the two sides of a dyad differ; omitting it leaves the bloc neutral at
   1.0, which is what every bloc was before the game became a bimatrix.
 
-  The seven default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
-  0.26/0.040/0.025/0.95, Eurasian 0.16/0.010/0.035/0.70, Indo-Pacific
-  0.14/0.050/0.030/0.90, and the three that used to be one non-aligned
-  residual -- Africa 0.05, Gulf 0.05 and Non-Aligned 0.04, each at
-  0.020/0.040/1.05 -- as share/growth-bias/volatility/cooperation-affinity.
-  The growth biases are annual rates. The three regional blocs share a set of
-  parameters deliberately: the split is meant to change the network, not to
-  smuggle in a spread of new guesses. All seven are neutral on valuation.
+  The eight default blocs are United States 0.17/0.000/0.020/1.00, Europe
+  0.13/0.000/0.020/1.00, Sinic 0.26/0.040/0.025/0.95, Eurasian
+  0.16/0.010/0.035/0.70, Indo-Pacific 0.14/0.050/0.030/0.90, and the three
+  regional blocs of the old non-aligned residual -- Africa 0.05, Gulf 0.05 and
+  Non-Aligned 0.04, each at 0.020/0.040/1.05 -- as
+  share/growth-bias/volatility/cooperation-affinity. The first two are the old
+  Atlantic bloc split in two, and the three regionals are the old Non-Aligned
+  residual split in three; each split inherits the parameters it replaced. The
+  growth biases are annual rates. All eight are neutral on valuation.
 
   `--ai` is not a sixth bloc and not a multiplier: it is both, run as two
   rival hypotheses about what AI is, against the existing five-bloc model
@@ -1037,7 +1061,7 @@ fn run_ai_hinge(base: &Args) {
     println!("  Two things the fate column does not measure, so that it is not read as more");
     println!("  than it is. The dominance threshold is the same 45% the polarity classifier");
     println!("  uses, so 'hegemon' here and 'unipolar' there are one claim, not two. And the");
-    println!("  band between ASCENDANT and HEGEMON is wide: at 0.080 the actor reaches 32%");
+    println!("  band between ASCENDANT and HEGEMON is wide: at 0.080 the actor reaches 31%");
     println!("  of world power -- a major pole by any reading -- while the verdict still says");
     println!("  ASCENDANT, because it is not a hegemon. The verdict answers 'does it come to");
     println!("  dominate', not 'does it matter'.");
@@ -1112,26 +1136,24 @@ fn run_ai_hinge(base: &Args) {
     println!("  exactly, because the payoff feedback inside a year is not proportional");
     println!("  across blocs, so a common lift is not perfectly neutral.");
     println!();
-    println!("  One caveat on the top-share column: it is NOT a dose-response curve, and it");
-    println!("  is not monotone. Two different things can make it fall while the lead term");
-    println!("  grows, and the leader column only shows the second of them.");
+    println!("  One caveat on the top-share column: it measures *concentration*, and it is");
+    println!("  now monotone across the whole range -- 38.5% at no lead, 43.2% at 0.0100,");
+    println!("  55.4% at 0.0400, 64.7% at 0.0800. It was not monotone before the Atlantic");
+    println!("  split, and the reason is worth keeping: the old Atlantic aggregate held both");
+    println!("  the largest starting share and the largest AI lead, so a bigger lead let the");
+    println!("  two frontier blocs pull away together, the gap between the top two closed, and");
+    println!("  the top share *fell* while the system was in fact concentrating. With the");
+    println!("  United States and Europe separate, the leader at every level is Sinic -- which");
+    println!("  holds the largest share but only the second-largest lead -- so that particular");
+    println!("  cancellation no longer happens and the column reads as it looks.");
     println!();
-    println!("  First, top share measures *concentration*, not inequality. A bigger lead");
-    println!("  effect lets the two frontier leaders both pull away from the laggards, so");
-    println!("  the leaders converge on each other while the spread between leaders and");
-    println!("  the rest widens -- and the top share falls, because the gap between the top");
-    println!("  two has closed. That is what happens between 0.0200 and 0.0400, where the");
-    println!("  leader is unchanged and the top share drops by 17 points: nothing has gone");
-    println!("  wrong, the measure is simply answering a different question than the one it");
-    println!("  looks like it answers.");
-    println!();
-    println!("  Second, past a large enough lead the ranking itself flips -- at 0.0800 the");
-    println!("  leader becomes Atlantic, whose lead is the largest -- and the new winner's");
-    println!("  trajectory is then computed from a different path altogether.");
+    println!("  What that costs is the second thing the old text could show: the ranking no");
+    println!("  longer flips at any lead effect in the range. Ownership moves how *much* the");
+    println!("  leader holds, from 38.5% to 64.7%, and never who it is.");
     println!();
     println!("  So read this column as 'uneven AI ownership moves the hierarchy a great");
     println!("  deal', which the whole range shows, and not as 'this much ownership buys");
-    println!("  this much concentration', which it does not show at any point.");
+    println!("  this much concentration', which no single row establishes.");
 
     // ---- 3. the disputed sign ----------------------------------------------
     println!();
@@ -1188,9 +1210,9 @@ fn run_ai_hinge(base: &Args) {
     println!();
     println!("  What to take from the numbers, and the grid is deliberately fine enough");
     println!("  to show this: the cooperation rate is MONOTONE on each side of zero and");
-    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.266 ->");
-    println!("  0.285; from 0.01 to 0.30 it rises 0.312 -> 0.359; and at exactly 0.00 it is");
-    println!("  0.212, below both. So:");
+    println!("  DISCONTINUOUS at it. Moving from -0.30 to -0.01 cooperation rises 0.276 ->");
+    println!("  0.296; from 0.01 to 0.30 it rises 0.326 -> 0.374; and at exactly 0.00 it is");
+    println!("  0.214, below both. So:");
     println!();
     println!("    ROBUST: the SIGN. A coefficient that makes AI ownership raise the owner's");
     println!("    valuation of cooperation produces a more cooperative world than one that");
@@ -1208,7 +1230,7 @@ fn run_ai_hinge(base: &Args) {
     println!("  identical, and the exchangeability rule then closes the asymmetric branch");
     println!("  completely -- a symmetric game cannot report that one of two identical");
     println!("  players is the cooperator. Any nonzero spread, in either direction, opens");
-    println!("  that branch, which is why the asymmetric share jumps from 0% to 15-51%");
+    println!("  that branch, which is why the asymmetric share jumps from 0% to 17-57%");
     println!("  beside it.");
     println!();
     println!("  That discontinuity is itself a limitation worth naming: behaviour that is");
@@ -1327,6 +1349,12 @@ fn scenarios() -> Vec<Scenario> {
 fn run_scenarios(base: &Args) {
     let scenarios = scenarios();
     let mut rows: Vec<(&Scenario, HingePoint, Vec<String>)> = Vec::new();
+    // The same end shares again, as numbers: the strings above are for the printed
+    // table and would have to be parsed back for the export, which is exactly the kind
+    // of round trip that silently disagrees with itself.
+    let mut numeric: Vec<Vec<f64>> = Vec::new();
+    // The first scenario is the baseline world, kept whole for the export.
+    let mut baseline_world: Option<(Config, Ensemble)> = None;
 
     for scenario in &scenarios {
         let mut args = base.clone();
@@ -1354,6 +1382,13 @@ fn run_scenarios(base: &Args) {
 
         let config = args.to_config();
         let ensemble = Ensemble::run(&config);
+        // The baseline world is kept so that `--scenarios --export` can write the full
+        // per-year bundle as well as the comparison: the figures are drawn from one
+        // directory, and a plot command that worked for the default world but not for
+        // the scenario run would be a trap.
+        if baseline_world.is_none() {
+            baseline_world = Some((config.clone(), ensemble.clone()));
+        }
         let point = hinge_point(&config, &ensemble, None);
         let shares = ensemble
             .mean_shares_by_year
@@ -1373,6 +1408,53 @@ fn run_scenarios(base: &Args) {
             })
             .collect();
         rows.push((scenario, point, per_bloc));
+        numeric.push(shares);
+    }
+
+    // The export is written before the reading below, so a failure to write is
+    // reported alongside the tables rather than after an essay about them.
+    if let Some(dir) = &base.export {
+        let mut written: Vec<std::path::PathBuf> = Vec::new();
+        if let Some((config, ensemble)) = &baseline_world {
+            match export::write_bundle(dir, config, ensemble) {
+                Ok(files) => written.extend(files),
+                Err(error) => eprintln!("warning: could not write the world export: {error}"),
+            }
+        }
+        let scenario_rows: Vec<export::ScenarioRow> = rows
+            .iter()
+            .zip(numeric.iter())
+            .map(|((scenario, point, _), shares)| export::ScenarioRow {
+                label: scenario.label.to_string(),
+                premise: scenario.premise.to_string(),
+                cooperation: point.cooperation,
+                tension: point.tension,
+                trap: point.trap,
+                pareto_loss: point.loss,
+                pension: point.pension,
+                leading: point.leading.clone(),
+                top_share: point.top_share,
+                shares: shares.clone(),
+                bloc_names: base.blocs.iter().map(|b| b.name.clone()).collect(),
+                start_shares: base.blocs.iter().map(|b| b.power_share).collect(),
+            })
+            .collect();
+        match export::write_scenarios(dir, &scenario_rows) {
+            Ok(files) => written.extend(files),
+            Err(error) => {
+                eprintln!("warning: could not write the scenario export: {error}");
+            }
+        }
+        if !written.is_empty() {
+            println!();
+            println!("  EXPORTED for plotting ({}):", dir.display());
+            for file in &written {
+                println!("    {}", file.display());
+            }
+            println!();
+            println!("  Draw the figures with:");
+            println!("    python tools/plot_multipolar.py {}", dir.display());
+        }
     }
 
     println!();
@@ -1497,9 +1579,9 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     println!("     once a growth lead is established: the bloc simply outgrows the disorder.");
     println!();
     println!("     **And notice what it does not do: it leaves the world exactly as");
-    println!("     cooperative as it was.** Cooperation 0.210 -> 0.210, trap years 96.6% ->");
+    println!("     cooperative as it was.** Cooperation 0.212 -> 0.213, trap years 96.7% ->");
     println!(
-        "     96.5%, pension 0.502 -> 0.503. A bloc taking {:.0}% of world power",
+        "     96.7%, pension 0.504 -> 0.504. A bloc taking {:.0}% of world power",
         grows.1.top_share * 100.0
     );
     println!("     changes *who holds power* not at all how the system behaves, because it is");
@@ -1607,7 +1689,10 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     println!("  5. What this model cannot say about your question");
     println!("     Four limits, stated rather than left to be discovered:");
     println!("     - **Africa is a bloc now, and still not a place.** The blocs are");
-    println!("       Atlantic, Sinic, Eurasian, Indo-Pacific, Africa, Gulf and Non-Aligned.");
+    println!("       United States, Europe, Sinic, Eurasian, Indo-Pacific, Africa, Gulf and");
+    println!("       Non-Aligned. The United States and Europe are separate blocs, so the");
+    println!("       transatlantic relationship -- and the dollar's leverage over the euro");
+    println!("       area -- is visible rather than averaged away.");
     println!("       'Africa' is the whole continent at 5% of system power, carrying the");
     println!("       Maghreb because the one energy anchor this model holds for it is");
     println!("       Algerian gas. A war 'in Africa' is therefore a war on that aggregate: a");
@@ -1663,6 +1748,22 @@ fn main() {
     let ensemble = Ensemble::run(&config);
     report::print_report(&config, &ensemble);
 
+    if let Some(dir) = &args.export {
+        match export::write_bundle(dir, &config, &ensemble) {
+            Ok(files) => {
+                println!();
+                println!("  EXPORTED for plotting ({}):", dir.display());
+                for file in files {
+                    println!("    {}", file.display());
+                }
+                println!();
+                println!("  Draw the figures with:");
+                println!("    python tools/plot_multipolar.py {}", dir.display());
+            }
+            Err(error) => eprintln!("warning: could not write the export: {error}"),
+        }
+    }
+
     println!();
     println!("  {}", "-".repeat(74));
     println!("  Run with --sweep to see how much of the above depends on parameters");
@@ -1684,17 +1785,17 @@ mod tests {
         let before = args.blocs.len();
 
         // Editing an existing bloc replaces it in place, field for field.
-        assert!(args.set_bloc("Atlantic:0.40:0.001:0.030:0.80"));
+        assert!(args.set_bloc("United States:0.40:0.001:0.030:0.80"));
         assert_eq!(args.blocs.len(), before, "an edit must not add a bloc");
-        let atlantic = args
+        let edited = args
             .blocs
             .iter()
-            .find(|bloc| bloc.name == "Atlantic")
-            .expect("Atlantic is one of the default blocs");
-        assert_eq!(atlantic.power_share, 0.40);
-        assert_eq!(atlantic.growth_bias, 0.001);
-        assert_eq!(atlantic.volatility, 0.030);
-        assert_eq!(atlantic.cooperation_affinity, 0.80);
+            .find(|bloc| bloc.name == "United States")
+            .expect("the United States is one of the default blocs");
+        assert_eq!(edited.power_share, 0.40);
+        assert_eq!(edited.growth_bias, 0.001);
+        assert_eq!(edited.volatility, 0.030);
+        assert_eq!(edited.cooperation_affinity, 0.80);
 
         // Matching is case-insensitive and tolerates surrounding whitespace, so the
         // report's capitalisation does not have to be reproduced exactly.

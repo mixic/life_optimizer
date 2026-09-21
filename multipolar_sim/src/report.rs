@@ -765,7 +765,7 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
         its_leverage * 100.0
     );
     println!(
-        "  leverage held over it        {:.2}    the maximum any bloc can hold",
+        "  leverage held over it        {:.2}    the most any one issuer holds over it",
         max_leverage_over_it
     );
     println!("  energy disruption exposure   {exposure:.2}");

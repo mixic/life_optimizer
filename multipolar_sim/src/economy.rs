@@ -124,10 +124,19 @@ pub fn default_reserve_shares(blocs: &[PowerBloc]) -> (Vec<f64>, f64, Provenance
     let at = |name: &str| blocs.iter().position(|b| b.name == name);
     let mut shares = vec![0.0; blocs.len()];
 
-    if let Some(atlantic) = at("Atlantic") {
-        shares[atlantic] += 56.77; // US dollar, sourced
-        shares[atlantic] += 20.25; // euro: issued by the euro area, inside this bloc
-        shares[atlantic] += 10.7; // illustrative share of the 14.90 minor aggregate
+    // The dollar is issued by the United States and the euro by the euro area, and
+    // since the Atlantic split those are different blocs -- which is the point of it.
+    // The illustrative 10.7 of the minor-currency aggregate is divided between them:
+    // sterling is a European currency, and the Canadian and Australian dollars are
+    // commodity currencies held alongside dollar reserves. The total is unchanged, so
+    // the published totals and the unattributed residual are too.
+    if let Some(us) = at("United States") {
+        shares[us] += 56.77; // US dollar, sourced
+        shares[us] += 5.2; // illustrative: the commodity dollars of the 14.90 aggregate
+    }
+    if let Some(europe) = at("Europe") {
+        shares[europe] += 20.25; // euro, sourced
+        shares[europe] += 5.5; // illustrative: sterling, the largest non-yen minor
     }
     if let Some(sinic) = at("Sinic") {
         shares[sinic] += 1.95; // renminbi, sourced
@@ -240,9 +249,13 @@ pub fn default_energy_exposure(blocs: &[PowerBloc]) -> Vec<EnergyExposure> {
     let mut out = Vec::with_capacity(blocs.len());
     for bloc in blocs {
         let (import, export, provenance) = match bloc.name.as_str() {
-            // The United States is a net exporter of oil and LNG while the euro area
-            // is a large importer, so the bloc aggregate is close to balanced.
-            "Atlantic" => illustrative(0.35, 0.25),
+            // A net exporter of oil and LNG: the lowest import dependence of any large
+            // bloc, with a real export position behind it.
+            "United States" => illustrative(0.15, 0.20),
+            // The largest energy importer in the model and a negligible exporter. This
+            // is the position the old "Atlantic" aggregate hid -- it averaged a net
+            // exporter and a large importer into a bloc neither of them was.
+            "Europe" => illustrative(0.60, 0.03),
             // The world's largest crude importer, with a gas import bill to match.
             "Sinic" => illustrative(0.72, 0.02),
             // The opposite position: energy is the core of its export revenue.
@@ -292,7 +305,8 @@ pub fn default_energy_flows(blocs: &[PowerBloc]) -> Vec<EnergyFlow> {
         }
     };
 
-    let atlantic = index("Atlantic");
+    let us = index("United States");
+    let europe = index("Europe");
     let sinic = index("Sinic");
     let eurasian = index("Eurasian");
     let indo = index("Indo-Pacific");
@@ -304,19 +318,23 @@ pub fn default_energy_flows(blocs: &[PowerBloc]) -> Vec<EnergyFlow> {
     push(eurasian, sinic, 0.48);
     push(eurasian, indo, 0.32);
     // The residual reaches Europe and others, much reduced but not zero.
-    push(eurasian, atlantic, 0.12);
+    push(eurasian, europe, 0.12);
 
     // Sourced: Russian LNG was 16.1% and Russian pipeline gas 16.3% of EU imports by
-    // value in 2025, against a US share of 52.5% of LNG. The last is intra-bloc
-    // trade for this model, so it does not appear as a flow.
-    push(eurasian, atlantic, 0.0);
+    // value in 2025, against a US share of 52.5% of LNG. That last one used to be
+    // intra-bloc trade -- the United States and the euro area were one bloc -- so it
+    // appeared nowhere; with the Atlantic split it is the largest single energy flow
+    // in the model, which is what a transatlantic rupture would actually sever. The
+    // *direction* is the reported figure; the conversion from a share of EU imports to
+    // a share of US exports is illustrative.
+    push(us, europe, 0.35);
 
     // Sourced: Algeria 27.4%, Norway 24.9% and Azerbaijan 12.8% of EU pipeline gas.
     // Algeria is the supplier this flow is built from, and it is why the flow leaves
     // the African bloc: before the regional split it left "Non-Aligned", a bloc whose
     // own description never named Africa, so the single most-sourced number in this
     // layer was attached to a region the model did not have.
-    push(africa, atlantic, 0.30);
+    push(africa, europe, 0.30);
 
     // The Gulf supplies the two Asian importers. This is the bulk of what the old
     // non-aligned aggregate exported, and the Gulf is what exports it.
@@ -428,31 +446,51 @@ mod tests {
     /// actually the anchor.
     #[test]
     fn reserve_shares_reproduce_the_published_totals() {
-        let (_, economy) = economy();
+        let (blocs, economy) = economy();
         let total: f64 = economy.reserve_shares.iter().sum::<f64>() + economy.unattributed_reserves;
         assert!(
             (total - 1.0).abs() < 1e-9,
             "reserve shares plus the unattributed residual must sum to 1, got {total}"
         );
 
-        // 56.77 (USD) + 20.25 (EUR) + 10.7 (illustrative Atlantic share of minor
-        // currencies) = 87.72% for the Atlantic bloc.
-        let atlantic = economy.reserve_shares[0];
+        // 56.77 (USD) + 5.2 (illustrative commodity dollars) = 61.97% for the United
+        // States; 20.25 (EUR) + 5.5 (illustrative sterling) = 25.75% for Europe. The
+        // two together are the 87.72% the old Atlantic aggregate held, which is the
+        // check that the split partitioned the attribution rather than changing it.
+        let by_name = |name: &str| {
+            let index = blocs
+                .iter()
+                .position(|b| b.name == name)
+                .expect("the default bloc list contains this bloc");
+            economy.reserve_shares[index]
+        };
+
         assert!(
-            (atlantic - 0.8772).abs() < 1e-9,
-            "Atlantic should hold the dollar and the euro, got {atlantic}"
+            (by_name("United States") - 0.6197).abs() < 1e-9,
+            "the United States should hold the dollar, got {}",
+            by_name("United States")
+        );
+        assert!(
+            (by_name("Europe") - 0.2575).abs() < 1e-9,
+            "Europe should hold the euro and sterling, got {}",
+            by_name("Europe")
+        );
+        assert!(
+            by_name("United States") > by_name("Europe"),
+            "the dollar's share is larger than the euro's, and the split must not \
+             invent otherwise"
         );
 
         // The renminbi is the only other individually identified share that maps to
         // a bloc, and it is small. A model that made it large would be contradicting
         // its own source.
+        let sinic = by_name("Sinic");
         assert!(
-            (economy.reserve_shares[1] - 0.0195).abs() < 1e-9,
-            "Sinic should be the renminbi share alone, got {}",
-            economy.reserve_shares[1]
+            (sinic - 0.0195).abs() < 1e-9,
+            "Sinic should be the renminbi share alone, got {sinic}"
         );
         assert!(
-            economy.reserve_shares[1] < 0.05,
+            sinic < 0.05,
             "the renminbi's reserve share is a few percent, not a rival to the dollar"
         );
     }
@@ -473,17 +511,39 @@ mod tests {
     #[test]
     fn monetary_leverage_is_directional_and_bounded() {
         let (blocs, economy) = economy();
-        // The Atlantic bloc issues the dollar and the euro; the Eurasian bloc issues
-        // no reserve currency at all.
-        let atlantic_over_eurasian = economy.monetary_leverage(0, 2);
-        let eurasian_over_atlantic = economy.monetary_leverage(2, 0);
+        let at = |name: &str| {
+            blocs
+                .iter()
+                .position(|b| b.name == name)
+                .expect("default bloc")
+        };
+
+        // The transatlantic asymmetry the split made expressible: the United States
+        // issues the currency Europe's reserves are mostly held in, and not the
+        // reverse. Before the split this was invisible by construction -- one bloc
+        // issued both the dollar and the euro.
+        let us_over_europe = economy.monetary_leverage(at("United States"), at("Europe"));
+        let europe_over_us = economy.monetary_leverage(at("Europe"), at("United States"));
         assert!(
-            atlantic_over_eurasian > eurasian_over_atlantic,
-            "leverage must run from issuer to non-issuer: {atlantic_over_eurasian} vs \
-             {eurasian_over_atlantic}"
+            us_over_europe > europe_over_us,
+            "leverage must run from the larger issuer to the smaller: {us_over_europe} vs \
+             {europe_over_us}"
+        );
+        assert!(
+            us_over_europe > 0.4,
+            "the dollar's lead over the euro is large enough to matter, got \
+             {us_over_europe}"
+        );
+
+        // And it must still run from issuer to non-issuer at all.
+        let eurasian = at("Eurasian");
+        assert!(
+            us_over_europe > economy.monetary_leverage(eurasian, at("United States")),
+            "an issuer must hold more leverage than a bloc with no reserve currency"
         );
         assert_eq!(
-            eurasian_over_atlantic, 0.0,
+            economy.monetary_leverage(eurasian, at("United States")),
+            0.0,
             "a bloc issuing no reserve currency has no monetary leverage"
         );
         for a in 0..blocs.len() {
@@ -552,12 +612,15 @@ mod tests {
         );
         let _ = name;
 
-        // And the attribution the regional split was for: the two anchors must leave
-        // the blocs that actually supply them. Both used to leave "Non-Aligned", which
-        // named neither Africa nor the Gulf.
+        // And the attribution the splits were for: each anchor must leave the bloc that
+        // actually supplies it, rather than an aggregate that never named it.
         let africa = blocs.iter().position(|b| b.name == "Africa").unwrap();
         let gulf = blocs.iter().position(|b| b.name == "Gulf").unwrap();
-        let atlantic = blocs.iter().position(|b| b.name == "Atlantic").unwrap();
+        let europe = blocs.iter().position(|b| b.name == "Europe").unwrap();
+        let us = blocs
+            .iter()
+            .position(|b| b.name == "United States")
+            .unwrap();
         let residual = blocs.iter().position(|b| b.name == "Non-Aligned").unwrap();
 
         assert!(
@@ -569,8 +632,19 @@ mod tests {
             economy
                 .flows
                 .iter()
-                .any(|f| f.from == africa && f.to == atlantic),
-            "the Algerian flow is directed at the Atlantic bloc"
+                .any(|f| f.from == africa && f.to == europe),
+            "the Algerian flow is directed at Europe, which imports the gas"
+        );
+        // The transatlantic flow the old aggregate could not express: the United
+        // States supplied 52.5% of EU LNG imports in 2025, and both ends of that trade
+        // are now visible.
+        assert!(
+            economy.flows.iter().any(|f| f.from == us && f.to == europe),
+            "US LNG exports reach Europe, and the model must show it"
+        );
+        assert!(
+            !economy.flows.iter().any(|f| f.from == europe && f.to == us),
+            "and not the reverse: the direction of that trade is the reported fact"
         );
         let gulf_to_asia: f64 = economy
             .flows

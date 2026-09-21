@@ -262,7 +262,12 @@ pub fn default_ai_lead(blocs: &[PowerBloc]) -> Vec<f64> {
     blocs
         .iter()
         .map(|bloc| match bloc.name.as_str() {
-            "Atlantic" => 1.00,
+            "United States" => 1.00,
+            // Europe hosts frontier-adjacent labs and regulates the field, but does not
+            // currently hold a leading frontier model. Placed between the leaders and
+            // the rest. Invented like every other entry in this vector: the *shape* is
+            // argued for above, the magnitudes are not measurements.
+            "Europe" => 0.55,
             "Sinic" => 0.85,
             "Indo-Pacific" => 0.40,
             "Eurasian" => 0.15,
@@ -723,22 +728,36 @@ mod tests {
                 .growth_bias
         };
 
-        // Atlantic leads, Eurasian barely registers.
+        // The United States leads, Eurasian barely registers.
         assert!(
-            lead_of("Atlantic") > lead_of("Eurasian"),
+            lead_of("United States") > lead_of("Eurasian"),
             "the lead vector must not be flat"
         );
         assert!(
-            bias_of("Atlantic") > bias_of("Eurasian"),
+            bias_of("United States") > bias_of("Eurasian"),
             "the larger lead must buy the larger growth advantage: {} vs {}",
-            bias_of("Atlantic"),
+            bias_of("United States"),
             bias_of("Eurasian")
         );
-        // The laggard still gets something, so the term is a gradient rather than a
-        // winner-take-all switch.
+        // Splitting the old Atlantic bloc must not have quietly promoted Europe to
+        // frontier-leader status.
         assert!(
-            bias_of("Eurasian") > blocs[2].growth_bias,
-            "even a small lead must add something"
+            lead_of("Europe") < lead_of("Sinic"),
+            "Europe is not a frontier AI leader in this vector, by construction"
+        );
+        // The laggard still gets something, so the term is a gradient rather than a
+        // winner-take-all switch. The comparison is against the *same* bloc's
+        // unboosted bias, looked up by name rather than by position: the bloc list's
+        // order is not a fact the test should depend on.
+        let unboosted = default_blocs()
+            .into_iter()
+            .find(|bloc| bloc.name == "Eurasian")
+            .expect("default bloc")
+            .growth_bias;
+        assert!(
+            bias_of("Eurasian") > unboosted,
+            "even a small lead must add something: {} vs {unboosted}",
+            bias_of("Eurasian")
         );
     }
 
@@ -807,9 +826,9 @@ mod tests {
             .iter()
             .position(|bloc| bloc.name == AI_ACTOR_NAME)
             .expect("the actor is present");
-        let atlantic = blocs
+        let issuer = blocs
             .iter()
-            .position(|bloc| bloc.name == "Atlantic")
+            .position(|bloc| bloc.name == "United States")
             .expect("default bloc");
 
         assert_eq!(
@@ -817,15 +836,28 @@ mod tests {
             "an AI actor issues no reserve currency"
         );
         assert_eq!(
-            economy.monetary_leverage(actor, atlantic),
+            economy.monetary_leverage(actor, issuer),
             0.0,
             "with no issuance it holds no leverage over anyone"
         );
-        assert_eq!(
-            economy.monetary_leverage(atlantic, actor),
-            1.0,
-            "and every issuer holds maximum leverage over it"
+        // Not the saturated 1.0 it used to be. The old Atlantic aggregate issued both
+        // the dollar and the euro, so 1.4x its 87.72% share clipped this measure at its
+        // ceiling; with the split the largest single issuer holds 61.97% and the
+        // measure is no longer saturated. That is a better reading of a quantity that
+        // is linear in the share, and the claim worth pinning is the ranking, not the
+        // clip.
+        let over_actor = economy.monetary_leverage(issuer, actor);
+        assert!(
+            over_actor > 0.8,
+            "the dollar's issuer holds most of the leverage over a currency-less actor, \
+             got {over_actor}"
         );
+        for index in 0..blocs.len() {
+            assert!(
+                economy.monetary_leverage(index, actor) <= over_actor,
+                "no bloc holds more leverage over the actor than the largest issuer"
+            );
+        }
     }
 
     /// Only the player world may contain an actor. A stray one in either of the other

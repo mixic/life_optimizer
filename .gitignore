@@ -29,3 +29,7 @@ target
 
 # Python bytecode from the tools/ scripts
 __pycache__/
+
+# Plotting output from --export (CSV plus figures); regenerate with the two
+# commands in multipolar_sim/README.md rather than committing it.
+out/

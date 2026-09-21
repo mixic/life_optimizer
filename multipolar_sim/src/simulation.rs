@@ -692,6 +692,15 @@ pub struct Ensemble {
     pub tension_by_year: Vec<f64>,
     /// Number of years recorded per run.
     pub horizon: usize,
+    /// Power shares per run, per year, per bloc. `--export` draws its fan charts from
+    /// these; everything else in the binary uses the means above.
+    pub share_trajectories: Vec<Vec<Vec<f64>>>,
+    /// Realized cooperation per run, per year.
+    pub cooperation_trajectories: Vec<Vec<f64>>,
+    /// Accumulated tension per run, per year.
+    pub tension_trajectories: Vec<Vec<f64>>,
+    /// Realized Pareto-efficiency loss per run, per year.
+    pub loss_trajectories: Vec<Vec<f64>>,
 }
 
 impl Ensemble {
@@ -704,6 +713,16 @@ impl Ensemble {
         let n = config.blocs.len();
         let mut mean_shares_by_year = vec![vec![0.0; n]; horizon];
 
+        // The same trajectories, kept per run rather than averaged. A mean line cannot
+        // show how wide the spread around it is, and the spread is most of what a
+        // forty-run ensemble has to say about a fifty-year extrapolation: two worlds
+        // with the same mean but different dispersion are different worlds. The cost is
+        // a few megabytes at the default settings.
+        let mut share_trajectories: Vec<Vec<Vec<f64>>> = Vec::with_capacity(config.runs);
+        let mut cooperation_trajectories: Vec<Vec<f64>> = Vec::with_capacity(config.runs);
+        let mut tension_trajectories: Vec<Vec<f64>> = Vec::with_capacity(config.runs);
+        let mut loss_trajectories: Vec<Vec<f64>> = Vec::with_capacity(config.runs);
+
         for run in 0..config.runs {
             // Distinct, reproducible seeds derived from the configured base, so two
             // parameter settings can be compared against the same shock draws.
@@ -711,6 +730,11 @@ impl Ensemble {
                 .seed
                 .wrapping_add(run as u64 * 2_654_435_761);
             let (outcome, records) = simulate_run(config, seed);
+
+            let mut run_shares = Vec::with_capacity(horizon);
+            let mut run_cooperation = Vec::with_capacity(horizon);
+            let mut run_tension = Vec::with_capacity(horizon);
+            let mut run_loss = Vec::with_capacity(horizon);
 
             for (year, record) in records.iter().enumerate() {
                 if year < horizon {
@@ -721,8 +745,16 @@ impl Ensemble {
                             mean_shares_by_year[year][i] += share;
                         }
                     }
+                    run_shares.push(record.shares.clone());
+                    run_cooperation.push(record.cooperation);
+                    run_tension.push(record.tension);
+                    run_loss.push(record.efficiency_loss);
                 }
             }
+            share_trajectories.push(run_shares);
+            cooperation_trajectories.push(run_cooperation);
+            tension_trajectories.push(run_tension);
+            loss_trajectories.push(run_loss);
             outcomes.push(outcome);
         }
 
@@ -741,6 +773,10 @@ impl Ensemble {
             mean_shares_by_year,
             tension_by_year,
             horizon,
+            share_trajectories,
+            cooperation_trajectories,
+            tension_trajectories,
+            loss_trajectories,
         }
     }
 
@@ -1088,21 +1124,20 @@ mod tests {
         // that concentrates the system.
         //
         // The assertion is that the world *concentrates*, not that it lands on one
-        // particular label, and both worlds are now checked because the regional split
-        // made the duopoly robust to the cooperation balance: Sinic and Indo-Pacific --
-        // the two Asian poles -- are large at the start and gain under either balance,
-        // so *which* two blocs hold the system is no longer something this balance
-        // decides. What it decides is how much is at stake, which the three assertions
-        // above measure. Asserting that the labels differ would now be asserting
-        // something the seven-bloc list makes false, and that is a property of the
-        // parameterisation rather than of the mechanism.
+        // particular label. With the Atlantic split the contrast the earlier version of
+        // this test pinned came back, and with the opposite sign to what a reader might
+        // expect: the *conflict-locked* configuration is the concentrated one, and the
+        // cooperative world is merely `Balanced` -- cooperation spreads power, a hard
+        // dilemma pools it. The labels are the classifier's, and which pair of them
+        // appears is a property of the bloc list; that they differ is not.
         assert!(
             matches!(polarity_bad, Polarity::Unipolar | Polarity::Bipolar),
             "a hard dilemma should concentrate the system, got {polarity_bad:?}"
         );
-        assert!(
-            matches!(polarity_good, Polarity::Unipolar | Polarity::Bipolar),
-            "and the cooperative world concentrates it too, got {polarity_good:?}"
+        assert_ne!(
+            polarity_good, polarity_bad,
+            "the cooperation/competition balance must change the polarity the system \
+             settles into: {polarity_good:?} vs {polarity_bad:?}"
         );
     }
 

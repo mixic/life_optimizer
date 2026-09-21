@@ -114,15 +114,31 @@ impl PowerBloc {
     }
 }
 
-/// The default seven-pole system.
+/// The default eight-pole system.
 ///
 /// The names follow `MULTIPOLAR_GAME.md` section 4's description of the current
-/// transition: a US-led Atlantic bloc, a China-centred Sinic one, a Eurasian one,
+/// transition: a US-led Atlantic order, a China-centred Sinic one, a Eurasian one,
 /// an Indo-Pacific one, and the non-aligned middle powers that section 4 notes are
 /// now "pursuing independent strategic optimization rather than aligning within a
 /// single hegemonic order".
 ///
-/// # Why the non-aligned middle is three blocs and not one
+/// # Why the Atlantic bloc is now the United States and Europe
+///
+/// `Atlantic` was a single 0.30 bloc covering the United States *and* the euro area,
+/// and the code said so out loud: `economy.rs` noted that "Atlantic spans the United
+/// States and the euro area, whose energy positions are opposite", and the reserve
+/// shares handed the dollar and the euro to one actor -- which made the transatlantic
+/// relationship, the one relationship this model is best placed to say something
+/// about, invisible by construction. Two questions were unanswerable rather than
+/// merely unanswered: what happens to Europe, and what the holder of the world's
+/// reserve currency can do to its allies.
+///
+/// They are now separate blocs. The euro's 20.25% of world reserves goes to Europe
+/// and the dollar's 56.77% stays with the United States, so `monetary_leverage`
+/// finally expresses something real: the United States holds leverage over Europe,
+/// and (unlike the old aggregate) Europe does not hold it back.
+///
+/// # And why the non-aligned middle is three blocs and not one
 ///
 /// `Non-Aligned` used to be a single 0.14 residual: the Gulf exporters, most of
 /// Africa, Latin America, and the parts of Asia that align with no pole. That left
@@ -138,13 +154,14 @@ impl PowerBloc {
 /// statistical agency reports these as units, which is why `economy.rs` marks every
 /// magnitude it attaches to them illustrative.
 ///
-/// The three inherit the aggregate's growth bias, volatility and affinity rather
-/// than being given a spread of their own. Nothing available here distinguishes them
-/// on those axes, and inventing a difference would make the split's own effect
-/// unreadable: the five-bloc and seven-bloc worlds should differ by what a finer
-/// partition does to the *network* -- more dyads, so more tension, and an energy
-/// flow that now leaves the right bloc -- and not by new guesses. Per-region
-/// parameters are one `--bloc` flag away, and `--scenarios` uses that route.
+/// Both splits inherit the parameters of the aggregate they replaced rather than
+/// being given a spread of their own. Nothing available here distinguishes the
+/// successors on growth, volatility or affinity, and inventing a difference would
+/// make a split's own effect unreadable: the five-bloc, seven-bloc and eight-bloc
+/// worlds should differ by what a finer partition does to the *network* -- more
+/// dyads, and a flow that now leaves the right bloc -- and not by new guesses.
+/// Per-region parameters are one `--bloc` flag away, and `--scenarios` uses that
+/// route.
 ///
 /// Starting shares are roughly the shape a system of this kind would have, not
 /// measured figures. They are editable, which is the point.
@@ -167,7 +184,11 @@ impl PowerBloc {
 /// would have been measuring the bloc count rather than the region.
 pub fn default_blocs() -> Vec<PowerBloc> {
     vec![
-        PowerBloc::new("Atlantic", 0.30, 0.000, 0.020, 1.00),
+        // The former 0.30 Atlantic bloc, split. Its growth bias, volatility and
+        // affinity are inherited unchanged, so the two successors differ only through
+        // the network: what each issues, what each imports, and whom each can lean on.
+        PowerBloc::new("United States", 0.17, 0.000, 0.020, 1.00),
+        PowerBloc::new("Europe", 0.13, 0.000, 0.020, 1.00),
         PowerBloc::new("Sinic", 0.26, 0.040, 0.025, 0.95),
         PowerBloc::new("Eurasian", 0.16, 0.010, 0.035, 0.70),
         PowerBloc::new("Indo-Pacific", 0.14, 0.050, 0.030, 0.90),
@@ -515,21 +536,34 @@ mod tests {
         let blocs = default_blocs();
         assert_eq!(
             blocs.len(),
-            7,
-            "the default system is seven-pole: five poles plus the three-way split of \
-             the non-aligned middle"
+            8,
+            "the default system is eight-pole: the old five, with Atlantic split in two \
+             and the non-aligned residual split in three"
         );
-        // The non-aligned middle is split, not enlarged: the three regional blocs must
-        // still add up to the single residual they replaced, or the split has quietly
-        // moved power.
-        let aligned: f64 = blocs
-            .iter()
-            .filter(|b| ["Africa", "Gulf", "Non-Aligned"].contains(&b.name.as_str()))
-            .map(|b| b.power_share)
-            .sum();
+        // A split must partition, not enlarge. Each pair of successors has to add up to
+        // the bloc it replaced, or the split has quietly moved power.
+        let share_of = |names: &[&str]| -> f64 {
+            blocs
+                .iter()
+                .filter(|b| names.contains(&b.name.as_str()))
+                .map(|b| b.power_share)
+                .sum()
+        };
+        let aligned = share_of(&["Africa", "Gulf", "Non-Aligned"]);
         assert!(
             (aligned - 0.14).abs() < 1e-9,
             "the three regional blocs must sum to the 0.14 they replaced, got {aligned}"
+        );
+        let atlantic = share_of(&["United States", "Europe"]);
+        assert!(
+            (atlantic - 0.30).abs() < 1e-9,
+            "the United States and Europe must sum to the 0.30 Atlantic held, got \
+             {atlantic}"
+        );
+        assert!(
+            share_of(&["United States"]) > share_of(&["Europe"]),
+            "the split must not invert the larger power, whatever it does to the \
+             reserve shares"
         );
         let total: f64 = blocs.iter().map(|b| b.power_share).sum();
         assert!(

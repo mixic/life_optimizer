@@ -1,6 +1,6 @@
 # multipolar_sim
 
-A Monte Carlo simulator for a multipolar world: seven power blocs, every pair
+A Monte Carlo simulator for a multipolar world: eight power blocs, every pair
 playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved
 (pure or mixed), annual shocks, and a pension-security read-out.
 Run it with `cargo run -p multipolar_sim`, and with `--sweep` for the run that
@@ -11,7 +11,9 @@ cargo run -p multipolar_sim -- --compare               # who wins, and who loses
 cargo run -p multipolar_sim -- --ai                    # AI as a player, or as a tool?
 cargo run -p multipolar_sim -- --sweep                  # the informative mode
 cargo run -p multipolar_sim -- --seed 42 --runs 1000    # reproducible ensemble
-cargo run -p multipolar_sim -- --bloc "Atlantic:0.50:0.02:0.010:1.0"
+cargo run -p multipolar_sim -- --export out/world        # CSV, then:
+python tools/plot_multipolar.py out/world                # the pictures
+cargo run -p multipolar_sim -- --bloc "United States:0.50:0.02:0.010:1.0"
 cargo run -p multipolar_sim -- --bloc "Antarctic:0.06:0.010:0.020:1.00"
 cargo run -p multipolar_sim -- --help
 ```
@@ -35,6 +37,74 @@ before the game became a bimatrix. `--seed` makes a whole ensemble reproducible,
 which is what lets two parameter settings be compared against the same shock draws
 instead of against different luck. `--help` prints every flag with its real default,
 derived from the code rather than written out by hand.
+
+## Plotting the extrapolation
+
+`--export <dir>` writes the run out as CSV — per-year quantiles across runs for every
+bloc's power share and for cooperation, tension and Pareto loss; one row per run for the
+end states; the pension channel per run; and the exposure, monetary-leverage and energy-flow
+tables. `tools/plot_multipolar.py <dir>` draws three figures from those files:
+
+| Figure | What it shows |
+| ------ | ------------- |
+| `fig1-extrapolation.png` | Power shares as a median with a 10–90% band, cooperation and tension, where the shares end with P(dominant), and the pension security distribution |
+| `fig2-europe-swiss.png` | Europe against the poles, Europe's structural position, and the Swiss pension channel |
+| `fig3-scenarios.png` | Every named world of `--scenarios` side by side, if they were exported |
+
+Two things about the pictures are deliberate. The bands are quantiles **across runs at a
+fixed year**, so they show the model's own dispersion and *not* uncertainty about the
+world: the uncertainty that matters here is in the parameters, and the export holds those
+fixed while the shocks vary — `--sweep` is the mode for the other question. And the
+figures are drawn from CSV only: the script never runs the simulation and never invents a
+number, so every value on a figure can be traced back to `config.txt` beside it.
+
+`--scenarios --export <dir>` writes both the baseline world's bundle and the scenario
+comparison into the one directory, so all three figures come from a single command and a
+single plot invocation. The script skips a figure whose input files are absent rather than
+failing, which is what makes that work.
+
+## Splitting the Atlantic bloc, and what it says about Europe
+
+`Atlantic` was one 0.30 bloc covering the United States *and* the euro area. The code said
+so out loud — `economy.rs` noted that the two halves have "opposite" energy positions, and
+`default_reserve_shares` handed the dollar and the euro to the same actor. That made the
+transatlantic relationship, which is the relationship this model is best placed to say
+something about, invisible by construction: one bloc issued both reserve currencies, so
+`monetary_leverage` could never express the dollar's hold over the euro area.
+
+They are now separate blocs, inheriting the aggregate's growth bias, volatility and
+affinity so that the split changes the network rather than the guesses. What changes
+structurally is the attribution: the euro's 20.25% of world reserves goes to Europe and the
+dollar's 56.77% stays with the United States, the American energy position (imports 15%,
+exports 20%) stops being averaged with the European one (imports 60%), and the 52.5% of EU
+LNG imports that come from the United States becomes a flow the model can sever rather
+than intra-bloc trade it could not see.
+
+What it says, at 400 runs and seed 7:
+
+* **Europe's fate is decided by whether the system is cooperative, far more than by
+  anything else in the model.** In the `--compare` worlds Europe ends at **11.8%** of world
+  power under a cooperative payoff balance and **3.7%** under a competitive one — from
+  13.0% at the start, so a cooperative world costs it about a point and a competitive one
+  costs it nine. In the mixed baseline it lands at 3.9% (`--scenarios`, `BASELINE`).
+* **The asymmetry it faces is monetary.** The United States holds the dollar and therefore
+  leverage 0.51 *over* Europe, against Europe's 0.00 over it, and Europe imports 60% of its
+  energy against the United States' 15%. Both are reported in the export and drawn on
+  `fig2`.
+* **The bloc that benefits most from cooperation is not a great power.** In the
+  cooperative world Africa goes 5.0% → 11.0% and the Gulf 5.0% → 12.9%, while the United
+  States goes 17.0% → 8.7%. A cooperative world is one in which the periphery gains
+  relative ground and the incumbent loses it, which is the opposite of the intuition that
+  cooperation favours the strong.
+
+**Switzerland is not a bloc and is not plotted as one.** It has no power share to
+extrapolate, and the only Swiss thing in this crate is the pension channel in `pension.rs`.
+So `fig2` shows the pension channel — replacement rate, contributor-to-retiree ratio,
+portfolio return and the security index, one histogram per run — and states on its own face
+what is missing: the SNB and safe-haven flows, pharmaceutical and financial exports,
+Swiss-EU bilateral agreements, Swiss energy imports specifically, and any fiscal response.
+The elasticities from geopolitics to pensions are invented; the AHV's real replacement and
+contribution rates do not enter.
 
 ## The 2×2 is a bimatrix, and why that mattered
 
@@ -201,13 +271,16 @@ is worth naming: **AI as a player is now `ASCENDANT` (`4.8%` → `10.7%`) rather
 system and defect 3 was doing much of the work that the report attributed to its lack of
 monetary sovereignty.
 
-At the seven-bloc default the game is close to where it was and the hierarchy is not:
-baseline cooperation `0.210`, tension `2.86`, trap years `96.6%`, with Sinic at `39.7%`
-and Indo-Pacific at `36.4%` against Africa `3.1%`, Gulf `2.9%` and Non-Aligned `2.4%`.
-The three regional blocs lose ground in the baseline and *gain* it heavily in a
-cooperative world (Africa `5.0%` → `10.2%`, Gulf `5.0%` → `12.5%`), which is the
-`--compare` reading worth carrying away: who the game rewards depends on whether
-cooperation pays, and in this parameterisation it rewards the periphery.
+At the eight-bloc default the game is close to where it was and the hierarchy is not:
+baseline cooperation `0.212`, tension `2.86`, trap years `96.7%`, with Sinic at `38.5%`
+and Indo-Pacific at `36.0%` against the United States `6.0%`, Europe `3.9%`, Africa
+`3.2%`, Gulf `2.9%` and Non-Aligned `2.4%`. The peripheral blocs lose ground in the
+baseline and *gain* it heavily in a cooperative world (Africa `5.0%` → `11.0%`, Gulf
+`5.0%` → `12.9%`), which is the `--compare` reading worth carrying away: who the game
+rewards depends on whether cooperation pays, and in this parameterisation it rewards the
+periphery. Europe is the clearest case of the *opposite* sensitivity: it goes `13.0%` →
+`11.8%` in the cooperative world and `13.0%` → `3.7%` in the competitive one, so the same
+question costs it one point or nine.
 
 One consequence the split made visible and did *not* fix: the sanction drag is applied
 per adversarial dyad, so a bloc with more adversaries absorbs more of it. That is
@@ -281,6 +354,7 @@ repository root:
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
 | `pension.rs`    | The AHV/pension channels the simulated world implies                            |
 | `report.rs`     | Terminal presentation                                                           |
+| `export.rs`     | CSV for plotting: per-year quantiles, per-run end states, exposure and leverage |
 | `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`                      |
 
 ## The economic layer, and what is measured versus invented
