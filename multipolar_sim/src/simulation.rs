@@ -33,7 +33,7 @@ use rand_distr::{Distribution, Normal};
 
 use crate::blocks::{GameParams, PowerBloc};
 use crate::economy::Economy;
-use crate::game::{solve, Action};
+use crate::game::{solve_pair, Action, Equilibrium, Payoffs};
 use crate::pension::{PensionLink, PensionOutcome};
 
 /// Kind of annual shock. The categories follow `MULTIPOLAR_GAME.md` section 4's
@@ -209,6 +209,15 @@ pub struct RunOutcome {
     pub final_recession_risk: f64,
     /// How many shocks of each kind occurred.
     pub shock_counts: (u32, u32, u32),
+    /// Fraction of dyad-years whose equilibrium had the two sides playing
+    /// *different* pure actions.
+    ///
+    /// Zero unless the two sides faced different matrices, which requires a
+    /// non-neutral [`PowerBloc::cooperation_valuation`]. It is reported because it is
+    /// the only direct evidence that the asymmetric solver is doing any work: a
+    /// capability that never fires is indistinguishable from one that does not exist,
+    /// and this is the number that tells the two apart.
+    pub asymmetric_fraction: f64,
 }
 
 /// Classify a power distribution into a polarity.
@@ -282,6 +291,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
     let mut dyad_years = 0u32;
     let mut trap_years = 0u32;
     let mut shock_counts = (0u32, 0u32, 0u32);
+    let mut asymmetric_dyads = 0u32;
 
     for year in 0..config.horizon {
         // --- shocks ---------------------------------------------------------
@@ -323,9 +333,11 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         // --- energy disruption ----------------------------------------------
         //
         // Financial strain makes a disruption more likely, and the sourced exposure
-        // figures decide who pays. This is the asymmetric door into the model: an
-        // importer loses supply and an exporter loses revenue, so one event moves
-        // blocs in opposite directions in a way the symmetric 2x2 cannot express.
+        // figures decide who pays. This is the door into the model that acts on
+        // *capability* rather than on choices: an importer loses supply and an
+        // exporter loses revenue, so one event moves blocs in opposite directions --
+        // which the payoff matrix cannot express, because the matrix is about what a
+        // bloc decides, not about what it is able to do.
         let disruption_probability = (config.shocks.energy_disruption_probability
             * (1.0 + economy.recession_risk))
             .clamp(0.0, 1.0);
@@ -361,10 +373,25 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // Interdependence is the economic layer's contribution to the game
                 // itself: a pair that trades heavily has more to lose from a
                 // rupture, which raises what cooperation is worth to both sides.
-                let payoffs = config
-                    .game
-                    .payoffs_with(gap, tension, economy.interdependence(i, j));
-                let solution = solve(&payoffs);
+                //
+                // Each side gets its *own* matrix, which is what lets a bloc's own
+                // valuation of cooperation change what it chooses. With every
+                // valuation at the neutral 1.0 the two matrices are identical and this
+                // is exactly the symmetric game it replaced.
+                let interdependence = economy.interdependence(i, j);
+                let mine_matrix = config.game.payoffs_for(
+                    gap,
+                    tension,
+                    interdependence,
+                    config.blocs[i].cooperation_valuation,
+                );
+                let theirs_matrix = config.game.payoffs_for(
+                    gap,
+                    tension,
+                    interdependence,
+                    config.blocs[j].cooperation_valuation,
+                );
+                let solution = solve_pair(&mine_matrix, &theirs_matrix);
 
                 // Realize the equilibrium. A pure equilibrium is deterministic; at a
                 // mixed one neither side can commit, so the two sides draw
@@ -373,36 +400,47 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // drawing once for the pair would make the two sides' choices
                 // perfectly correlated, which is precisely the commitment a mixed
                 // equilibrium says neither side can make.
-                let draw = |rng: &mut StdRng| {
-                    if rng.gen::<f64>() < solution.cooperate_probability {
+                //
+                // The two probabilities are separate because the two matrices are: at
+                // a mixed equilibrium of an asymmetric game the sides mix at different
+                // rates, and using one rate for both would erase the very asymmetry
+                // the solver was widened to find.
+                let draw = |rng: &mut StdRng, probability: f64| {
+                    if rng.gen::<f64>() < probability {
                         Action::Cooperate
                     } else {
                         Action::Compete
                     }
                 };
-                let mine = draw(&mut rng);
-                let theirs = draw(&mut rng);
+                let mine = draw(&mut rng, solution.cooperate_probability);
+                let theirs = draw(&mut rng, solution.opponent_cooperate_probability);
                 let both_cooperated = mine == Action::Cooperate && theirs == Action::Cooperate;
 
                 // Realized cooperation for the dyad: the share of the two sides that
-                // cooperated. Its expectation is `cooperate_probability`, so the
-                // statistic keeps the meaning and scale it had before.
+                // cooperated. Its expectation is the mean of the two probabilities, so
+                // the statistic keeps the meaning and scale it had before.
                 let cooperated_sides =
                     u32::from(mine == Action::Cooperate) + u32::from(theirs == Action::Cooperate);
                 year_cooperation += f64::from(cooperated_sides) / 2.0;
                 year_loss += solution.efficiency_loss;
                 equilibrium_votes.push(solution.equilibrium.label());
+                if solution.equilibrium == Equilibrium::Asymmetric {
+                    asymmetric_dyads += 1;
+                }
                 dyads += 1;
 
                 // --- payoffs feed back into power ---------------------------
                 //
                 // Realized payoffs shift relative power: cooperation creates joint
                 // gains, competition wastes surplus. Each side banks its *own*
-                // realized payoff rather than the equilibrium expectation, so a
-                // defector actually collects the temptation it took rather than the
-                // average. The affinity term scales the payoff a bloc gets when it
-                // is the one cooperating, because a bloc embedded in global supply
-                // chains has more to gain from cooperation.
+                // realized payoff, from its *own* matrix, rather than the equilibrium
+                // expectation, so a defector actually collects the temptation it took
+                // rather than the average. The affinity term scales the payoff a bloc
+                // gets when it is the one cooperating, because a bloc embedded in
+                // global supply chains has more to gain from cooperation -- and it is
+                // deliberately separate from that bloc's *valuation*, which has already
+                // done its work inside the matrix by deciding whether it cooperates at
+                // all.
                 //
                 // The coefficient is half what it was when the feedback used the
                 // equilibrium expectation, because that change roughly doubled the
@@ -411,8 +449,8 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // it keeps the coupling at the strength it had before, rather than
                 // letting an unrelated change silently amplify power concentration.
                 const PAYOFF_TO_POWER: f64 = 0.001;
-                let realized = |me: Action, them: Action, bloc: &PowerBloc| {
-                    let base = payoffs.payoff(me, them);
+                let banked = |matrix: &Payoffs, me: Action, them: Action, bloc: &PowerBloc| {
+                    let base = matrix.payoff(me, them);
                     if me == Action::Cooperate {
                         base * bloc.cooperation_affinity
                     } else {
@@ -420,9 +458,9 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                     }
                 };
                 power[i] += power[i] * config.blocs[i].growth_bias
-                    + realized(mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER;
+                    + banked(&mine_matrix, mine, theirs, &config.blocs[i]) * PAYOFF_TO_POWER;
                 power[j] += power[j] * config.blocs[j].growth_bias
-                    + realized(theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER;
+                    + banked(&theirs_matrix, theirs, mine, &config.blocs[j]) * PAYOFF_TO_POWER;
 
                 // Competition raises tension; this is the feedback loop that makes
                 // an arms race self-reinforcing. A dyad counts as competitive unless
@@ -550,6 +588,11 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         top_share,
         final_recession_risk: economy.recession_risk,
         shock_counts,
+        asymmetric_fraction: if dyad_years > 0 {
+            f64::from(asymmetric_dyads) / f64::from(dyad_years)
+        } else {
+            0.0
+        },
     };
 
     (outcome, records)

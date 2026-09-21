@@ -151,11 +151,24 @@ pub const DEFAULT_LEAD_GROWTH_EFFECT: f64 = 0.010;
 /// reports it) has AI competition not being zero-sum at all because the technology
 /// is bound up with global supply chains and cross-border data flows. Those imply
 /// opposite signs for this coefficient, so picking either would be hiding a
-/// judgement inside a default -- the same choice `payoffs_with` makes when it
+/// judgement inside a default -- the same choice `payoffs_for` makes when it
 /// declines to let interdependence touch the temptation to defect.
 ///
 /// The `--ai` hinge sweep runs this in both directions precisely so the disputed
 /// sign is *shown* rather than assumed.
+///
+/// # What it moves, and what it took to make it move
+///
+/// This raises the owning bloc's [`PowerBloc::cooperation_valuation`], which enters
+/// the payoff matrix -- so it changes how often the bloc cooperates, and the sweep
+/// row is a real test of the chapter's optimistic case.
+///
+/// It did not always. The first version of this feature raised
+/// `cooperation_affinity` instead, which is applied *downstream* of the solver to the
+/// power a bloc banks; the coefficient therefore could not move the cooperation rate
+/// at all, and the sweep row was flat at every value. That flatness was reported
+/// honestly at the time as a limitation of a symmetric 2x2, and it is what prompted
+/// widening the solver to a bimatrix -- which is why the row now moves.
 pub const DEFAULT_LEAD_COOPERATION_EFFECT: f64 = 0.0;
 
 /// How AI enters the system. The rival hypotheses, plus the control.
@@ -334,8 +347,14 @@ impl AiParams {
                 for (index, bloc) in out.iter_mut().enumerate() {
                     let lead = self.lead.get(index).copied().unwrap_or(0.0).clamp(0.0, 1.0);
                     bloc.growth_bias += self.lead_growth_effect * lead;
-                    bloc.cooperation_affinity =
-                        (bloc.cooperation_affinity + self.lead_cooperation_effect * lead).max(0.0);
+                    // Valuation, not affinity. This is what makes the coefficient
+                    // able to change the *cooperation rate*: valuation enters the
+                    // payoff matrix, so a bloc that leads in AI and therefore values
+                    // cooperation more will actually choose it more often. Affinity
+                    // is downstream of the solver and could never do that, which is
+                    // why the first version of this sweep row moved nothing.
+                    bloc.cooperation_valuation =
+                        (bloc.cooperation_valuation + self.lead_cooperation_effect * lead).max(0.0);
                 }
             }
         }
@@ -587,7 +606,10 @@ pub const LEAD_COOPERATION_PROVENANCE: Provenance = Provenance::Illustrative {
     rationale: "zero by default because MULTIPOLAR_GAME.md section 4 presents the dispute \
                 and declines to resolve it: the realist case implies AI sharpens zero-sum \
                 rivalry, the optimistic case that it need not. Picking either sign would \
-                hide a judgement inside a default, so --ai sweeps both directions",
+                hide a judgement inside a default, so --ai sweeps both directions. It acts \
+                on the bloc's cooperation valuation, which enters the payoff matrix, so \
+                unlike the first version of this coefficient it genuinely moves the \
+                cooperation rate",
 };
 
 #[cfg(test)]
@@ -805,7 +827,11 @@ mod tests {
         let mut blocs = default_blocs();
         blocs.push(PowerBloc::new(AI_ACTOR_NAME, 0.40, 0.03, 0.02, 1.0));
 
-        for role in [AiRole::Absent, AiRole::WieldedInstrument, AiRole::SixthPower] {
+        for role in [
+            AiRole::Absent,
+            AiRole::WieldedInstrument,
+            AiRole::SixthPower,
+        ] {
             let params = match role {
                 AiRole::Absent => AiParams::absent(),
                 AiRole::SixthPower => AiParams::sixth_power(),
@@ -821,7 +847,8 @@ mod tests {
                 assert_eq!(actors, 1, "the player world must have exactly one actor");
             } else {
                 assert_eq!(
-                    actors, 0,
+                    actors,
+                    0,
                     "{} must contain no actor, whatever the base list held",
                     role.label()
                 );

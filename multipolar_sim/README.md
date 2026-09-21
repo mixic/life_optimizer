@@ -3,7 +3,6 @@
 A Monte Carlo simulator for a multipolar world: five power blocs, every pair
 playing a 2×2 Cooperate/Compete game each year with its Nash equilibrium solved
 (pure or mixed), annual shocks, and a pension-security read-out.
-
 Run it with `cargo run -p multipolar_sim`, and with `--sweep` for the run that
 actually matters.
 
@@ -26,13 +25,53 @@ redistributing power away from some blocs, which is robust, whereas the *identit
 of the largest bloc is decided by the invented starting shares and growth biases and
 should not be read as a prediction.
 
-`--bloc` takes `Name:share:bias:volatility:affinity`, edits the named bloc if the
-system has one and appends it otherwise, and is repeatable — so the five-pole
-default can be reshaped a field at a time or replaced outright. `--seed` makes a
-whole ensemble reproducible, which is what lets two parameter settings be compared
-against the same shock draws instead of against different luck. `--help` prints
-every flag with its real default, derived from the code rather than written out by
-hand.
+`--bloc` takes `Name:share:bias:volatility:affinity` with an optional sixth field,
+the bloc's **cooperation valuation**. It edits the named bloc if the system has one
+and appends it otherwise, and is repeatable — so the five-pole default can be
+reshaped a field at a time or replaced outright. The valuation is the field that
+makes the two sides of a dyad differ, because it enters that bloc's own payoff
+matrix; omitting it leaves the bloc neutral at `1.0`, which is what every bloc was
+before the game became a bimatrix. `--seed` makes a whole ensemble reproducible,
+which is what lets two parameter settings be compared against the same shock draws
+instead of against different luck. `--help` prints every flag with its real default,
+derived from the code rather than written out by hand.
+
+## The 2×2 is a bimatrix, and why that mattered
+
+The solver takes **one payoff matrix per side** (`solve_bimatrix`, with `solve_pair`
+taking the documented symmetric fast path when the two are equal). This is worth
+explaining because the first version of this crate could not express a claim as basic
+as *cooperation is worth more to this bloc than to that one* — which is not a detail,
+since it is exactly the claim `MULTIPOLAR_GAME.md` §4 is organised around.
+
+Two things follow from it, and both are load-bearing:
+
+* **`cooperation_valuation` was added** to `PowerBloc`: what cooperation is worth
+  *when choosing*, entering the payoff matrix. It is deliberately separate from
+  `cooperation_affinity`, which is what cooperation *pays once chosen* — downstream of
+  the solver, so it cannot change a decision. A test pins both halves: affinity cannot
+  move the cooperation rate, valuation can.
+* **A symmetric game is never answered asymmetrically.** In the region where the
+  sucker's payoff beats mutual competition — which the simulation reaches at high
+  tension — a symmetric game has three equilibria: `(C,D)`, `(D,C)` and a mixed one.
+  The first two pay more in total, but selecting either would mean deciding which of two
+  *identical* players is the exploiter, so the solver searches only `(C,C)` and `(D,D)`
+  when the matrices are equal and falls back to the mixed equilibrium. Where the
+  matrices differ, all four profiles are candidates and the tie between `(C,D)` and
+  `(D,C)` is broken by a stated convention — the side that values cooperation more is
+  the one that cooperates — so the answer does not depend on argument order. A test
+  checks that invariance across a grid.
+
+**The already-published figures did not move.** `--sweep` and `--compare` outputs are
+byte-identical to before the change, because every default bloc is neutral on
+valuation and the symmetric fast path therefore runs the original code. That is
+verified by construction rather than by a test alone, and the baseline outputs were
+diffed to confirm it.
+
+One consequence worth knowing: behaviour is **discontinuous at perfect symmetry**. With
+every valuation equal, the asymmetric branch is closed; any nonzero spread opens it. So
+a model like this cannot be read as continuous in the spread of valuations, which the
+`--ai` cooperation sweep says in its own output.
 
 ## AI in the game: player, or tool?
 
@@ -80,14 +119,14 @@ What the default run says, and the honest limits of it:
 
 Three limitations the mode prints rather than hides:
 
-1. **The cooperation question is not expressible.** `--ai-cooperation` scales the
-   payoff a bloc banks when it cooperates, and never enters the solved payoff
-   matrix, because the 2×2 is symmetric — there is nowhere to put "cooperation is
-   worth more to this bloc". The third sweep row is a *null test* and is included
-   because it fails: the coefficient cannot move the cooperation rate, so
-   `MULTIPOLAR_GAME.md` §4's disputed sign cannot currently be modelled. A test
-   pins that invariant, so the flat column stays a proof of a limitation rather
-   than becoming a silent bug.
+1. **The cooperation channel now works, and it took the bimatrix to get there.** The
+   third sweep row was flat at every value in the first version of this feature,
+   because `--ai-cooperation` raised `cooperation_affinity` — a term applied
+   *downstream* of the solver — and so could not change a decision. It now raises the
+   owning bloc's `cooperation_valuation`, which enters the payoff matrix, and the row
+   moves: `-0.15` leaves cooperation at `0.334` and `+0.15` at `0.422`, which is the
+   realist case against the optimistic one, measured. The default row is a knife-edge
+   (see above), and the sweep says so.
 2. **Adding any sixth actor changes the field, not only an AI one.** The model
    applies a bloc's growth bias once per dyad, so going from five blocs to six gives
    every existing bloc an extra application. The verdict is unaffected — it is
@@ -158,7 +197,7 @@ repository root:
 
 | Module | Responsibility |
 |---|---|
-| `game.rs` | Symmetric 2×2 game, Nash equilibrium selection (pure or mixed), efficiency loss |
+| `game.rs` | 2×2 bimatrix game, Nash equilibrium selection (pure or mixed), efficiency loss |
 | `blocks.rs` | Power blocs and the payoff structure their interactions produce |
 | `economy.rs` | Monetary standing, energy trade, financial conditions — with provenance |
 | `ai.rs` | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts |
@@ -195,29 +234,26 @@ names both a source and a vintage.
 
 ### Two doors into the model
 
-The 2×2 is *symmetric* — one payoff matrix describes both sides — but bloc-specific
-economics are inherently asymmetric, since the issuer of a reserve currency is not
-in the same position as a bloc that issues none. So the layer enters twice:
+Bloc-specific economics are partly about what a bloc **decides** and partly about what
+it **pays**, and the layer enters through a different door for each:
 
 * **Into the game**: the pair's interdependence raises what mutual cooperation is
-  worth. Both sides feel it, so it belongs in the matrix. It deliberately does *not*
-  touch the temptation to defect: a richer relationship is worth more to capture as
-  well as more to sustain, and picking a sign for that would be hiding a judgement.
+  worth. Both sides feel it, so it belongs in both matrices. Alongside it sits each
+  bloc's own cooperation valuation, which is what makes the two matrices differ. The
+  interdependence term deliberately does *not* touch the temptation to defect: a richer
+  relationship is worth more to capture as well as more to sustain, and picking a sign
+  for that would be hiding a judgement.
 * **Into the simulation**: energy disruption and monetary leverage hit individual
-  blocs differently, so they act on that bloc's own power — the importer loses
-  supply, the exporter loses revenue, and the bloc with less monetary leverage
-  absorbs more of an adversarial turn.
+  blocs differently, so they act on that bloc's own power — the importer loses supply,
+  the exporter loses revenue, and the bloc with less monetary leverage absorbs more of
+  an adversarial turn.
+
+The distinction matters for what each door can express. Capability asymmetries act on
+power, so they belong downstream of the solver; value asymmetries act on the choice, so
+they belong in the matrix. A test asserts that interdependence stays pair-symmetric,
+because it describes the relationship rather than either side of it.
 
 ### Outstanding
-
-Making the 2×2 *itself* asymmetric is the next structural step, and `--ai` gives it
-a sharp motivation: until it is asymmetric, the claim that AI makes cooperation
-worth more to one bloc than another is not expressible at all, which the third
-sweep row demonstrates by failing. De-dollarisation has the same dependency — until
-then it enters through pair averages and through power, not through a bloc-specific
-payoff matrix. The reserve shares are also a fixed endowment held constant for all
-50 years, so de-dollarisation is a change in the *level* of leverage rather than a
-drift in it. All of these are noted in the report's own output.
 
 A second item, surfaced by `--ai` and deliberately not fixed: a bloc's growth bias
 is applied once per dyad as well as once per year, so a bloc's growth rate depends
@@ -225,6 +261,13 @@ on how many other blocs exist. Correcting it would move every published `--compa
 and `--sweep` figure, so it is reported rather than changed — the AI sweep prints
 the *effective* annual growth beside the nominal figure, and the multiplier's size
 is stated in the output.
+
+The reserve shares are a fixed endowment held constant for all 50 years, so
+de-dollarisation remains a change in the *level* of leverage rather than a drift in
+it. De-dollarisation also cannot yet enter as a bloc-specific payoff: it is an
+asymmetry in *capability*, which the bimatrix deliberately does not carry — the
+matrices hold what a bloc values, not what it can do. A test asserts that
+interdependence stays pair-symmetric for the same reason.
 
 Not yet built: European deindustrialisation, and the crypto channel. That last one
 is planned as a *falsifiable* test rather than an assumed buffer, because the

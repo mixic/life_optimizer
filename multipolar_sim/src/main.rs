@@ -141,19 +141,26 @@ impl Args {
         true
     }
 
-    /// Apply a `--bloc Name:share:bias:volatility:affinity` definition.
+    /// Apply a `--bloc Name:share:bias:volatility:affinity[:valuation]` definition.
     ///
     /// Replaces the bloc of that name if the system has one, otherwise adds it, so
     /// the default five-pole system can be edited field by field as well as
     /// replaced. Names match case-insensitively so the report's capitalisation does
     /// not have to be reproduced exactly.
     ///
+    /// The sixth field is optional, and deliberately so: five fields leaves the bloc's
+    /// cooperation valuation at the neutral `1.0`, so every command line written
+    /// before the 2x2 became a bimatrix keeps working and keeps its meaning.
+    ///
     /// A malformed definition is reported and refused rather than half-applied: a
     /// bloc silently missing one field would look like a modelling result.
     fn set_bloc(&mut self, spec: &str) -> bool {
         let parts: Vec<&str> = spec.split(':').collect();
-        if parts.len() != 5 {
-            eprintln!("warning: --bloc expects Name:share:bias:volatility:affinity, got {spec:?}");
+        if parts.len() != 5 && parts.len() != 6 {
+            eprintln!(
+                "warning: --bloc expects Name:share:bias:volatility:affinity[:valuation], \
+                 got {spec:?}"
+            );
             return false;
         }
         let name = parts[0].trim();
@@ -174,7 +181,10 @@ impl Args {
             return false;
         }
 
-        let bloc = PowerBloc::new(name, numbers[0], numbers[1], numbers[2], numbers[3]);
+        let mut bloc = PowerBloc::new(name, numbers[0], numbers[1], numbers[2], numbers[3]);
+        if let Some(valuation) = numbers.get(4) {
+            bloc = bloc.with_cooperation_valuation(*valuation);
+        }
         match self
             .blocs
             .iter_mut()
@@ -346,15 +356,20 @@ OPTIONS:
   `--seed` is printed above in the decimal form it is parsed from, so the value
   can be copied straight back onto the command line.
 
-  `--bloc` takes Name:share:bias:volatility:affinity, matching the bloc name
-  case-insensitively. It edits the bloc of that name if the system has one,
-  otherwise it appends a new one, so the default five-pole system can be
-  reshaped one field at a time or replaced outright.
+  `--bloc` takes Name:share:bias:volatility:affinity with an optional sixth
+  field, the bloc's cooperation valuation. Matching the bloc name is
+  case-insensitive, and it edits the bloc of that name if the system has
+  one, otherwise it appends a new one, so the default five-pole system can
+  be reshaped one field at a time or replaced outright. The valuation is
+  what enters that bloc's own payoff matrix, so it is the field that makes
+  the two sides of a dyad differ; omitting it leaves the bloc neutral at
+  1.0, which is what every bloc was before the game became a bimatrix.
 
   The five default blocs are Atlantic 0.30/0.000/0.020/1.00, Sinic
   0.26/0.008/0.025/0.95, Eurasian 0.16/0.002/0.035/0.70, Indo-Pacific
   0.14/0.010/0.030/0.90 and Non-Aligned 0.14/0.004/0.040/1.05, as
-  share/growth-bias/volatility/cooperation-affinity.
+  share/growth-bias/volatility/cooperation-affinity. All five are neutral
+  on valuation.
 
   `--ai` is not a sixth bloc and not a multiplier: it is both, run as two
   rival hypotheses about what AI is, against the existing five-bloc model
@@ -804,6 +819,9 @@ struct HingePoint {
     /// rather than having to infer it from a non-monotone column.
     leading: String,
     pension: f64,
+    /// Fraction of dyad-years solved to an asymmetric equilibrium: the two sides
+    /// playing different pure actions. Zero unless the two matrices differ.
+    asymmetric: f64,
     /// Present only when the world has an AI actor.
     actor_share: Option<f64>,
     actor_start: Option<f64>,
@@ -834,6 +852,7 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
         top_share: shares.iter().cloned().fold(0.0_f64, f64::max),
         leading,
         pension: observed.security_index(&reference),
+        asymmetric: ensemble.summarize(|o| o.asymmetric_fraction).0,
         actor_share: actor.and_then(|index| shares.get(index).copied()),
         actor_start: actor.and_then(|index| config.blocs.get(index).map(|bloc| bloc.power_share)),
         actor_dominance: actor.and_then(|index| {
@@ -1037,13 +1056,17 @@ fn run_ai_hinge(base: &Args) {
 
     // ---- 3. the disputed sign ----------------------------------------------
     println!();
-    println!("  3. AI as a TOOL: can this model even express 'AI makes cooperation worth more'?");
+    println!("  3. AI as a TOOL: does owning AI make cooperation worth more, or less?");
     println!("  {}", "-".repeat(74));
-    println!("  This is a NULL TEST, and it is included because it fails.");
+    println!("  MULTIPOLAR_GAME.md section 4 presents this as an open dispute rather than");
+    println!("  a settled question -- the realist case has AI as one more axis of zero-sum");
+    println!("  rivalry, the optimistic case has AI competition bound up with supply chains");
+    println!("  and data flows, and therefore not zero-sum at all. Those imply opposite");
+    println!("  signs, so the coefficient defaults to zero and the sweep runs both ways.");
     println!();
     println!(
-        "  {:<12} {:>8}  {:>9}  {:>10}  {:>9}",
-        "coefficient", "coop", "trap yrs", "top share", "pension"
+        "  {:<12} {:>8}  {:>9}  {:>10}  {:>9}  {:>8}",
+        "coefficient", "coop", "trap yrs", "top share", "pension", "asymm."
     );
     for value in [-0.30, -0.15, 0.00, 0.15, 0.30] {
         let mut args = base.clone();
@@ -1053,31 +1076,49 @@ fn run_ai_hinge(base: &Args) {
         let ensemble = Ensemble::run(&config);
         let point = hinge_point(&config, &ensemble, None);
         println!(
-            "  {:<12.2} {:>8.3}  {:>8.1}%  {:>9.1}%  {:>9.3}",
+            "  {:<12.2} {:>8.3}  {:>8.1}%  {:>9.1}%  {:>9.3}  {:>7.1}%",
             value,
             point.cooperation,
             point.trap * 100.0,
             point.top_share * 100.0,
-            point.pension
+            point.pension,
+            point.asymmetric * 100.0
         );
     }
+    println!("  `asymm.` is the share of dyad-years whose equilibrium had the two sides");
+    println!("  playing *different* pure actions -- one cooperating while the other");
+    println!("  competes. It is the only direct evidence that the asymmetric solver is");
+    println!("  doing any work at all, and it is non-zero only here: a capability that");
+    println!("  never fires is indistinguishable from one that does not exist.");
     println!();
-    println!("  The cooperation column does not move at all, and that is not a null result");
-    println!("  about AI -- it is a limitation of this model, which is worth stating plainly");
-    println!("  rather than dressing up as a finding. `cooperation_affinity` scales the");
-    println!("  payoff a bloc *banks* when it cooperates. It never enters the solved payoff");
-    println!("  matrix, because the 2x2 is symmetric: one matrix describes both sides, so");
-    println!("  there is nowhere to put 'cooperation is worth more to this bloc'. Changing");
-    println!("  the coefficient therefore moves how power is distributed after the fact and");
-    println!("  cannot move whether a dyad cooperates in the first place.");
+    println!("  Reading the row. A coefficient row that moved nothing would have meant the");
+    println!("  claim was not expressible, which is what the first version of this feature");
+    println!("  reported: it raised `cooperation_affinity`, a term applied *downstream* of");
+    println!("  the solver to the power a bloc banks, so it could not change a decision and");
+    println!("  the column was flat at every value. The coefficient now raises the owning");
+    println!("  bloc's cooperation *valuation*, which enters the payoff matrix, so it moves");
+    println!("  what the blocs actually choose. Getting there required making the 2x2 a");
+    println!("  bimatrix -- one payoff matrix per side -- because a symmetric game has");
+    println!("  nowhere to put \"cooperation is worth more to this bloc\".");
     println!();
-    println!("  So MULTIPOLAR_GAME.md section 4's disputed sign -- realist AI as one more");
-    println!("  axis of zero-sum rivalry versus AI competition that need not be zero-sum --");
-    println!("  is not currently expressible in this model. Making the 2x2 itself");
-    println!("  asymmetric is what would make it expressible, and that is the structural");
-    println!("  step README.md already records as outstanding. The coefficient defaults to");
-    println!("  zero because the sign is disputed, and the row is here because a flag that");
-    println!("  silently cannot do what its name suggests is worse than one that says so.");
+    println!("  What to take from the numbers: whether the world's cooperation rate is");
+    println!("  sensitive to this at all, and in which direction. The direction does show --");
+    println!("  the negative rows leave the world less cooperative than the positive ones,");
+    println!("  which is the realist case against the optimistic one.");
+    println!();
+    println!("  ONE THING TO READ CAREFULLY: the 0.00 row is a knife-edge, not the midpoint");
+    println!("  of a continuum. At exactly zero every bloc holds the same valuation, so the");
+    println!("  two payoff matrices are identical, and the exchangeability rule then closes");
+    println!("  the asymmetric branch completely -- a symmetric game cannot report that one");
+    println!("  of two identical players is the cooperator. Any nonzero spread, in either");
+    println!("  direction, opens that branch, which is why the asymmetric share jumps from");
+    println!("  0% in the middle row to 30-84% beside it. The jump in that column is a");
+    println!("  property of the exchangeability rule rather than a finding about AI; the");
+    println!("  direction of the *cooperation* column is the finding.");
+    println!();
+    println!("  That discontinuity is itself a limitation worth naming: behaviour that is");
+    println!("  qualitatively different at perfect symmetry than at near-symmetry means a");
+    println!("  model like this cannot be read as continuous in the spread of valuations.");
 
     println!();
     println!("  {}", "-".repeat(74));
@@ -1163,6 +1204,36 @@ mod tests {
         assert!(args.set_bloc("Antarctic:0.05:0.000:0.010:1.00"));
         assert_eq!(args.blocs.len(), before + 1);
 
+        // The valuation field is optional. Omitting it must leave the bloc neutral --
+        // otherwise every command line written before the game became a bimatrix would
+        // silently acquire a meaning it never had.
+        assert!(args.set_bloc("Antarctic:0.05:0.000:0.010:1.00"));
+        let antarctic = |args: &Args| {
+            args.blocs
+                .iter()
+                .find(|bloc| bloc.name == "Antarctic")
+                .expect("just added")
+                .cooperation_valuation
+        };
+        assert_eq!(
+            antarctic(&args),
+            1.0,
+            "a five-field spec must leave the valuation neutral"
+        );
+
+        // Supplying it must take effect, and must not disturb the other fields.
+        assert!(args.set_bloc("Antarctic:0.05:0.000:0.010:1.00:1.75"));
+        assert_eq!(
+            args.blocs.len(),
+            before + 1,
+            "still an edit, not an addition"
+        );
+        assert_eq!(antarctic(&args), 1.75);
+
+        // A seventh field is still refused rather than partly applied.
+        assert!(!args.set_bloc("Antarctic:0.05:0.000:0.010:1.00:1.75:9.0"));
+        assert_eq!(antarctic(&args), 1.75, "a refused spec must change nothing");
+
         // Malformed specs are refused and change nothing.
         let snapshot = args.blocs.len();
         for bad in [
@@ -1224,63 +1295,71 @@ mod tests {
         );
     }
 
-    /// `cooperation_affinity` must not be able to move the cooperation rate.
+    /// `cooperation_affinity` must not be able to move the cooperation rate, while
+    /// `cooperation_valuation` must.
     ///
-    /// The 2x2 is symmetric -- one payoff matrix describes both sides -- so there is
-    /// nowhere in the solved matrix to put "cooperation is worth more to this bloc".
-    /// Affinity scales the payoff a bloc *banks* when it cooperates, downstream of the
-    /// solver, so it can redistribute power after the fact but cannot change whether a
-    /// dyad cooperates in the first place.
+    /// These two knobs are the whole reason the payoff structure splits them, and the
+    /// pair is what `--ai`'s third sweep row rests on. `cooperation_affinity` scales
+    /// the payoff a bloc *banks* when it cooperates -- downstream of the solver -- so
+    /// it can redistribute power after the fact but cannot change whether a dyad
+    /// cooperates. `cooperation_valuation` enters the payoff matrix, so it can.
     ///
-    /// This is the invariant that makes `--ai`'s third sweep row a *proof* of a
-    /// limitation rather than a null result. If it ever stopped holding, that flat
-    /// column would become a bug report, and the mode's explanation of why
-    /// MULTIPOLAR_GAME.md section 4's disputed sign is not currently expressible would
-    /// become false.
+    /// This test used to assert only the first half, and it passed while the "does AI
+    /// make cooperation worth more" question was inexpressible in the model. The
+    /// second half is what makes the sweep row a real test rather than a null one, so
+    /// if it ever stops holding, that row has silently become meaningless again.
     #[test]
-    fn cooperation_affinity_cannot_move_the_cooperation_rate() {
+    fn affinity_is_downstream_of_the_solver_and_valuation_is_inside_it() {
         let blocs = blocks::default_blocs();
-        let cooperativeness = |effect: f64| -> f64 {
-            let mut layer = ai::AiParams::wielded_instrument(&blocs);
-            layer.lead_cooperation_effect = effect;
+
+        // --- affinity: no route into the solver ---------------------------------
+        let by_affinity = |scale: f64| -> f64 {
+            let mut edited = blocs.clone();
+            for bloc in edited.iter_mut() {
+                bloc.cooperation_affinity *= scale;
+            }
             let config = Config {
-                blocs: layer.apply(&blocs),
-                // One year: the shares entering the solver are identical between the
-                // two runs, so any difference would have to come from affinity itself.
+                blocs: edited,
+                // One year, so the shares entering the solver are identical between
+                // the two runs and any difference would have to come from the
+                // parameter itself.
                 horizon: 1,
                 runs: 20,
                 ..Config::default()
             };
             Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
         };
-
-        let suppressed = cooperativeness(-0.50);
-        let amplified = cooperativeness(2.00);
+        let suppressed = by_affinity(0.25);
+        let amplified = by_affinity(4.00);
         assert!(
             (suppressed - amplified).abs() < 1e-12,
             "affinity has no route into the payoff matrix, so it cannot move the \
              cooperation rate: {suppressed} vs {amplified}"
         );
 
-        // Over a full horizon it can move it only through the power feedback, which is
-        // an indirect and much weaker path -- so the near-invariance must survive, but
-        // as near rather than exact.
-        let long_run = |effect: f64| -> f64 {
-            let mut layer = ai::AiParams::wielded_instrument(&blocs);
-            layer.lead_cooperation_effect = effect;
+        // --- valuation: inside the solver ---------------------------------------
+        //
+        // Raising every bloc's valuation far enough must raise how often they
+        // cooperate, or the asymmetry this model was widened for is still decorative.
+        let by_valuation = |valuation: f64| -> f64 {
+            let mut edited = blocs.clone();
+            for bloc in edited.iter_mut() {
+                bloc.cooperation_valuation = valuation;
+            }
             let config = Config {
-                blocs: layer.apply(&blocs),
-                horizon: 50,
+                blocs: edited,
+                horizon: 1,
                 runs: 20,
                 ..Config::default()
             };
             Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
         };
-        let over_time = (long_run(-0.50) - long_run(2.00)).abs();
+        let neutral = by_valuation(1.0);
+        let keen = by_valuation(3.0);
         assert!(
-            over_time < 0.02,
-            "even over 50 years the indirect path must stay weak, got a difference of \
-             {over_time}"
+            keen > neutral,
+            "a bloc that values cooperation more must cooperate more often: \
+             {keen} at valuation 3.0 vs {neutral} at 1.0"
         );
     }
 

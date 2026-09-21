@@ -52,7 +52,37 @@ pub struct PowerBloc {
     /// How much this bloc gains from cooperation relative to the baseline. A
     /// high value models a bloc deeply embedded in global supply chains, which is
     /// the structural feature the optimistic case in section 4 rests on.
+    ///
+    /// This scales the *power* the bloc banks when it cooperates, downstream of the
+    /// solver. It deliberately does **not** enter the payoff matrix, so it cannot
+    /// change what the bloc chooses to do -- see `cooperation_valuation` for that
+    /// channel, and the note there on why they are two knobs rather than one.
     pub cooperation_affinity: f64,
+    /// How much this bloc values the cooperative outcome, relative to a baseline of
+    /// `1.0`. This *does* enter the payoff matrix, so it changes what the bloc
+    /// chooses.
+    ///
+    /// # Why this is separate from `cooperation_affinity`
+    ///
+    /// They are the two halves of "cooperation is worth more to this bloc", and
+    /// conflating them would build in an assumption rather than report a finding: a
+    /// bloc that *gains* more from cooperation need not be a bloc that *wants* it
+    /// more, and the whole point of `MULTIPOLAR_GAME.md` section 4's open dispute is
+    /// that those can come apart.
+    ///
+    /// * `cooperation_affinity` -- what cooperation pays, once it has been chosen.
+    /// * `cooperation_valuation` -- what cooperation is worth, when choosing.
+    ///
+    /// The second is what the solver needs in order to express the chapter's
+    /// optimistic case at all. Until the two sides could face different matrices, a
+    /// claim like "AI competition need not be zero-sum *for this bloc*" had nowhere
+    /// to live, and `--ai`'s cooperation sweep moved nothing because of it.
+    ///
+    /// `1.0` means neutral. Every default bloc is neutral, which is what keeps the
+    /// model's already-published figures reproducible: with every valuation at 1.0
+    /// the two matrices are identical and the general solver reduces to the
+    /// symmetric one exactly.
+    pub cooperation_valuation: f64,
 }
 
 impl PowerBloc {
@@ -69,7 +99,18 @@ impl PowerBloc {
             growth_bias,
             volatility,
             cooperation_affinity,
+            // Neutral by default, so a bloc defined the old way behaves the old way.
+            cooperation_valuation: 1.0,
         }
+    }
+
+    /// Set how much this bloc values cooperation in its own strategic calculation.
+    ///
+    /// Builder-style rather than a sixth constructor argument, so every existing
+    /// `PowerBloc::new` call keeps compiling and keeps its meaning.
+    pub fn with_cooperation_valuation(mut self, valuation: f64) -> Self {
+        self.cooperation_valuation = valuation.max(0.0);
+        self
     }
 }
 
@@ -190,20 +231,34 @@ impl GameParams {
     /// The coefficient is **illustrative**: nobody has measured how a one-point
     /// change in an energy-trade share changes the value of cooperation in a
     /// 50-year counterfactual.
-    pub fn payoffs_with(&self, power_gap: f64, tension: f64, interdependence: f64) -> Payoffs {
+    ///
+    /// `valuation` is the *own side's* [`PowerBloc::cooperation_valuation`]: what
+    /// cooperation is worth to the bloc this matrix describes. It scales the gross
+    /// cooperation gain before tension erodes it, and it is the only term in this
+    /// function that can make two sides' matrices differ. Passing `1.0` reproduces
+    /// the pre-asymmetric model exactly.
+    pub fn payoffs_for(
+        &self,
+        power_gap: f64,
+        tension: f64,
+        interdependence: f64,
+        valuation: f64,
+    ) -> Payoffs {
         /// Illustrative: how strongly a fully interdependent pair values cooperation.
         const INTERDEPENDENCE_GAIN: f64 = 0.6;
 
         let parity = (1.0 - power_gap).clamp(0.0, 1.0);
         let interdependence = interdependence.clamp(0.0, 1.0);
+        let valuation = valuation.max(0.0);
 
         // Cooperation is worth more between equals, worth more between trading
-        // partners, and worth less as tension accumulates. Floored at zero:
-        // cooperation cannot become actively harmful, which would be a different
-        // game.
+        // partners, worth more to a bloc that values it more, and worth less as
+        // tension accumulates. Floored at zero: cooperation cannot become actively
+        // harmful, which would be a different game.
         let cc = (self.cooperation_gain
             * (0.55 + 0.45 * parity)
             * (1.0 + INTERDEPENDENCE_GAIN * interdependence)
+            * valuation
             - self.tension_pressure * tension)
             .max(0.0);
 
@@ -225,14 +280,15 @@ impl GameParams {
         Payoffs { cc, cd, dc, dd }
     }
 
-    /// The base case: no economic interdependence at all.
+    /// The base case: no economic interdependence and a neutral valuation of
+    /// cooperation.
     ///
-    /// Test-only. The simulator always carries an economic layer, so the binary has
-    /// no use for a two-argument form, but the payoff tests read considerably better
-    /// without a third argument that is always zero.
+    /// Test-only. The simulator always carries an economic layer and always passes a
+    /// valuation, so the binary has no use for a shorthand, but the payoff tests read
+    /// considerably better without arguments that are always zero and one.
     #[cfg(test)]
     pub fn payoffs(&self, power_gap: f64, tension: f64) -> Payoffs {
-        self.payoffs_with(power_gap, tension, 0.0)
+        self.payoffs_for(power_gap, tension, 0.0, 1.0)
     }
 }
 

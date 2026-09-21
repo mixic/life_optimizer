@@ -43,19 +43,22 @@
 //!
 //! # Why the coupling is split in two
 //!
-//! The 2x2 in `game.rs` is a *symmetric* game: one payoff matrix describes both
-//! sides. Bloc-specific economics are inherently asymmetric -- the issuer of a
-//! reserve currency is not in the same position as a bloc that holds none -- so the
-//! economic layer enters through two different doors:
+//! The economic layer enters the model through two different doors:
 //!
-//! * **Symmetric, into the game**: the pair's *interdependence* raises what mutual
-//!   cooperation is worth. Both sides feel that, so it belongs in the payoff matrix.
-//! * **Asymmetric, into the simulation**: exposure to an energy disruption, and
-//!   leverage over another bloc's money, hit individual blocs differently, so they
-//!   act on that bloc's own power and losses.
+//! * **Through the game**: the pair's *interdependence* raises what mutual
+//!   cooperation is worth to both sides, so it belongs in the payoff matrix. So does
+//!   each bloc's own valuation of cooperation -- the term that makes the two sides'
+//!   matrices differ, and therefore the term that lets the model express "cooperation
+//!   is worth more to this bloc than to that one".
+//! * **Through the simulation**: exposure to an energy disruption, and leverage over
+//!   another bloc's money, hit individual blocs differently, so they act on that
+//!   bloc's own power and losses.
 //!
-//! That division keeps the solver honest. Making the 2x2 itself asymmetric is the
-//! next structural step, and is recorded in `README.md` as outstanding.
+//! The first door handles what a bloc *decides*; the second handles what it *pays*.
+//! Keeping them apart is what lets the model say "this bloc values cooperation more"
+//! and "this bloc is more exposed to a rupture" without conflating the two -- and it
+//! is why the solver could be widened from a symmetric 2x2 to a bimatrix without a
+//! single line of this layer changing.
 
 use crate::blocks::PowerBloc;
 
@@ -330,7 +333,7 @@ impl Economy {
     ///
     /// A pair that trades energy heavily has more to lose from a rupture, which is
     /// the mechanism that makes cooperation worth more between them. This is the
-    /// channel that enters the *symmetric* game -- see the module doc.
+    /// channel that enters the *payoff matrix* -- see the module doc.
     pub fn interdependence(&self, a: usize, b: usize) -> f64 {
         let direct: f64 = self
             .flows
@@ -453,8 +456,8 @@ mod tests {
         );
     }
 
-    /// Leverage must be directional and bounded. This is the asymmetry the symmetric
-    /// 2x2 cannot express, so it has to be right here.
+    /// Leverage must be directional and bounded. This is an asymmetry that acts on a
+    /// bloc's *power* rather than on its choices, so it has to be right here.
     #[test]
     fn monetary_leverage_is_directional_and_bounded() {
         let (_, economy) = economy();
@@ -482,8 +485,10 @@ mod tests {
         }
     }
 
-    /// Interdependence must be symmetric, because it enters a symmetric payoff
-    /// matrix. An asymmetric value there would silently bias the solver.
+    /// Interdependence must be symmetric, because it describes the *pair* rather than
+    /// either side of it: both blocs feel the same trade link. An asymmetric value
+    /// would mean the two sides of one relationship had different beliefs about it,
+    /// which would be a defect rather than a modelling choice.
     #[test]
     fn interdependence_is_symmetric() {
         let (_, economy) = economy();
