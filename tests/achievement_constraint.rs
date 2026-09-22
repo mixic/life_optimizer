@@ -507,6 +507,67 @@ fn replacement_risk_is_priced_when_it_is_declared() {
     );
 }
 
+/// An assignment that *no* work percentage delivers is a workload problem, not a
+/// trade-off, and must not be optimised for leisure.
+///
+/// Risk weighting exists to price a shortfall the worker could have avoided by
+/// working more. When the required output is unreachable even at 100% with the
+/// optimistic AI gain, there is no such choice: every candidate fails by the same
+/// amount, so a utility search with the delivery requirement relaxed takes the
+/// lowest percentage — recommending 50% work and reporting the goals as
+/// undeliverable in the same breath. The search must instead fall back to the
+/// least-bad option and report that nothing met the goals.
+#[test]
+fn an_impossible_assignment_is_reported_rather_than_optimised() {
+    // Twice what full time delivers, with no AI leverage: unreachable everywhere.
+    let unreachable = AchievementConstraint::new(2.0, 0.0).with_replacement_risk(2.5);
+    let optimizer =
+        optimizer_with_enforcement(Some(unreachable), 150_000.0, Enforcement::RiskWeighted);
+    let outcome = optimizer.search_outcome(&CANDIDATES).unwrap();
+
+    assert!(
+        !outcome.feasible_found,
+        "no percentage delivers the goals, so nothing is feasible — even under \
+         risk-weighted enforcement"
+    );
+    assert!(
+        (outcome.scenario.work_percentage - 1.0).abs() < 1e-9,
+        "the least-bad option is full time, not the most leisurely one; got {}",
+        outcome.scenario.work_percentage
+    );
+    // Note what is *not* asserted: `scenario.is_feasible()` is still true here,
+    // because under risk-weighted enforcement only affordability can block a
+    // single scenario. The "nothing delivers this" verdict lives at the level of
+    // the search, which is why `feasible_found` — not that predicate — is what the
+    // report uses to decide whether to call the result an optimum.
+    assert_eq!(
+        outcome.scenario.achievement.map(|a| a.robustness),
+        Some(Robustness::Unreachable),
+        "the chosen fallback is unreachable at every percentage, which is the \
+         finding the report has to carry"
+    );
+
+    // The guard must not fire for an assignment that *is* reachable optimistically:
+    // that is exactly the contingent shortfall the mode is for.
+    let contingent = AchievementConstraint::new(1.0, 0.1)
+        .with_ai_gain_range(0.4)
+        .with_replacement_risk(2.5);
+    let optimizer =
+        optimizer_with_enforcement(Some(contingent), 150_000.0, Enforcement::RiskWeighted);
+    let outcome = optimizer.search_outcome(&CANDIDATES).unwrap();
+    assert!(
+        outcome.feasible_found,
+        "a schedule that delivers at the optimistic end is still offerable"
+    );
+    assert!(
+        outcome
+            .all_scenarios
+            .iter()
+            .any(|s| s.delivers_optimistically() && !s.achievement_satisfied()),
+        "and the offered schedule is the contingent one, not a robust one"
+    );
+}
+
 /// §1.4 item 6 — **adaptation**: a reduction is only available after a period of
 /// demonstrated delivery, so the first years are worked at full time and the
 /// average workload — which is what leisure is measured from — is higher than the

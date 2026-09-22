@@ -43,21 +43,27 @@ struct ScenarioRow {
 }
 
 pub fn print_optimal_result(scenario: &WorkScenario) {
-    print_optimal_result_for(scenario, None)
+    print_optimal_result_for(scenario, None, scenario.is_feasible())
 }
 
-/// As [`print_optimal_result`], but naming the tax basis.
+/// As [`print_optimal_result`], but naming the tax basis and carrying the
+/// search's verdict.
 ///
-/// The tax-rate line used to read "(official Bern tax only)" unconditionally,
-/// which was false for every other canton once the two-level model began
-/// pricing them. The basis is now supplied by the caller, so the label cannot
-/// misdescribe the figure beside it.
-pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>) {
+/// `feasible_found` is whether the search found *any* acceptable candidate, and it
+/// is deliberately not `scenario.is_feasible()`: under risk-weighted enforcement
+/// that predicate is true by construction for every affordable percentage, so a
+/// fallback to the least-bad option would be announced as an optimum. The two must
+/// agree, or the report contradicts itself a few lines later.
+pub fn print_optimal_result_for(
+    scenario: &WorkScenario,
+    tax_basis: Option<&str>,
+    feasible_found: bool,
+) {
     // Only call it "optimal" when it is actually affordable *and* the
     // employer's required output is still delivered. Announcing an optimum next
     // to "below requirements" is the kind of self-contradicting output that
     // makes a tool untrustworthy.
-    if scenario.is_feasible() {
+    if feasible_found {
         println!("\n{}", "🎯 OPTIMAL SOLUTION FOUND!".bold().green());
     } else if !scenario.meets_requirements {
         println!("\n{}", "⚠  NO AFFORDABLE OPTION AT ANY WORK PERCENTAGE".bold().yellow());
@@ -124,7 +130,10 @@ pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>
         if a.satisfied {
             println!("  Status:          {} (margin {:+.2})",
                 "MEETS REQUIRED OUTPUT ✓".green().bold(), a.margin);
-        } else if a.blocks_recommendation {
+        } else if a.blocks_recommendation || !feasible_found {
+            // Either the mode refuses an undelivered schedule, or the search found
+            // nothing that delivers — in which case the schedule shown is a
+            // least-bad fallback, not an offer, and must not be labelled as one.
             println!("  Status:          {} (shortfall {:.2})",
                 "BELOW REQUIRED OUTPUT ✗".red().bold(), -a.margin);
             println!("  {}", "  Note: a reduced work percentage is not credible here — the".dimmed());
@@ -138,8 +147,9 @@ pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>
             println!("  {}", "  ruling the schedule out; see the risk line below.".dimmed());
         }
 
-        // §1.4 item 4: work the contract does not mention. Reported as workload,
-        // so it can never be mistaken for the leisure the reduction promised.
+        // §1.4 item 4: work the contract does not mention. Reported beside the
+        // contract so it can never be mistaken for the leisure the reduction
+        // promised, and worded to say exactly where the hours above stand.
         if scenario.hidden_work_hours_per_week > 0.0 {
             println!(
                 "  Hidden work:     {:.1} h/week if AI lands at the pessimistic end",
@@ -147,10 +157,15 @@ pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>
             );
             println!(
                 "  {}",
-                "  (counted as workload, not as extra leisure: at that outcome you would"
+                "  (work the contract does not mention. At that outcome the load is a"
                     .dimmed()
             );
-            println!("  {})", "  be working a full-time load whatever the contract says.".dimmed());
+            println!(
+                "  {})",
+                "  full-time one whatever the hours above say, and it is not credited as \
+                 leisure.)"
+                    .dimmed()
+            );
         }
 
         // §1.4 item 5.

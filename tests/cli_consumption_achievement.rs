@@ -486,6 +486,98 @@ fn risk_weighted_mode_offers_what_strict_mode_refuses() {
     );
 }
 
+/// `--enforcement risk-weighted` with no declared risk would switch the delivery
+/// requirement off entirely, so the combination is refused rather than run.
+///
+/// The mode's function is to *price* a missed goal. With `--replacement-risk 0`
+/// the price is zero, every affordable percentage becomes feasible, and the
+/// utility search takes the lowest one — recommending 50% work for a portfolio no
+/// percentage can deliver, while the same report states that the goals are
+/// undeliverable at every percentage. A flag that silently inverts its own meaning
+/// is worth an error message.
+#[test]
+fn risk_weighted_enforcement_without_a_declared_risk_is_refused() {
+    let output = run(&[
+        "optimize",
+        "--salary",
+        "150000",
+        "--age",
+        "40",
+        "--required-output-index",
+        "1.0",
+        "--enforcement",
+        "risk-weighted",
+    ]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "the combination must be refused, got: {}",
+        stdout(&output)
+    );
+    let err = stderr(&output);
+    assert!(
+        err.contains("--replacement-risk"),
+        "and the message must name the missing flag: {err}"
+    );
+    assert!(
+        !stdout(&output).contains("Work Percentage"),
+        "no recommendation may be produced for the refused combination"
+    );
+}
+
+/// An assignment no percentage can deliver is reported as a workload problem, and
+/// the least-bad option is not announced as an optimum.
+///
+/// The banner and the achievement status have to agree. `is_feasible()` is true by
+/// construction under risk-weighted enforcement, so a fallback to the least-bad
+/// option would otherwise be announced with "OPTIMAL SOLUTION FOUND!" and then
+/// explained by "Why no option worked" a few lines later.
+#[test]
+fn an_impossible_assignment_is_not_announced_as_an_optimum() {
+    let output = run(&[
+        "optimize",
+        "--salary",
+        "150000",
+        "--age",
+        "40",
+        "--required-output-index",
+        "2.0",
+        "--enforcement",
+        "risk-weighted",
+        "--replacement-risk",
+        "2.5",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "the run itself is valid: {}",
+        stderr(&output)
+    );
+    let out = stdout(&output);
+
+    assert!(
+        out.contains("NO OPTION MEETS THE REQUIRED OUTPUT"),
+        "the report must say the goals are undeliverable: {out}"
+    );
+    assert!(
+        !out.contains("OPTIMAL SOLUTION FOUND"),
+        "and must not call the least-bad option an optimum: {out}"
+    );
+    assert!(
+        out.contains("BELOW REQUIRED OUTPUT"),
+        "the achievement status must read as a shortfall, not as an offer: {out}"
+    );
+    assert!(
+        !out.contains("OFFERED BUT NOT DELIVERED"),
+        "nothing was offered here: {out}"
+    );
+    assert!(
+        out.contains("Work Percentage: 100%"),
+        "the least-bad option is full time, not the most leisurely one: {out}"
+    );
+}
+
 /// Garbage in the new numeric flags must be refused with exit code 2 rather than
 /// clamped into a different model.
 #[test]

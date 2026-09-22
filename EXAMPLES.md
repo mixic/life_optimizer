@@ -461,8 +461,15 @@ unit of real value than a full-price item you actually use.
 | `normal` (default) | 1.00 |
 | `luxury` | 1.75 |
 
-These are alternative spending profiles, not moral judgments. The same 80% work
-schedule can be feasible under one and infeasible under another.
+These are alternative spending profiles, not moral judgments. They change what a
+schedule *leaves you* — the target basket, the saving capacity, and the
+consumption term of the utility score — but they cannot change whether you can
+afford it. Feasibility is tested against the mandatory floor of rent, essentials
+and debt, and the profile multiplier is applied only to the discretionary tier,
+which is deliberately treated as trimmable. So `extreme-saving` and `luxury`
+return the same work percentage and the same affordability verdict; what moves is
+the basket and the saving capacity beside them. Only the inelastic items — rent
+and contractual debt — can make a schedule unaffordable.
 
 ### Example: locked-in spending
 
@@ -565,7 +572,8 @@ Feasibility is always judged at the **pessimistic** end of the range, so the
 report tells you which kind of claim the recommendation is:
 
 - `ROBUST across the AI range` — delivers even if AI only returns the low gain;
-- `OPTIMISTIC ONLY` — delivers only at the top of the range, i.e. a bet on the tool;
+- `ONLY IF AI DELIVERS at the optimistic end` — a bet on the tool: the goals hold
+  only if AI lands at the top of the range;
 - `UNREACHABLE at any point in the AI range` — even full time falls short.
 
 ```bash
@@ -624,15 +632,20 @@ Employer Achievement Capacity:
   Robustness:      UNREACHABLE at any point in the AI range
   Status:          OFFERED BUT NOT DELIVERED (50% short)
   Hidden work:     21.0 h/week if AI lands at the pessimistic end
-    (counted as workload, not as extra leisure: at that outcome you would
-    be working a full-time load whatever the contract says.)
+    (work the contract does not mention. At that outcome the load is a
+    full-time one whatever the hours above say, and it is not credited as leisure.)
   Replacement risk:  25%   from the goal shortfall
 ```
 
 A 50% work contract here would really be a full-time job with a half-time
-salary. Hidden work is never added to your free hours, and a large enough
+salary. Those hours are not added to the free hours above either: working the
+cover and missing the goal are two answers to the same shortfall, not two costs
+to add up, and the model prices the second one. A large enough
 `--replacement-risk` makes the optimizer return to 100% on its own — the risk is
-a real trade-off, not a decoration.
+a real trade-off, not a decoration. Note that `--enforcement risk-weighted` will
+not run without a `--replacement-risk`: the mode exists to price the shortfall,
+and with nothing declared it would silently stop the required output from
+constraining the search at all.
 
 The reasoning behind these knobs, and an explicit list of what is *not*
 modelled, is in `CRITICS_CURRENT_WORK.md` §7.

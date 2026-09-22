@@ -110,14 +110,18 @@ leverage:
 
 - **AI as a range, not a point** — feasibility is judged at the *pessimistic* end of
   the declared productivity range, so a schedule that only works if AI performs at
-  the top is reported as a bet on the tool (`OPTIMISTIC ONLY`) rather than a credible
-  reduction
+  the top is labelled `ONLY IF AI DELIVERS at the optimistic end` — a bet on the tool
+  rather than a credible reduction
 - **Quality channels** — the share of the AI gain that survives verification and
   rework, and the defects induced by compressing the same output into fewer hours
-- **Hidden work counted as workload** — if the pessimistic AI outcome would demand
-  evenings or weekends, that is printed in h/week and never added to your free hours
+- **Hidden work reported, not absorbed** — if the pessimistic AI outcome would demand
+  evenings or weekends, that is printed in h/week beside the contract. It is not
+  credited as leisure, and it is not added to the hours either: working the cover and
+  missing the goal are two answers to the same shortfall, not two costs to add up, and
+  the model prices the second through the replacement risk
 - **Replacement risk** — a missed goal can be priced as a probability of job loss
-  (`--enforcement risk-weighted`), or refused outright (`strict`, the default)
+  (`--enforcement risk-weighted`, which requires `--replacement-risk`), or refused
+  outright (`strict`, the default)
 - **Two-level consumption** — rent, debt instalments and other unavoidable costs form
   a mandatory floor that does not shrink when hours do, while lifestyle profiles
   (extreme-saving / moderate / normal / luxury) show what the same schedule costs at

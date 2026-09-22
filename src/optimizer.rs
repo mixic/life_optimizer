@@ -527,6 +527,21 @@ impl WorkScenario {
     pub fn is_feasible(&self) -> bool {
         self.meets_requirements && !self.blocks_recommendation()
     }
+
+    /// Whether the required output can be delivered at the *optimistic* end of the
+    /// declared AI range.
+    ///
+    /// `true` when no achievement constraint is configured, since nothing then
+    /// constrains delivery. This is the weakest delivery claim the model can make,
+    /// and `search_outcome` uses it to tell an impossible assignment from a merely
+    /// risky one: if not even this holds for any candidate, no work percentage
+    /// delivers the goals and there is no shortfall left to trade off.
+    pub fn delivers_optimistically(&self) -> bool {
+        match self.achievement {
+            Some(a) => !matches!(a.robustness, Robustness::Unreachable),
+            None => true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -908,10 +923,25 @@ impl LifeOptimizer {
             .map(|&pct| self.evaluate_scenario(pct))
             .collect();
 
-        let feasible: Vec<&WorkScenario> = scenarios
-            .iter()
-            .filter(|s| s.is_feasible())
-            .collect();
+        // Risk weighting relaxes the delivery requirement, because a *contingent*
+        // shortfall is exactly what the mode exists to price. It is relaxed only
+        // while some percentage can still deliver at the optimistic end of the AI
+        // range. When no candidate can deliver even optimistically, the assignment
+        // is impossible rather than risky, and choosing the most leisurely of
+        // several guaranteed failures is not a trade-off — the least-bad fallback
+        // below reports it as a workload problem instead, which is the same answer
+        // the strict path gives.
+        let impossible_assignment = self.config.enforcement == Enforcement::RiskWeighted
+            && !scenarios.iter().any(|s| s.delivers_optimistically());
+
+        let feasible: Vec<&WorkScenario> = if impossible_assignment {
+            Vec::new()
+        } else {
+            scenarios
+                .iter()
+                .filter(|s| s.is_feasible())
+                .collect()
+        };
 
         // Among feasible candidates, the highest utility wins. When none is
         // feasible, fall back to the smallest shortfall rather than the highest

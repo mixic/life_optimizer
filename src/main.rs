@@ -306,7 +306,7 @@ struct OptimizeArgs {
 
     /// What a missed goal does to the search: `strict` (default) does not offer
     /// the work percentage at all, `risk-weighted` offers it and prices the
-    /// replacement probability into its security.
+    /// replacement probability into its security. Requires --replacement-risk.
     #[arg(long, default_value = "strict")]
     enforcement: String,
 
@@ -751,6 +751,25 @@ impl EmployerInputs {
                 raw.enforcement
             ));
         }
+        // `risk-weighted` exists to price a missed goal. With no risk declared the
+        // pricing is vacuous and the mode quietly becomes "ignore the required
+        // output": every affordable percentage is feasible, so the utility search
+        // takes the *lowest* one. For a portfolio that no percentage can deliver,
+        // the report then recommends 50% work and states in the next line that the
+        // goals are undeliverable at every percentage. That is not a trade-off, so
+        // the combination is refused rather than renamed.
+        if optimizer::Enforcement::parse(&raw.enforcement)
+            == Some(optimizer::Enforcement::RiskWeighted)
+            && raw.replacement_risk <= 0.0
+        {
+            return Err(
+                "--enforcement risk-weighted requires --replacement-risk above 0. The \
+                 mode's whole function is to price a missed goal, and with nothing \
+                 declared the required output stops constraining the search at all. \
+                 Use --enforcement strict to refuse undelivered schedules outright."
+                    .to_string(),
+            );
+        }
         Ok(raw)
     }
 
@@ -906,6 +925,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
         .search_outcome(&candidates)
         .expect("candidate list is non-empty");
     let (optimal, all_scenarios) = (outcome.scenario.clone(), outcome.all_scenarios.clone());
+    let feasible_found = outcome.feasible_found;
 
     display::print_tax_deduction_breakdown(&tax_schedule, optimal.gross_income);
 
@@ -925,7 +945,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     // Display work-life balance results, naming the tax basis that produced them
     // so the rate line cannot be read as a different canton's figures.
-    display::print_optimal_result_for(&optimal, Some(&tax_basis));
+    display::print_optimal_result_for(&optimal, Some(&tax_basis), feasible_found);
 
     // When nothing was feasible, say which constraint eliminated the options.
     // The remedies are completely different: one is a budget problem, the other
