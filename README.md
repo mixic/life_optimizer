@@ -381,8 +381,8 @@ life-optimizer/
 ├── information_warfare_claims_reference.md
 │                                 The sourced case table behind INFORMATION_WARFARE.md §5,
 │                                 including the cases that could not be sourced
-├── figures/                      Figures embedded by AI_AS_CATALYST.md
-│                                 (drawn by tools/plot_ai_catalyst.py)
+├── figures/                      Figures drawn by tools/plot_ai_catalyst.py
+│                                 and tools/plot_information_warfare.py
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview

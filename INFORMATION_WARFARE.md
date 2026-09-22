@@ -214,6 +214,16 @@ than derived because each is a modelling choice, and each is a place a critic sh
 
 ## 3. Results
 
+![The six theorems, drawn: the band where a lie decides, the liar's budget, the network
+phase transition, the public-good failure, integration cutting both ways, and the
+instalment optimum](figures/information-warfare-1-theorems.png)
+
+The figure is model output — the algebra of §2, drawn — and it is a picture of the
+statements below rather than evidence for them. Three of the six panels show something the
+statement alone does not convey: that the band where a lie decides is bounded on both sides
+(T1), that the amplification is *undefined* rather than large below the threshold (T3), and
+that the liar's optimum is interior rather than at a corner (T6).
+
 ### 3.1 Theorem 0 — what disinformation buys at the Council is pivotality, not votes
 
 **Theorem 0.** Under (1)–(2) and A6, and with `P` as in (2):
@@ -1049,11 +1059,28 @@ by a golden-value test and by running the pre-change and post-change binaries an
 their full output. The layer's only effect on the simulation is to replace the exogenous war
 draw; nothing else in the Monte Carlo is touched.
 
-**The reproduction does not include a plotting script, and that is a deliberate omission
-rather than an oversight.** The results in §3 are exact consequences of §2, and a figure of
-them would be a picture of algebra that the tests already check; the interesting quantities
-are the four objects of §6.1, which have no data to plot. The mode that produces a table
-worth reading is `--information`, and it prints its own caveats.
+**The figure is reproducible and cannot drift silently.**
+
+```
+python tools/plot_information_warfare.py            # writes figures/information-warfare-*.png
+python tools/plot_information_warfare.py --verify   # also checks against the binary
+```
+
+The script re-checks each curve's *defining equation* numerically before it draws anything —
+that the threshold is a root of `V`, that the break-even solves `β(x) = r`, that the
+amplification diverges at the threshold, that the instalment optimum satisfies its
+first-order condition — and refuses to produce a figure from a model that has stopped
+satisfying its own definitions. It caught one error during writing: a check that conflated
+the time cost `δ` with `δμ`.
+
+The one quantity the figure and the binary can be compared on **exactly** is the spectral
+radius of the influence ring, which is `2σ` and which `--information` prints; `--verify`
+checks that. Everything else on the figure has a counterpart in the binary that depends on a
+stochastic clipped chain, so comparing them would be comparing an expectation with a single
+realisation — which is worse than not comparing at all, and is why the script does not do it.
+
+**A figure of the empirical material was not drawn, deliberately.** The quantities that
+would fill one are the four objects of §6.1, and they have no data to plot.
 
 ---
 
