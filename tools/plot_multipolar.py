@@ -2,8 +2,13 @@
 """Draw the multipolar extrapolation from a `multipolar_sim --export` directory.
 
 Usage:
-    cargo run -p multipolar_sim --release -- --export out/world
-    python tools/plot_multipolar.py out/world
+    cargo run -p multipolar_sim --release -- --scenarios --export out/all
+    python tools/plot_multipolar.py out/all                    # figures beside the data
+    python tools/plot_multipolar.py out/all multipolar_sim/figures
+
+The second argument sends the figures somewhere other than the data directory, which
+is how the copies committed for `multipolar_sim/README.md` are made: the CSV stays
+git-ignored, the pictures do not.
 
 The figures are drawn from CSV only: this script never runs the simulation and never
 invents a number. Everything it plots was produced by the simulator, and everything
@@ -30,6 +35,7 @@ from __future__ import annotations
 
 import csv
 import sys
+import warnings
 from pathlib import Path
 
 import matplotlib
@@ -386,7 +392,13 @@ def figure_europe_swiss(directory: Path, out: Path) -> bool:
     )
 
     _footer(fig)
-    fig.tight_layout(rect=(0, 0.02, 1, 0.93))
+    # The lower-right cell is a text panel with no axes, which `tight_layout` reports
+    # itself unable to handle -- and constrained layout, the suggested alternative,
+    # spreads the three rows far enough apart to look broken. The result here was
+    # checked by eye, so the warning is silenced rather than acted on.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*not compatible with tight_layout.*")
+        fig.tight_layout(rect=(0, 0.02, 1, 0.93))
     fig.savefig(out, dpi=140)
     plt.close(fig)
     print(f"wrote {out}")
@@ -483,16 +495,18 @@ def figure_scenarios(directory: Path, out: Path) -> bool:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         print(__doc__)
         return 2
     directory = Path(sys.argv[1])
     if not directory.is_dir():
         sys.exit(f"error: {directory} is not a directory")
+    out = Path(sys.argv[2]) if len(sys.argv) == 3 else directory
+    out.mkdir(parents=True, exist_ok=True)
 
-    figure_extrapolation(directory, directory / "fig1-extrapolation.png")
-    figure_europe_swiss(directory, directory / "fig2-europe-swiss.png")
-    if not figure_scenarios(directory, directory / "fig3-scenarios.png"):
+    figure_extrapolation(directory, out / "fig1-extrapolation.png")
+    figure_europe_swiss(directory, out / "fig2-europe-swiss.png")
+    if not figure_scenarios(directory, out / "fig3-scenarios.png"):
         print("note: no scenarios-world.csv here, so fig3 was skipped")
     return 0
 

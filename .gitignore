@@ -30,6 +30,9 @@ target
 # Python bytecode from the tools/ scripts
 __pycache__/
 
-# Plotting output from --export (CSV plus figures); regenerate with the two
-# commands in multipolar_sim/README.md rather than committing it.
+# Plotting output from --export: the CSV and the local copies of the figures.
+# Regenerate with the two commands in multipolar_sim/README.md rather than
+# committing it. The figures the README embeds are the exception: they live in
+# multipolar_sim/figures/ and *are* committed, so the page renders for a reader
+# who has never run the simulator.
 out/
