@@ -34,6 +34,7 @@ use rand_distr::{Distribution, Normal};
 use crate::blocks::{GameParams, PowerBloc};
 use crate::economy::Economy;
 use crate::game::{solve_pair, Action, Equilibrium, Payoffs};
+use crate::information::{attack_payoff, InformationParams};
 use crate::pension::{PensionLink, PensionOutcome};
 
 /// The number of dyads `GameParams::tension_per_conflict` is calibrated against.
@@ -160,6 +161,12 @@ pub struct Config {
     /// It pins only the *first* belligerent; the second is still drawn, so a targeted
     /// war is a war centred on that bloc rather than a scripted outcome.
     pub war_target: Option<usize>,
+    /// The information layer of `INFORMATION_WARFARE.md`.
+    ///
+    /// Disabled by default, and that is load-bearing rather than tidy: the only thing the
+    /// layer does is replace the exogenous war draw with an endogenous one, so with it off
+    /// every published figure must be reproduced exactly. A test pins that.
+    pub information: InformationParams,
 }
 
 /// The default ensemble base seed.
@@ -181,6 +188,7 @@ impl Default for Config {
             trap_tension_threshold: 0.6,
             trap_cooperation_threshold: 0.5,
             war_target: None,
+            information: InformationParams::default(),
         }
     }
 }
@@ -228,6 +236,30 @@ pub struct YearRecord {
     pub recession_risk: f64,
 }
 
+/// What the information layer produced, when it was switched on.
+///
+/// Reported separately from [`RunOutcome`]'s own fields because the layer's whole claim
+/// is that it *derives* something the baseline assumes: with the layer on, the war rate
+/// is an output. Printing it beside the assumed rate is what makes that comparison
+/// possible. `INFORMATION_WARFARE.md` sections 3.2-3.7.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InformationOutcome {
+    /// Wars triggered by an attack payoff that crossed zero -- the endogenous onset.
+    pub legitimated_wars: u32,
+    /// Wars that would have occurred with no justification at all (`V >= 0` at `b = 0`).
+    /// Theorem 1(iv): in these dyads the narrative is decoration, not cause.
+    pub bare_wars: u32,
+    /// Years in which some dyad was in Corollary 1.1's contestable band -- inside the
+    /// region where disinformation can change the outcome at all.
+    pub contestable_years: u32,
+    /// Times a bloc's sustained assertions were exposed, across the whole run.
+    pub detected_lies: u32,
+    /// Mean belief in culpability at the horizon, across blocs.
+    pub mean_belief: f64,
+    /// Mean credibility at the horizon, across blocs. Theorem 2's stock.
+    pub mean_credibility: f64,
+}
+
 /// What one complete run produced.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunOutcome {
@@ -261,6 +293,8 @@ pub struct RunOutcome {
     /// capability that never fires is indistinguishable from one that does not exist,
     /// and this is the number that tells the two apart.
     pub asymmetric_fraction: f64,
+    /// The information layer's read-out, or `None` when the layer was off.
+    pub information: Option<InformationOutcome>,
 }
 
 /// Classify a power distribution into a polarity.
@@ -336,11 +370,159 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
     let mut shock_counts = (0u32, 0u32, 0u32);
     let mut asymmetric_dyads = 0u32;
 
+    // --- the information layer's own state ----------------------------------
+    //
+    // `belief` is what the audience believes about each bloc's culpability; `credibility`
+    // is each bloc's stock of standing as a source. Both are meaningless unless the layer
+    // is on, and when it is off they are never read.
+    let information_on = config.information.enabled
+        && config.information.truth.len() == n
+        && config.information.effort.len() == n
+        && n >= 2;
+    let mut belief = vec![0.0_f64; n];
+    let mut credibility = vec![config.information.credibility.ceiling; n];
+    let mut information_outcome = InformationOutcome {
+        legitimated_wars: 0,
+        bare_wars: 0,
+        contestable_years: 0,
+        detected_lies: 0,
+        mean_belief: 0.0,
+        mean_credibility: 0.0,
+    };
+    // Credibility only moves for blocs that are actually spending it.
+    let assertive: Vec<bool> = if information_on {
+        config.information.effort.iter().map(|e| *e > 0.0).collect()
+    } else {
+        vec![false; n]
+    };
+
     for year in 0..config.horizon {
+        // --- the information layer: belief and credibility -------------------
+        //
+        // Updated *before* the attack decision, because the decision is taken on the
+        // belief the audience currently holds. Equation (3) of `INFORMATION_WARFARE.md`,
+        // reduced to the simulation's granularity: each bloc's assertions raise belief
+        // about its target, weighted by its own credibility, while verification pulls
+        // belief back toward the truth.
+        if information_on {
+            let params = &config.information;
+            let previous_belief = belief.clone();
+
+            // `effort[i]` is bloc `i`'s *own* total sustained assertion mass, one meaning
+            // and one meaning only, so that the quantity which damages its credibility is
+            // the same quantity that moves belief. Targeting is uniform across the other
+            // blocs: no available source says who talks about whom, and inventing a
+            // targeting matrix would make the layer's output a property of that guess
+            // rather than of the model. What makes one dyad differ from another is then
+            // the payoff structure, which is the model's own.
+            let reach = (n - 1) as f64;
+            for j in 0..n {
+                let injection: f64 = (0..n)
+                    .filter(|i| *i != j)
+                    .map(|i| params.effort[i] / reach * credibility[i])
+                    .sum();
+                // Cross-contamination: suspicion about one bloc transferring to another.
+                // Zero unless the configured influence matrix says otherwise.
+                let contamination: f64 = (0..n)
+                    .filter(|m| *m != j)
+                    .map(|m| params.influence.contamination[m][j] * previous_belief[m])
+                    .sum();
+                belief[j] = ((1.0 - params.verification) * previous_belief[j]
+                    + params.verification * params.truth[j]
+                    + injection
+                    + contamination)
+                    .clamp(0.0, 1.0);
+            }
+
+            // Credibility: detection and damage, per bloc. Theorem 2 of the paper, and
+            // the reason a sustained campaign is self-limiting.
+            for i in 0..n {
+                if !assertive[i] {
+                    continue;
+                }
+                let detected = rng.gen::<f64>() < params.credibility.detection_probability(params.effort[i]);
+                if detected {
+                    information_outcome.detected_lies += 1;
+                }
+                credibility[i] = params.credibility.step(credibility[i], params.effort[i], detected);
+            }
+        }
+
         // --- shocks ---------------------------------------------------------
         let mut year_shocks = Vec::new();
 
-        if rng.gen::<f64>() < config.shocks.war_probability {
+        // With the layer off this is the original exogenous draw, unchanged and
+        // consuming exactly the same random numbers, so the published figures reproduce.
+        // With it on, onset is *derived*: the war rate becomes an output of the model
+        // rather than an assumption in it. `INFORMATION_WARFARE.md` section 3.2.
+        let war_probability_draw = rng.gen::<f64>();
+        let war_triggered = if information_on {
+            let mut trigger: Option<(usize, usize, bool)> = None;
+            let mut best_payoff = f64::NEG_INFINITY;
+            let mut contestable = false;
+            for i in 0..n {
+                for j in 0..n {
+                    if i == j {
+                        continue;
+                    }
+                    let total = power[i] + power[j];
+                    let gap = if total > 0.0 {
+                        (power[i] - power[j]).abs() / total
+                    } else {
+                        0.0
+                    };
+                    let interdependence = economy.interdependence(i, j);
+                    let payoffs = config.game.payoffs_for(
+                        gap,
+                        tension,
+                        interdependence,
+                        config.blocs[i].cooperation_valuation,
+                    );
+                    // The spoils are the model's own prize for defection -- what the
+                    // aggressor gains by taking advantage of a cooperator rather than
+                    // settling for mutual competition. Nothing new is invented here.
+                    let spoils = (payoffs.dc - payoffs.dd).max(0.0);
+                    let cost = payoffs.cc.max(0.0) + config.information.force_cost;
+                    let legitimation = &config.information.legitimation;
+                    let bare = attack_payoff(spoils, cost, config.information.coalition_channel, legitimation, 0.0);
+                    let at_belief = attack_payoff(
+                        spoils,
+                        cost,
+                        config.information.coalition_channel,
+                        legitimation,
+                        belief[j],
+                    );
+                    // Corollary 1.1: the dyad is contestable when justification is what
+                    // decides it -- not needed at zero belief, and sufficient at the
+                    // belief actually held.
+                    if bare < 0.0 && at_belief >= 0.0 {
+                        contestable = true;
+                    }
+                    if at_belief > best_payoff {
+                        best_payoff = at_belief;
+                        trigger = Some((i, j, bare >= 0.0));
+                    }
+                }
+            }
+            if contestable {
+                information_outcome.contestable_years += 1;
+            }
+            match trigger {
+                Some((_, _, bare)) if best_payoff >= 0.0 => {
+                    if bare {
+                        information_outcome.bare_wars += 1;
+                    } else {
+                        information_outcome.legitimated_wars += 1;
+                    }
+                    true
+                }
+                _ => false,
+            }
+        } else {
+            war_probability_draw < config.shocks.war_probability
+        };
+
+        if war_triggered {
             year_shocks.push(ShockKind::RegionalWar);
             shock_counts.2 += 1;
             tension += config.shocks.war_tension;
@@ -358,8 +540,16 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 if b == a {
                     b = (b + 1) % n;
                 }
-                power[a] *= 1.0 - config.shocks.war_power_loss;
-                power[b] *= 1.0 - config.shocks.war_power_loss;
+                // Theorem 5(i) inside the simulation: a war between deeply interdependent
+                // blocs destroys more, because there was more to sever. The baseline --
+                // severance_scale at zero, or the layer off -- is unaffected.
+                let severance = if information_on {
+                    1.0 + config.information.severance_scale * economy.interdependence(a, b)
+                } else {
+                    1.0
+                };
+                power[a] *= 1.0 - config.shocks.war_power_loss * severance;
+                power[b] *= 1.0 - config.shocks.war_power_loss * severance;
             }
         }
         if rng.gen::<f64>() < config.shocks.crisis_probability {
@@ -658,6 +848,14 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         }
     };
 
+    let information = if information_on {
+        information_outcome.mean_belief = belief.iter().sum::<f64>() / n as f64;
+        information_outcome.mean_credibility = credibility.iter().sum::<f64>() / n as f64;
+        Some(information_outcome)
+    } else {
+        None
+    };
+
     let outcome = RunOutcome {
         dominant,
         final_polarity: classify_polarity(final_shares.clone()),
@@ -675,6 +873,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         } else {
             0.0
         },
+        information,
     };
 
     (outcome, records)
@@ -1276,5 +1475,86 @@ mod tests {
         // A degenerate list has no pairs and no tension to feed.
         assert_eq!(tension_feed_scale(0), 1.0);
         assert_eq!(tension_feed_scale(1), 1.0);
+    }
+
+    /// The information layer must be inert when it is off, and "inert" has to mean
+    /// *byte-identical*, not merely similar -- `INFORMATION_WARFARE.md` section 8 promises
+    /// the published figures reproduce, and every figure in this crate is a snapshot that
+    /// would silently drift if the draw sequence moved by one.
+    ///
+    /// A golden value pins the whole chain: the number of random draws per year, the order
+    /// they are consumed in, and every payoff and update downstream of them. If the layer
+    /// ever takes a draw while disabled, this fails.
+    #[test]
+    fn the_information_layer_is_off_by_default_and_leaves_the_baseline_untouched() {
+        let mut config = Config::default();
+        assert!(
+            !config.information.enabled,
+            "the layer must default off, or the published figures change meaning"
+        );
+        config = Config {
+            runs: 8,
+            seed: 12345,
+            ..config
+        };
+        let ensemble = Ensemble::run(&config);
+        assert!(
+            ensemble.outcomes.iter().all(|o| o.information.is_none()),
+            "a disabled layer must report nothing"
+        );
+        // Golden value at 8 runs, seed 12345: the baseline this crate published before the
+        // layer existed, recorded from the pre-change binary.
+        let cooperation = ensemble.summarize(|o| o.mean_cooperation).0;
+        assert!(
+            (cooperation - 0.207).abs() < 0.0005,
+            "baseline cooperation moved to {cooperation}: the information layer must not \
+             draw a random number while it is disabled"
+        );
+    }
+
+    /// And with it on, it must actually be doing something -- a knob that changes nothing
+    /// is indistinguishable from one that does not exist.
+    #[test]
+    fn enabling_the_layer_changes_war_onset_and_reports_its_own_state() {
+        let mut config = Config {
+            runs: 24,
+            ..Config::default()
+        };
+        let baseline = Ensemble::run(&config);
+
+        let n = config.blocs.len();
+        config.information = InformationParams {
+            enabled: true,
+            effort: vec![0.2; n],
+            truth: vec![0.3; n],
+            influence: crate::information::Influence::ring(n, 0.1),
+            ..InformationParams::default()
+        };
+        let layered = Ensemble::run(&config);
+
+        assert!(
+            layered.outcomes.iter().all(|o| o.information.is_some()),
+            "an enabled layer must report its state on every run"
+        );
+        let reported = layered.outcomes[0].information.expect("present");
+        assert!(
+            reported.mean_credibility > 0.0 && reported.mean_credibility <= 1.0,
+            "credibility is a stock in [0, 1], got {}",
+            reported.mean_credibility
+        );
+        let _ = reported;
+        assert_ne!(
+            baseline
+                .outcomes
+                .iter()
+                .map(|o| o.shock_counts.2)
+                .sum::<u32>(),
+            layered
+                .outcomes
+                .iter()
+                .map(|o| o.shock_counts.2)
+                .sum::<u32>(),
+            "endogenous onset must produce a different war count than the assumed rate"
+        );
     }
 }

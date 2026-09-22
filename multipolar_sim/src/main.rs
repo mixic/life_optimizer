@@ -35,6 +35,15 @@ mod blocks;
 mod economy;
 mod export;
 mod game;
+/// The information layer of `INFORMATION_WARFARE.md` -- legitimation, credibility as a
+/// depletable stock, and the public-good failure in verification.
+///
+/// Allowed to be partly unused by the binary on purpose: the module *is* the deliverable
+/// for that document, and its test module is where the six theorems are checked. Threading
+/// every one of them through the CLI would mean inventing a flag for each, and a flag
+/// nobody passes is not a stronger claim than a test that runs.
+#[allow(dead_code)]
+mod information;
 mod pension;
 mod report;
 mod simulation;
@@ -42,6 +51,7 @@ mod simulation;
 use ai::{AiParams, AiRole, AI_ACTOR_NAME};
 use blocks::{GameParams, PowerBloc};
 use economy::Economy;
+use information::{Influence, InformationParams};
 use simulation::{Config, Ensemble};
 
 /// Options, parsed from `--flag value` pairs without an argument-parsing crate.
@@ -84,6 +94,18 @@ struct Args {
     scenarios: bool,
     /// Directory to write plotting CSVs into, when `--export` was given.
     export: Option<std::path::PathBuf>,
+    /// `--information`: run the world with endogenous war onset beside the baseline.
+    information: bool,
+    /// `--information-verification <x>`: the audience's verification rate `lambda`.
+    /// This is the phase variable of `INFORMATION_WARFARE.md` Corollary 3.1.
+    information_verification: f64,
+    /// `--information-effort <x>`: sustained assertion mass per bloc.
+    information_effort: f64,
+    /// `--information-contamination <x>`: cross-contamination `sigma` in a ring.
+    information_contamination: f64,
+    /// `--information-force-cost <x>`: the part of the cost of force that no
+    /// justification removes. The calibration dial for the derived war rate.
+    information_force_cost: f64,
 }
 
 impl Default for Args {
@@ -117,6 +139,11 @@ impl Default for Args {
             ai: false,
             scenarios: false,
             export: None,
+            information: false,
+            information_verification: InformationParams::default().verification,
+            information_effort: 0.20,
+            information_contamination: 0.10,
+            information_force_cost: InformationParams::default().force_cost,
         }
     }
 }
@@ -137,6 +164,10 @@ impl Args {
             "--tension-pressure" => &mut self.tension_pressure,
             "--conflict-wear" => &mut self.conflict_wear,
             "--energy-disruption" => &mut self.energy_disruption_probability,
+            "--information-verification" => &mut self.information_verification,
+            "--information-effort" => &mut self.information_effort,
+            "--information-contamination" => &mut self.information_contamination,
+            "--information-force-cost" => &mut self.information_force_cost,
             "--crisis" => &mut self.crisis_probability,
             "--war" => &mut self.war_probability,
             "--breakthrough" => &mut self.breakthrough_probability,
@@ -271,6 +302,33 @@ impl Args {
         config
     }
 
+    /// Build the information layer for a run.
+    ///
+    /// `verification` is a parameter rather than a field because `--information` sweeps
+    /// it: it is the phase variable of Corollary 3.1, and holding it fixed would hide the
+    /// only threshold the layer has.
+    ///
+    /// The `truth` vector is a **declared scenario**, and the one place where the layer
+    /// could smuggle in a judgement. It is set flat at `0.3` for every bloc -- an
+    /// assumption that no bloc is more culpable than another -- precisely so that the
+    /// model cannot be read as accusing anyone. A run that wants a different truth vector
+    /// is a run that has made an empirical claim, and this code will not make it.
+    fn information_params(&self, verification: f64) -> InformationParams {
+        let n = self.blocs.len();
+        InformationParams {
+            enabled: true,
+            credibility: information::CredibilityParams::default(),
+            legitimation: information::LegitimationParams::default(),
+            influence: Influence::ring(n, self.information_contamination),
+            effort: vec![self.information_effort; n],
+            coalition_channel: 0.15,
+            verification,
+            truth: vec![0.30; n],
+            force_cost: self.information_force_cost,
+            severance_scale: 0.50,
+        }
+    }
+
     /// Apply this run's CLI overrides to an AI layer.
     ///
     /// Kept separate from the world constructors so the sweep can move one parameter
@@ -319,6 +377,10 @@ fn parse_args() -> Args {
             }
             "--ai" => {
                 args.ai = true;
+                i += 1;
+            }
+            "--information" => {
+                args.information = true;
                 i += 1;
             }
             "--scenarios" => {
@@ -391,7 +453,7 @@ fn print_usage() {
 Multipolar World Simulator
 
 USAGE:
-  multipolar_sim [--sweep | --compare | --ai | --scenarios] [options]
+  multipolar_sim [--sweep | --compare | --ai | --information | --scenarios] [options]
 
 OPTIONS:
   --horizon <years>          simulation length                (default {horizon})
@@ -439,6 +501,16 @@ OPTIONS:
                              cooperation is worth; zero by default
                              because the sign is genuinely disputed
   --sweep                    run the sensitivity sweep instead of one report
+  --information              replace the assumed war rate with a derived one, and
+                             sweep the verification rate it turns on. See
+                             INFORMATION_WARFARE.md; the layer is OFF by default
+                             and leaves every published figure unchanged
+  --information-verification <x>  the audience's verification rate  (default {inf_verification:.2})
+  --information-effort <x>   sustained assertion mass per bloc      (default {inf_effort:.2})
+  --information-contamination <x>  cross-contamination between blocs (default {inf_contamination:.2})
+  --information-force-cost <x>     cost of force that no justification
+                             removes; the dial the derived war
+                             rate comes out of                  (default {inf_force_cost:.2})
   --help                     this message
 
   `--seed` is printed above in the decimal form it is parsed from, so the value
@@ -496,6 +568,10 @@ across parameter ranges and which flip on small changes. See report.rs.",
         ai_lead_effect = d.ai_lead_effect,
         ai_cooperation = d.ai_cooperation,
         ai_actor = AI_ACTOR_NAME,
+        inf_verification = d.information_verification,
+        inf_effort = d.information_effort,
+        inf_contamination = d.information_contamination,
+        inf_force_cost = d.information_force_cost,
     );
 }
 
@@ -967,6 +1043,160 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
                 .copied()
         }),
     }
+}
+
+/// Run the world with the information layer off and on, from the same shock draws, and
+/// then sweep the one parameter the layer's own threshold turns on.
+///
+/// The mode's whole point is that it converts an assumption into an output. The baseline
+/// assumes a war rate (`--war`, 3% a year); the layer derives one from the attack payoffs
+/// and the beliefs the blocs manufacture. Printing the two side by side, from the same
+/// seeds, is the comparison that carries information -- and the sweep over the
+/// verification rate `lambda` is where the phase transition of `INFORMATION_WARFARE.md`
+/// Corollary 3.1 becomes visible in the world rather than only in the algebra.
+fn run_information(base: &Args) {
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("INFORMATION WARFARE: LEGITIMATION, CREDIBILITY, AND ENDOGENOUS WAR ONSET");
+    println!("{}", "=".repeat(78));
+    println!("  The model proved in INFORMATION_WARFARE.md, run. Every constant in it is");
+    println!("  invented -- see that document's section 6 -- so no level below is a finding.");
+    println!("  What the mode is for is the comparison:");
+    println!();
+    println!("    * the baseline ASSUMES a war rate; the layer DERIVES one from the attack");
+    println!("      payoffs and the beliefs the blocs manufacture;");
+    println!("    * and the sweep names how much verification it takes to leave the world");
+    println!("      where force needs no justification at all.");
+    println!();
+
+    let horizon = f64::from(base.horizon).max(1.0);
+
+    // ---- 1. the dial the derived rate comes out of --------------------------
+    println!("  1. The war rate: assumed, and derived");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  The baseline assumes a war rate (`--war`, {:.2} a year). The layer derives one,",
+        base.war_probability
+    );
+    println!("  and the dial it comes out of is the part of the cost of force that no");
+    println!("  justification removes. Sweeping that dial is the honest way to report this: the");
+    println!("  LEVEL is not a finding, the shape is.");
+    println!();
+    println!(
+        "  {:>11}  {:>10}  {:>12}  {:>10}  {:>12}",
+        "force cost", "wars/yr", "needed just.", "bare", "contestable"
+    );
+
+    for (step, force_cost) in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 7.0, 9.0, 12.0]
+        .into_iter()
+        .enumerate()
+    {
+        let mut args = base.clone();
+        args.information = true;
+        args.information_force_cost = force_cost;
+        let mut config = args.to_config();
+        config.information = args.information_params(base.information_verification);
+        let ensemble = Ensemble::run(&config);
+        let wars = ensemble.summarize(|o| f64::from(o.shock_counts.2)).0;
+        let legitimated = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.legitimated_wars)))
+            .0;
+        let bare = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.bare_wars)))
+            .0;
+        let contestable = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years)))
+            .0;
+        let marker = if (force_cost - base.information_force_cost).abs() < 1e-9 {
+            " *"
+        } else {
+            ""
+        };
+        println!(
+            "  {:>11.1}  {:>10.2}  {:>12.1}  {:>10.1}  {:>12.1}{}",
+            force_cost,
+            wars / horizon,
+            legitimated,
+            bare,
+            contestable,
+            marker
+        );
+        let _ = step;
+    }
+    println!();
+    println!("  `*` marks the default. Three readings of the table, in the order the model");
+    println!("  supports them:");
+    println!();
+    println!("    * `needed just.` counts wars that would NOT have happened at zero believed");
+    println!("      culpability -- Corollary 1.1's band. `bare` counts the ones that would have");
+    println!("      happened anyway, where the narrative is decoration rather than cause. The");
+    println!("      model's claim is about the first column, not the second.");
+    println!("    * `bare` RISES as force gets cheaper, which is Theorem 1(iv) rather than a");
+    println!("      curiosity: the cheaper force is on its own merits, the less evidence anyone");
+    println!("      needs, and the layer's own machinery stops mattering.");
+    println!("    * and the derived rate does not fall smoothly to the assumed 3% a year. It");
+    println!("      falls off a cliff, because with blocs this symmetric the attack condition");
+    println!("      crosses zero for many dyads at once. That is a property of running eight");
+    println!("      similarly-parameterised blocs, not a finding about the world.");
+
+    // ---- 2. the verification threshold -------------------------------------
+    println!();
+    println!("  2. Verification is the phase variable");
+    println!("  {}", "-".repeat(74));
+    println!("  Corollary 3.1: belief has a stable equilibrium only if the verification rate");
+    println!("  exceeds the spectral radius of the contamination network. Below that the");
+    println!("  audience has no settled belief at all. This is that threshold, in the world:");
+    println!();
+    println!(
+        "  {:>8}  {:>10}  {:>9}  {:>10}  {:>10}  {:>11}",
+        "lambda", "rho(Sigma)", "belief", "credib.", "war years", "contestable"
+    );
+
+    let influence = Influence::ring(base.blocs.len(), base.information_contamination);
+    let threshold = influence.verification_threshold();
+
+    for step in 0..=8 {
+        let verification = 0.10 + 0.10 * f64::from(step);
+        let mut args = base.clone();
+        args.information = true;
+        let mut config = args.to_config();
+        config.information = args.information_params(verification);
+        let ensemble = Ensemble::run(&config);
+        let belief = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| i.mean_belief))
+            .0;
+        let credibility = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| i.mean_credibility))
+            .0;
+        let wars = ensemble.summarize(|o| f64::from(o.shock_counts.2)).0;
+        let contestable = ensemble
+            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years)))
+            .0;
+        let marker = if verification > threshold { " " } else { "*" };
+        println!(
+            "  {:>7.2}{}  {:>10.2}  {:>9.3}  {:>10.3}  {:>10.1}  {:>11.1}",
+            verification, marker, threshold, belief, credibility, wars, contestable
+        );
+    }
+    println!();
+    println!("  `*` marks a verification rate at or below rho(Sigma) = {threshold:.2}, where");
+    println!("  the model says belief does not settle. Everything above it is inside the");
+    println!("  stable region, and the table says what a rise in verification buys there.");
+
+    // ---- 3. what the mode does not say -------------------------------------
+    println!();
+    println!("  3. What this does not say");
+    println!("  {}", "-".repeat(74));
+    println!("  It does not say that disinformation causes wars. Corollary 1.1 claims the");
+    println!("  weaker thing -- that it selects which of the wars that already pay become");
+    println!("  politically feasible -- and the `needed justification` count above is the");
+    println!("  part of the war rate that required none.");
+    println!("  It does not identify a liar: the truth vector is flat at 0.30 for every bloc");
+    println!("  by construction, so the layer cannot be read as accusing anyone.");
+    println!("  And it calibrates nothing. `--information-verification` and");
+    println!("  `--information-effort` are knobs, not measurements; section 6 of");
+    println!("  INFORMATION_WARFARE.md says what would have to be measured to change that.");
+    println!("{}", "=".repeat(78));
 }
 
 /// Run the three AI worlds from the same shock draws, then locate the hinge.
@@ -1731,6 +1961,11 @@ fn main() {
 
     if args.ai {
         run_ai(&args);
+        return;
+    }
+
+    if args.information {
+        run_information(&args);
         return;
     }
 

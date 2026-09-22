@@ -381,6 +381,7 @@ repository root:
 | `MULTIPOLAR_GAME.md` §8                     | Imperial overstretch: an arms race eventually stops paying for itself                                                 | `GameParams::conflict_wear` — the only channel by which conflict becomes self-limiting                           |
 | `THEORY_OF_SPARING.md` §7d                  | Engineered obsolescence as a 2×2 game with a Pareto-inferior Nash equilibrium                                        | The same solver;`efficiency_loss` is the operational measure of that inferiority                                  |
 | `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2c | AHV is a pay-as-you-go intergenerational contract, and "optimal for the individual is not optimal for the collective" | `pension.rs` — the voice the household tool has no way to represent                                              |
+| `INFORMATION_WARFARE.md` §2–3               | Legitimation is a production function whose capital is credibility, and the verification that would prevent a war is a public good | `information.rs` — the six theorems as test invariants, and `--information`, which derives the war rate instead of assuming it |
 
 ## Layout
 
@@ -390,11 +391,55 @@ repository root:
 | `blocks.rs`     | Power blocs and the payoff structure their interactions produce                 |
 | `economy.rs`    | Monetary standing, energy trade, financial conditions — with provenance        |
 | `ai.rs`         | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts     |
+| `information.rs`| The information layer of `INFORMATION_WARFARE.md`: legitimation, credibility as a depletable stock, endogenous war onset |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
 | `pension.rs`    | The AHV/pension channels the simulated world implies                            |
 | `report.rs`     | Terminal presentation                                                           |
 | `export.rs`     | CSV for plotting: per-year quantiles, per-run end states, exposure and leverage |
-| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`                      |
+| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`, `--information`    |
+
+## Information warfare: making the war rate an output instead of an assumption
+
+`--information` replaces the exogenous war draw with an endogenous one, following the model
+proved in `INFORMATION_WARFARE.md`. Force is used when a bloc's payoff from using it crosses
+zero, and believed culpability is what moves that payoff across zero — so the war rate stops
+being a parameter and becomes a result. Beliefs evolve from each bloc's assertions weighted
+by its own credibility, verification pulls them back toward the truth, and credibility is a
+**stock** that assertions deplete and that exposure damages.
+
+```
+cargo run -p multipolar_sim -- --information
+cargo run -p multipolar_sim -- --information --information-verification 0.6
+```
+
+**Disabled by default, and that is load-bearing.** The layer's only effect on the simulation
+is the war draw, so with it off every published figure reproduces exactly — verified by a
+golden-value test *and* by diffing the full output of the pre-change and post-change
+binaries. Two tests pin it.
+
+What the mode prints, and what it refuses to claim:
+
+* **The war rate becomes derived, and the dial it comes out of is named.** With the layer on
+  the rate is an output of `--information-force-cost` — the part of the cost of force that no
+  justification removes — so the mode sweeps that dial rather than presenting one number. The
+  level is not a finding; the shape is.
+* **The claim is about the wars that needed justification, not about all wars.** The output
+  separates wars that would have happened at zero believed culpability from those that
+  happened only because of it, and the model's Corollary 1.1 is a claim about the second
+  group. As force gets cheaper the first group grows, and the narrative machinery stops
+  mattering — which is Theorem 1(iv), not a curiosity.
+* **Verification is the phase variable.** The second table sweeps `lambda` across the
+  spectral radius of the contamination network, which `INFORMATION_WARFARE.md` Corollary 3.1
+  identifies as the threshold above which belief settles at all. Below it the audience has no
+  stable belief, and the table marks those rows.
+* **It does not identify a liar, and cannot.** The truth vector is flat at 0.30 for every
+  bloc by construction, so the layer cannot be read as accusing anyone. Giving blocs different
+  truths would be an empirical claim, and this code will not make one on the caller's behalf.
+* **Nothing in it is calibrated, and four of its parameters cannot be.** `μ`, `χ` and the
+  epistemic status of both — along with the aggregate cost of misinformation and the
+  no-war counterfactual — are the subject of §6.1 of the document, which reports that no
+  estimate of any quality exists for them. That is a stronger statement than "illustrative",
+  and the mode says so on its face before printing a number.
 
 ## The economic layer, and what is measured versus invented
 

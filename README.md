@@ -374,6 +374,13 @@ life-optimizer/
 ├── TEAM_DEPENDENCIES.md          Why a reduced schedule is not a private transaction
 ├── AI_AS_CATALYST.md             The evidence on AI-assisted software work, what it implies
 │                                 for Agile/Scrum and for validating delivered quality
+├── INFORMATION_WARFARE.md        Legitimation as a production function: six theorems on
+│                                 credibility, network amplification, and the public-good
+│                                 failure in verification, with the historical record that
+│                                 challenges them
+├── information_warfare_claims_reference.md
+│                                 The sourced case table behind INFORMATION_WARFARE.md §5,
+│                                 including the cases that could not be sourced
 ├── figures/                      Figures embedded by AI_AS_CATALYST.md
 │                                 (drawn by tools/plot_ai_catalyst.py)
 ├── EXAMPLES.md                   Worked usage examples
