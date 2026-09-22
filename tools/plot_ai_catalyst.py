@@ -79,9 +79,14 @@ EVIDENCE = [
         "n": 16,
         "measure": "time_on_task",
         "effect": 19.0,
-        "ci": None,
+        # The released paper says it reports 95% confidence intervals (HC3 standard
+        # errors) but prints the endpoints only inside its Figure 15. METR restated
+        # the pair in prose in its 2026-02-24 design update, which is where this is
+        # quoted from rather than eyeballed off a chart.
+        "ci": (2.0, 39.0),
+        "ci_note": "quoted from METR's 2026-02-24 update",
         "task": "Real maintenance tasks in mature\nprojects they maintain",
-        "source": "arXiv:2507.09089 (METR)",
+        "source": "arXiv:2507.09089 (METR); interval from its 2026-02-24 update",
     },
     {
         "key": "cui2024",
@@ -90,12 +95,63 @@ EVIDENCE = [
         "population": "4,867 developers across\nMicrosoft, Accenture and others",
         "n": 4867,
         "measure": "throughput",
-        "effect": 26.0,
+        "effect": 26.08,
+        # The paper prints an effect and a standard error, not an interval:
+        # "a 26.08% increase (standard error: 10.3%) in completed tasks". The bar
+        # drawn is the normal approximation to that pair. It is arithmetic on a
+        # published number, not a new estimate, and it is drawn dashed and labelled
+        # as derived so the two cannot be confused.
         "ci": None,
-        "task": "Daily work, not a set task;\noutcome is pull requests merged",
-        "source": "Management Science (2025), doi:10.1287/mnsc.2025.00535",
+        "se": 10.3,
+        "ci_note": "derived from the reported SE of 10.3%",
+        "task": "Daily work, not a set task;\noutcome is completed tasks",
+        "source": "Management Science, doi:10.1287/mnsc.2025.00535",
     },
 ]
+
+# Normal quantile for a 95% interval, used only to turn a *reported* standard error
+# into the interval drawn beside it. Nothing here is estimated from data.
+Z_95 = 1.959963984540054
+
+
+def interval_of(entry):
+    """The 95% interval for one evidence row, and where it came from.
+
+    Returns ``(low, high, provenance)``, or ``(None, None, "absent")`` when the
+    source consulted gives neither an interval nor a standard error. Provenance is:
+
+    * ``"reported"`` — the source prints the interval itself.
+    * ``"derived"``  — the source prints a standard error; the interval is
+      ``effect +/- 1.96 * se``, drawn dashed and labelled as derived.
+    * ``"absent"``   — nothing to draw. No row is in this state today; the branch
+      exists so that a future row cannot be plotted as if it had an interval.
+
+    This function exists because Figure 1 once printed "(no CI in the source
+    consulted)" against two rows whose sources both *do* report uncertainty. The
+    defect was in the reading, not the literature, so the question "what interval
+    does this row have, and where did it come from?" is now asked in one place.
+    """
+    if entry.get("ci"):
+        return entry["ci"][0], entry["ci"][1], "reported"
+    if entry.get("se"):
+        half = Z_95 * entry["se"]
+        return entry["effect"] - half, entry["effect"] + half, "derived"
+    return None, None, "absent"
+
+
+def interval_note(entry, provenance, narrow=False):
+    """The sample-size caption under a point, plus how its interval was obtained."""
+    note = f"n={entry['n']:,}"
+    if provenance == "derived":
+        why = f"95% CI derived from the reported SE of {entry['se']:.1f}%"
+    elif provenance == "absent":
+        why = "no interval in the source consulted"
+    else:
+        return note
+    if not narrow:
+        return f"{note}  ({why})"
+    head, _, tail = why.partition(" the ")
+    return f"{note}\n({head} the\n{tail})"
 
 # ── Model parameters (declared, not measured) ───────────────────────────────
 #
@@ -245,11 +301,14 @@ def figure_evidence(out_dir):
     ys = list(range(len(time_rows)))[::-1]
     for y, e in zip(ys, time_rows):
         colour = "#1f77b4" if e["effect"] < 0 else "#d62728"
-        if e["ci"]:
-            lo, hi = e["ci"]
-            ax1.plot([lo, hi], [y, y], color=colour, lw=2.0, alpha=0.55, zorder=2)
+        lo, hi, provenance = interval_of(e)
+        dash = "--" if provenance == "derived" else "-"
+        if lo is not None:
+            ax1.plot([lo, hi], [y, y], color=colour, lw=2.0, alpha=0.55,
+                     linestyle=dash, zorder=2)
             for edge in (lo, hi):
-                ax1.plot([edge, edge], [y - 0.12, y + 0.12], color=colour, lw=2.0, alpha=0.55)
+                ax1.plot([edge, edge], [y - 0.12, y + 0.12], color=colour, lw=2.0,
+                         alpha=0.55, linestyle=dash)
         ax1.plot(
             [e["effect"]], [y], marker="o", markersize=10, color=colour,
             markeredgecolor="white", markeredgewidth=1.4, zorder=3,
@@ -264,11 +323,8 @@ def figure_evidence(out_dir):
             fontweight="bold",
             color=colour,
         )
-        note = "n=%s" % f"{e['n']:,}"
-        if not e["ci"]:
-            note += "  (no CI in the source consulted)"
         ax1.annotate(
-            note,
+            interval_note(e, provenance),
             (e["effect"], y),
             textcoords="offset points",
             xytext=(0, -30 if e["effect"] < 0 else 19),
@@ -285,9 +341,12 @@ def figure_evidence(out_dir):
         [f"{e['label']}\n{e['detail']}" for e in time_rows], fontsize=9
     )
     ax1.set_xlim(-100, 70)
+    # Explicit y-limit: the bottom row's effect label sits below its point, and with
+    # the default margin it fell outside the axes and landed on the x-axis caption.
+    ax1.set_ylim(-0.55, len(time_rows) - 0.45)
     ax1.set_xlabel(
         "Change in time on task, %   (negative = faster)\n"
-        "bars are 95% confidence intervals where the source reports one",
+        "bars are 95% confidence intervals (dashed = derived from a reported SE)",
         fontsize=9.5,
     )
     ax1.set_title("Time on task", fontsize=11.5, fontweight="bold", pad=10)
@@ -299,23 +358,31 @@ def figure_evidence(out_dir):
     # ── panel 2: throughput, a different outcome
     y = 0
     e = tp_rows[0]
-    ax2.plot([0, e["effect"]], [y, y], color="#2ca02c", lw=2.0, alpha=0.55, zorder=2)
+    lo, hi, provenance = interval_of(e)
+    dash = "--" if provenance == "derived" else "-"
+    if lo is not None:
+        ax2.plot([lo, hi], [y, y], color="#2ca02c", lw=2.0, alpha=0.55,
+                 linestyle=dash, zorder=2)
+        for edge in (lo, hi):
+            ax2.plot([edge, edge], [y - 0.12, y + 0.12], color="#2ca02c", lw=2.0,
+                     alpha=0.55, linestyle=dash)
     ax2.plot([e["effect"]], [y], marker="o", markersize=10, color="#2ca02c",
              markeredgecolor="white", markeredgewidth=1.4, zorder=3)
-    ax2.annotate(f"{e['effect']:+.0f}%", (e["effect"], y),
+    ax2.annotate(f"{e['effect']:+.1f}%", (e["effect"], y),
                  textcoords="offset points", xytext=(-4, 16),
                  ha="center", fontsize=9.5, fontweight="bold", color="#2ca02c")
-    ax2.annotate(f"n={e['n']:,}   (no CI in the\nsource consulted)",
-                 (e["effect"], y), textcoords="offset points", xytext=(-6, -34),
+    ax2.annotate(interval_note(e, provenance, narrow=True),
+                 (e["effect"], y), textcoords="offset points", xytext=(0, -30),
                  ha="center", fontsize=7.5, color="#666666")
     ax2.axvline(0, color="#333333", lw=1.2, zorder=1)
     ax2.set_yticks([y])
     ax2.set_yticklabels([f"{e['label']}\n{e['detail']}"], fontsize=9)
     ax2.set_ylim(-1.0, 1.0)
-    ax2.set_xlim(-5, 45)
-    ax2.set_xlabel("Change in pull-request throughput, %\n(positive = more merged)",
+    ax2.set_xlim(-5, 50)
+    ax2.set_xlabel("Change in completed tasks, %\n(positive = more, the paper's own label)",
                    fontsize=9.5)
-    ax2.set_title("A different outcome:\nthroughput", fontsize=11.5, fontweight="bold", pad=10)
+    ax2.set_title("A different outcome:\ntasks completed", fontsize=11.5,
+                  fontweight="bold", pad=10)
     ax2.grid(axis="x", color="#dddddd", lw=0.7)
     ax2.set_axisbelow(True)
     for side in ("top", "right"):
@@ -341,7 +408,8 @@ def figure_evidence(out_dir):
         y=0.912,
     )
     _banner(fig, BANNER_EVIDENCE, "#8a6d00")
-    _cite(fig, "Sources: " + " · ".join(e["source"] for e in EVIDENCE))
+    _cite(fig, "Sources: " + " · ".join(e["source"] for e in EVIDENCE)
+          + "\nCui et al.'s interval is 1.96 x its reported standard error; the other three are the sources' own.")
     path = os.path.join(out_dir, "ai-catalyst-1-evidence.png")
     fig.savefig(path, dpi=170)
     plt.close(fig)
@@ -823,6 +891,34 @@ def verify_against_cli(repo_root):
     return results
 
 
+def verify_evidence_intervals():
+    """Every evidence row must carry an interval, and derived ones must be arithmetic.
+
+    Figure 1's first version printed "(no CI in the source consulted)" against two
+    rows. Both sources do report uncertainty — one in prose in a later update, one
+    as a standard error — so the note recorded a gap in the reading rather than in
+    the literature. This check makes a recurrence loud: a row with no interval
+    fails, and so does a derived interval that is not `effect +/- 1.96 * se`.
+    """
+    results = []
+    for e in EVIDENCE:
+        lo, hi, provenance = interval_of(e)
+        if lo is None:
+            results.append((e["label"], "row must carry an interval", False,
+                            "source consulted reports uncertainty"))
+        elif provenance == "derived":
+            half = Z_95 * e["se"]
+            want = (e["effect"] - half, e["effect"] + half)
+            ok = abs(lo - want[0]) < 1e-9 and abs(hi - want[1]) < 1e-9
+            results.append((e["label"],
+                            f"derived CI = effect +/- 1.96 * SE({e['se']:.1f}%)",
+                            ok, f"[{lo:+.2f}, {hi:+.2f}]"))
+        else:
+            results.append((e["label"], "interval quoted from the source", True,
+                            f"[{lo:+.1f}, {hi:+.1f}]"))
+    return results
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default="figures", help="output directory for the PNGs")
@@ -846,8 +942,10 @@ def main():
 
     print("\nevidence carried on the figures:")
     for e in EVIDENCE:
-        ci = f"  95% CI [{e['ci'][0]:+.1f}, {e['ci'][1]:+.1f}]" if e["ci"] else "  (no CI)"
-        print(f"  {e['label']:28} {e['measure']:14} {e['effect']:+6.1f}%{ci}  n={e['n']:,}")
+        lo, hi, provenance = interval_of(e)
+        ci = (f"  95% CI [{lo:+.2f}, {hi:+.2f}] ({provenance})" if lo is not None
+              else "  (no interval in the source consulted)")
+        print(f"  {e['label']:28} {e['measure']:14} {e['effect']:+6.2f}%{ci}  n={e['n']:,}")
 
     print("\nthe conversion the figures rest on (time change -> productivity gain):")
     for name, t in [("Peng 2023", -0.558), ("Google 2024", -0.21), ("METR 2025", +0.19)]:
@@ -868,8 +966,15 @@ def main():
         print(f"    rho={rho:.1f} -> {g*100:6.1f}%")
 
     if args.verify:
-        print("\nverification against the optimizer binary:")
         ok = True
+
+        print("\nevidence intervals carried on Figure 1:")
+        for label, why, passed, note in verify_evidence_intervals():
+            if not passed:
+                ok = False
+            print(f"  {'OK      ' if passed else 'MISMATCH'}  {label:28} {why:42} {note}")
+
+        print("\nverification against the optimizer binary:")
         for case, formula, reported, expected in verify_against_cli(repo_root):
             f = "none" if formula is None else f"{formula*100:.1f}%"
             r = "not run" if reported is None else f"{reported*100:.0f}%"

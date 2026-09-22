@@ -39,16 +39,32 @@ different things:
 | --- | --- | --- | --- | --- |
 | [Peng et al. 2023](https://arxiv.org/abs/2302.06590) | RCT | 95 freelancers, mostly early-career, recruited on Upwork | Time to write one HTTP server, 12 hidden tests | **55.8% faster** (95% CI 21–89%) |
 | [Paradis et al. 2024](https://arxiv.org/abs/2410.12944) | RCT | 96 Google engineers, C++, 1+ year tenure | Time on an enterprise-grade task in a monorepo | **21% faster** (95% CI −3 to +40%) |
-| [Becker et al. 2025 (METR)](https://arxiv.org/abs/2507.09089) | RCT | 16 experienced open-source maintainers | Time on real maintenance tasks in their own mature projects | **19% slower** |
-| [Cui et al. 2024](https://doi.org/10.1287/mnsc.2025.00535) | 3 pooled field experiments | 4,867 developers | Pull requests merged, in daily work | **26% more throughput** |
+| [Becker et al. 2025 (METR)](https://arxiv.org/abs/2507.09089) | RCT | 16 experienced open-source maintainers | Time on real maintenance tasks in their own mature projects | **19% slower** (95% CI +2 to +39%) |
+| [Cui et al. 2024](https://doi.org/10.1287/mnsc.2025.00535) | 3 pooled field experiments | 4,867 developers | Completed tasks, in daily work | **26.08% more** (SE 10.3% → 95% CI ≈ +6 to +46) |
+
+Where the intervals come from matters, so they are not presented as one kind of thing:
+
+- Peng and Paradis print their intervals directly.
+- METR reports 95% intervals from HC3 standard errors but the released paper prints
+  the endpoints only inside a figure. The pair above is quoted from METR's
+  [February 2026 update](https://metr.org/blog/2026-02-24-uplift-update/), which
+  restates it in prose. That post also reports that METR no longer trusts its own
+  later data, for selection reasons it sets out — the 2025 estimate stands, the
+  continuation does not.
+- Cui et al. print an effect with a **standard error**, not an interval. The interval
+  above is the normal approximation to the pair they published (`1.96 × 10.3%`). That
+  is arithmetic on a reported number, not a new estimate, and the figure draws it
+  dashed to keep the two apart.
 
 Three cautions that a bar chart would have hidden, and that the figure is drawn to
 expose:
 
-1. **The confidence intervals overlap almost everything.** Peng's runs from 21% to 89%
-   faster. Google's runs from 3% slower to 40% faster and is *not* significant once
-   covariates are included. An interval that wide is not a number to plan with.
-2. **Only one study measures throughput in real work**, and it measures pull requests,
+1. **Only one interval is comfortably clear of zero.** Peng's runs from 21% to 89%
+   faster and METR's from 2% to 39% slower, so each excludes no-effect on its own.
+   Google's runs from 3% slower to 40% faster and is *not* significant once covariates
+   are included; Cui's runs from 6% to 46% more and its lower bound is thin. An
+   interval that wide is not a number to plan with.
+2. **Only one study measures output in real work**, and it counts *completed tasks*,
    which count work started as well as work finished. It is a different quantity from
    time on task, which is why it sits in its own panel rather than on the same axis.
 3. **Peng et al. say what they did not measure**: *"this study does not examine the
@@ -298,8 +314,10 @@ python tools/plot_ai_catalyst.py --verify    # also checks the closed forms agai
 ```
 
 Five figures come out of one script: two of published evidence and three of model
-output. `--verify` runs the optimizer on three `(goal, gain)` pairs, checks that the
-script's closed form predicts the percentage the binary recommends, and reads back the
-four constants behind Figure 5 — the hidden-work figure, the amortised workload, and
-the §2 floor and net-income lines. If the model's arithmetic or the tax engine changes,
-the check fails rather than the figures quietly going stale.
+output. `--verify` checks first that every evidence row carries an interval and that
+the one derived from a standard error is that arithmetic, then runs the optimizer on
+three `(goal, gain)` pairs, checks that the script's closed form predicts the
+percentage the binary recommends, and reads back the four constants behind Figure 5 —
+the hidden-work figure, the amortised workload, and the §2 floor and net-income lines.
+If the model's arithmetic or the tax engine changes, the check fails rather than the
+figures quietly going stale.
