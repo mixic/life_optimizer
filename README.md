@@ -372,6 +372,10 @@ life-optimizer/
 ├── MULTIPOLAR_GAME.md            Theory the companion simulator operationalises
 ├── CRITICS_CURRENT_WORK.md       External criticism, and §7: what is implemented, what is not
 ├── TEAM_DEPENDENCIES.md          Why a reduced schedule is not a private transaction
+├── AI_AS_CATALYST.md             The evidence on AI-assisted software work, what it implies
+│                                 for Agile/Scrum and for validating delivered quality
+├── figures/                      Figures embedded by AI_AS_CATALYST.md
+│                                 (drawn by tools/plot_ai_catalyst.py)
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
