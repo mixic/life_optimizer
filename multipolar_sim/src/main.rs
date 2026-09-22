@@ -47,6 +47,10 @@ mod information;
 mod pension;
 mod report;
 mod simulation;
+/// The third-party spoiler of `THIRD_PARTY_SPOILER.md`: divide and conquer as a
+/// strategy, and why the profiteer is so rarely made to pay.
+#[allow(dead_code)]
+mod spoiler;
 
 use ai::{AiParams, AiRole, AI_ACTOR_NAME};
 use blocks::{GameParams, PowerBloc};
