@@ -381,8 +381,16 @@ life-optimizer/
 ├── information_warfare_claims_reference.md
 │                                 The sourced case table behind INFORMATION_WARFARE.md §5,
 │                                 including the cases that could not be sourced
-├── figures/                      Figures drawn by tools/plot_ai_catalyst.py
-│                                 and tools/plot_information_warfare.py
+├── THIRD_PARTY_SPOILER.md        Conflict as a failed equilibrium: the spoiler's leverage,
+│                                 divide-and-conquer, derived impunity and blowback, with the
+│                                 sourced historical record kept separate from the declared
+│                                 parameters
+├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
+│                                 budget and one clock: the crossing horizon, the critical
+│                                 discount rate, and a paired Monte Carlo of both
+├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
+│                                 tools/plot_information_warfare.py, tools/plot_spoiler.py
+│                                 and tools/plot_strategies.py
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview

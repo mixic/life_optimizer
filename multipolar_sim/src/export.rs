@@ -297,6 +297,152 @@ pub fn write_bundle(dir: &Path, config: &Config, ensemble: &Ensemble) -> io::Res
     Ok(files)
 }
 
+/// One run of one arm of the strategy comparison.
+///
+/// Written **per run** rather than as an arm-level mean, because the comparison is
+/// paired: run `n` of each arm sees the same world shocks and the same region
+/// realisations, so the difference between two arms is taken run by run and its spread
+/// across runs is what says whether it is distinguishable from noise. An arm-level mean
+/// would throw that away and leave the difference with no error bar at all.
+pub struct StrategyRunRow {
+    pub run: usize,
+    pub arm: &'static str,
+    pub cooperation: f64,
+    pub trap: f64,
+    pub pareto_loss: f64,
+    pub pension: f64,
+    pub conflict_years: f64,
+    pub realised_rent: f64,
+}
+
+/// One region's verdict under both strategies, at the plan's funded intensity.
+pub struct StrategyRegionRow {
+    pub region: String,
+    pub bloc_a: String,
+    pub bloc_b: String,
+    pub margin: f64,
+    pub rent: f64,
+    pub retaliation: f64,
+    pub trade_benefit: f64,
+    pub base_peace: f64,
+    pub proceeds_in_conflict: bool,
+    pub cooperative_spend: f64,
+    pub spoiling_spend: f64,
+    pub peace_under_cooperation: f64,
+    pub conflict_under_spoiling: f64,
+    pub value_cooperative: f64,
+    pub value_spoiling: f64,
+    pub difference: f64,
+    pub critical_rent: Option<f64>,
+}
+
+/// One point on the horizon curve: the clock, and what each arm is worth at it.
+///
+/// A named struct rather than a three-tuple, because `(f64, f64, f64)` in a signature
+/// gives a reader no way to tell the horizon from the two values, and the order of the
+/// two values is exactly the kind of thing that gets swapped silently.
+pub struct StrategyHorizonRow {
+    pub years: f64,
+    pub value_cooperative: f64,
+    pub value_spoiling: f64,
+}
+
+/// Write the strategy comparison as three CSVs: per-run paired outcomes, per-region
+/// verdicts, and the value of each arm against the horizon.
+///
+/// The horizon curve is exported rather than left for the plot to recompute. It is the
+/// framework's headline result, and a second implementation of it in Python would be free
+/// to disagree with the one the report prints.
+pub fn write_strategies(
+    dir: &Path,
+    runs: &[StrategyRunRow],
+    regions: &[StrategyRegionRow],
+    horizon: &[StrategyHorizonRow],
+    note: &str,
+) -> io::Result<Vec<PathBuf>> {
+    fs::create_dir_all(dir)?;
+    let mut files = Vec::new();
+
+    let mut run_csv = String::from(
+        "run,arm,cooperation,trap,pareto_loss,pension,regions_in_conflict,realised_rent\n",
+    );
+    for row in runs {
+        writeln!(
+            run_csv,
+            "{},{},{:.6},{:.6},{:.6},{:.6},{:.4},{:.6}",
+            row.run,
+            row.arm,
+            row.cooperation,
+            row.trap,
+            row.pareto_loss,
+            row.pension,
+            row.conflict_years,
+            row.realised_rent
+        )
+        .ok();
+    }
+    files.push(write_file(dir.join("strategies-runs.csv"), run_csv)?);
+
+    let mut region_csv = String::from(
+        "region,bloc_a,bloc_b,margin,rent,retaliation,trade_benefit,base_peace,\
+         proceeds_in_conflict,cooperative_spend,spoiling_spend,peace_under_cooperation,\
+         conflict_under_spoiling,value_cooperative,value_spoiling,difference,critical_rent,note\n",
+    );
+    for row in regions {
+        let critical = match row.critical_rent {
+            Some(value) => format!("{value:.6}"),
+            // An absent crossing is a result, not a missing value: it says spoiling never
+            // beats cooperation in this region at any rent. Written as `none` so the plot
+            // can tell it apart from a zero.
+            None => "none".to_string(),
+        };
+        writeln!(
+            region_csv,
+            "{},{},{},{:.6},{:.6},{:.6},{:.6},{:.6},{},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{},\"{}\"",
+            row.region,
+            row.bloc_a,
+            row.bloc_b,
+            row.margin,
+            row.rent,
+            row.retaliation,
+            row.trade_benefit,
+            row.base_peace,
+            row.proceeds_in_conflict,
+            row.cooperative_spend,
+            row.spoiling_spend,
+            row.peace_under_cooperation,
+            row.conflict_under_spoiling,
+            row.value_cooperative,
+            row.value_spoiling,
+            row.difference,
+            critical,
+            note
+        )
+        .ok();
+    }
+    files.push(write_file(dir.join("strategies-regions.csv"), region_csv)?);
+
+    let mut horizon_csv = String::from("years,value_cooperative,value_spoiling,difference\n");
+    for row in horizon {
+        // Nine decimals rather than six, because the plotting script checks that
+        // `difference` really is `value_spoiling - value_cooperative` and six decimals
+        // rounds each figure independently: at six, the check failed by 1e-6 on real
+        // exported data, which is the check working and the export being too coarse.
+        writeln!(
+            horizon_csv,
+            "{:.4},{:.9},{:.9},{:.9}",
+            row.years,
+            row.value_cooperative,
+            row.value_spoiling,
+            row.value_spoiling - row.value_cooperative
+        )
+        .ok();
+    }
+    files.push(write_file(dir.join("strategies-horizon.csv"), horizon_csv)?);
+
+    Ok(files)
+}
+
 /// Write the scenario comparison as two CSVs: world metrics, and end shares.
 pub fn write_scenarios(dir: &Path, rows: &[ScenarioRow]) -> io::Result<Vec<PathBuf>> {
     fs::create_dir_all(dir)?;

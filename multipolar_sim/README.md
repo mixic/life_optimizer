@@ -382,6 +382,8 @@ repository root:
 | `THEORY_OF_SPARING.md` §7d                  | Engineered obsolescence as a 2×2 game with a Pareto-inferior Nash equilibrium                                        | The same solver;`efficiency_loss` is the operational measure of that inferiority                                  |
 | `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §2c | AHV is a pay-as-you-go intergenerational contract, and "optimal for the individual is not optimal for the collective" | `pension.rs` — the voice the household tool has no way to represent                                              |
 | `INFORMATION_WARFARE.md` §2–3               | Legitimation is a production function whose capital is credibility, and the verification that would prevent a war is a public good | `information.rs` — the six theorems as test invariants, and `--information`, which derives the war rate instead of assuming it |
+| `THIRD_PARTY_SPOILER.md` §3                 | Conflict is a failed equilibrium, not crossed interests; a third party can install the failure and harvest it, and impunity is derived rather than assumed | `spoiler.rs` — the six theorems and the bifurcation as test invariants |
+| `STRATEGY_COMPARISON.md` §3–6               | The same influence buys peace or buys war; the spoiler's prize is bounded by depletion while the cooperator's return is a flow, so the verdict turns on the horizon, the discount rate and the victims' capacity to answer | `strategies.rs` — both optima, the crossing horizon, the critical discount rate, and `--strategies`, which runs the same seeded world three ways and differences every statistic run by run |
 
 ## Layout
 
@@ -392,11 +394,12 @@ repository root:
 | `economy.rs`    | Monetary standing, energy trade, financial conditions — with provenance        |
 | `ai.rs`         | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts     |
 | `information.rs`| The information layer of `INFORMATION_WARFARE.md`: legitimation, credibility as a depletable stock, endogenous war onset |
+| `strategies.rs` | The two strategies of `STRATEGY_COMPARISON.md`: buying the peace against buying the war, on one budget and one clock |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
 | `pension.rs`    | The AHV/pension channels the simulated world implies                            |
 | `report.rs`     | Terminal presentation                                                           |
 | `export.rs`     | CSV for plotting: per-year quantiles, per-run end states, exposure and leverage |
-| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`, `--information`    |
+| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`, `--information`, `--strategies`    |
 
 ## Information warfare: making the war rate an output instead of an assumption
 

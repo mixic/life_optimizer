@@ -36,6 +36,7 @@ use crate::economy::Economy;
 use crate::game::{solve_pair, Action, Equilibrium, Payoffs};
 use crate::information::{attack_payoff, InformationParams};
 use crate::pension::{PensionLink, PensionOutcome};
+use crate::strategies::{Strategy, StrategyOutcome, StrategyParams, StrategyState};
 
 /// The number of dyads `GameParams::tension_per_conflict` is calibrated against.
 ///
@@ -167,6 +168,16 @@ pub struct Config {
     /// layer does is replace the exogenous war draw with an endogenous one, so with it off
     /// every published figure must be reproduced exactly. A test pins that.
     pub information: InformationParams,
+    /// The strategy layer of `STRATEGY_COMPARISON.md`: buy the peace in a fragile
+    /// region, or buy the war.
+    ///
+    /// Disabled by default, and like the information layer that is load-bearing rather
+    /// than tidy: a disabled layer does not touch a payoff, does not advance the world's
+    /// random stream, and therefore leaves every published figure exactly as it was. It
+    /// draws its region realisations from a **separate** stream seeded from the run seed,
+    /// which is what lets the two arms of the comparison see the same shocks and be
+    /// differenced rather than merely both being run.
+    pub strategy: StrategyParams,
 }
 
 /// The default ensemble base seed.
@@ -189,6 +200,7 @@ impl Default for Config {
             trap_cooperation_threshold: 0.5,
             war_target: None,
             information: InformationParams::default(),
+            strategy: StrategyParams::default(),
         }
     }
 }
@@ -295,6 +307,8 @@ pub struct RunOutcome {
     pub asymmetric_fraction: f64,
     /// The information layer's read-out, or `None` when the layer was off.
     pub information: Option<InformationOutcome>,
+    /// The strategy layer's read-out, or `None` when the layer was off.
+    pub strategy: Option<StrategyOutcome>,
 }
 
 /// Classify a power distribution into a polarity.
@@ -396,7 +410,34 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         vec![false; n]
     };
 
+    // --- the strategy layer's own state -------------------------------------
+    //
+    // The layer draws its region realisations from a stream of its own, salted off the
+    // run seed, so that switching it on cannot shift a single number the rest of the
+    // simulator consumes. Without that, the two arms of the comparison would face
+    // different shocks and differencing them would measure luck rather than strategy.
+    let strategy_on = config.strategy.enabled && n >= 2 && !config.strategy.regions.is_empty();
+    let mut strategy_state = StrategyState::new(&config.strategy, &config.blocs, seed);
+    let mut strategy_outcome = StrategyOutcome {
+        mean_regions_in_conflict: 0.0,
+        realised_rent: 0.0,
+        region_years: 0,
+        conflict_years: 0,
+    };
+
     for year in 0..config.horizon {
+        // --- the strategy layer: this year's regional state -------------------
+        //
+        // Stepped first, because both the payoffs and the war draw below depend on it.
+        // With the layer off this is skipped entirely and the state stays empty, so no
+        // random number is consumed on its behalf.
+        if strategy_on {
+            strategy_state.step(&config.strategy);
+            if let Ok(years) = u32::try_from(strategy_state.conflicts_now()) {
+                strategy_outcome.mean_regions_in_conflict += f64::from(years);
+            }
+        }
+
         // --- the information layer: belief and credibility -------------------
         //
         // Updated *before* the attack decision, because the decision is taken on the
@@ -472,12 +513,19 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                         0.0
                     };
                     let interdependence = economy.interdependence(i, j);
-                    let payoffs = config.game.payoffs_for(
+                    let mut payoffs = config.game.payoffs_for(
                         gap,
                         tension,
                         interdependence,
                         config.blocs[i].cooperation_valuation,
                     );
+                    // The strategy layer moves the same two doors the information
+                    // layer reads: the region dyad's peace margin. Applied here as well
+                    // as in the solving loop below so that the attack decision and the
+                    // game itself see one consistent matrix.
+                    if strategy_on {
+                        strategy_state.adjust(&config.strategy, i, j, &mut payoffs);
+                    }
                     // The spoils are the model's own prize for defection -- what the
                     // aggressor gains by taking advantage of a cooperator rather than
                     // settling for mutual competition. Nothing new is invented here.
@@ -521,6 +569,15 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         } else {
             war_probability_draw < config.shocks.war_probability
         };
+
+        // The strategy layer's regional conflicts are an additional source of wars, and
+        // they are drawn from the *world* stream -- but only when the layer is on, so a
+        // run without it is byte-identical and no published figure moves. The draw is
+        // taken in both arms of a comparison regardless of which strategy is running,
+        // which is what keeps the two arms in lockstep.
+        let war_triggered = war_triggered
+            || (strategy_on
+                && rng.gen::<f64>() < strategy_state.extra_conflict_probability(&config.strategy));
 
         if war_triggered {
             year_shocks.push(ShockKind::RegionalWar);
@@ -628,18 +685,25 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 // valuation at the neutral 1.0 the two matrices are identical and this
                 // is exactly the symmetric game it replaced.
                 let interdependence = economy.interdependence(i, j);
-                let mine_matrix = config.game.payoffs_for(
+                let mut mine_matrix = config.game.payoffs_for(
                     gap,
                     tension,
                     interdependence,
                     config.blocs[i].cooperation_valuation,
                 );
-                let theirs_matrix = config.game.payoffs_for(
+                let mut theirs_matrix = config.game.payoffs_for(
                     gap,
                     tension,
                     interdependence,
                     config.blocs[j].cooperation_valuation,
                 );
+                if strategy_on {
+                    // Both sides' matrices, because the region's conflict is a property
+                    // of the dyad: a drag applied to one side only would be a different
+                    // and unmotivated claim.
+                    strategy_state.adjust(&config.strategy, i, j, &mut mine_matrix);
+                    strategy_state.adjust(&config.strategy, i, j, &mut theirs_matrix);
+                }
                 let solution = solve_pair(&mine_matrix, &theirs_matrix);
 
                 // Realize the equilibrium. A pure equilibrium is deterministic; at a
@@ -856,6 +920,44 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         None
     };
 
+    let strategy = if strategy_on {
+        strategy_outcome.mean_regions_in_conflict /= f64::from(config.horizon.max(1));
+        strategy_outcome.region_years = strategy_state.monitored() * config.horizon;
+        strategy_outcome.conflict_years = strategy_state.conflict_years();
+        // The rent the realised conflicts release, priced exactly as the analysis prices
+        // it: a depleting flow at the captured share, over the horizon actually run
+        // rather than the plan's declared one.
+        //
+        // Zero unless the arm is the spoiling one. A region in conflict releases its rent
+        // whoever is standing there, but *capturing* it is the spoiling strategy and not
+        // the cooperative one, and an earlier version of this block credited the
+        // cooperative arm with the rent from conflicts its own programme failed to
+        // prevent. That read as a cooperative strategy that pays for itself out of war.
+        strategy_outcome.realised_rent = if config.strategy.strategy == Strategy::Spoil {
+            config
+                .strategy
+                .regions
+                .iter()
+                .enumerate()
+                .map(|(index, region)| {
+                    let years = f64::from(strategy_state.conflict_years_in(index));
+                    region.rent
+                        * config.strategy.capturable_share(region)
+                        * (years / f64::from(config.horizon.max(1)))
+                        * StrategyParams::annuity(
+                            config.strategy.discount + config.strategy.depletion,
+                            f64::from(config.horizon),
+                        )
+                })
+                .sum()
+        } else {
+            0.0
+        };
+        Some(strategy_outcome)
+    } else {
+        None
+    };
+
     let outcome = RunOutcome {
         dominant,
         final_polarity: classify_polarity(final_shares.clone()),
@@ -874,6 +976,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
             0.0
         },
         information,
+        strategy,
     };
 
     (outcome, records)

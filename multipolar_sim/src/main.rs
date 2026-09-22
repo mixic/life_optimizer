@@ -51,12 +51,17 @@ mod simulation;
 /// strategy, and why the profiteer is so rarely made to pay.
 #[allow(dead_code)]
 mod spoiler;
+/// The two strategies of `STRATEGY_COMPARISON.md`: buy the peace, or buy the war,
+/// priced against each other on the same budget and the same clock.
+#[allow(dead_code)]
+mod strategies;
 
 use ai::{AiParams, AiRole, AI_ACTOR_NAME};
 use blocks::{GameParams, PowerBloc};
 use economy::Economy;
 use information::{Influence, InformationParams};
 use simulation::{Config, Ensemble};
+use strategies::{Strategy, StrategyParams};
 
 /// Options, parsed from `--flag value` pairs without an argument-parsing crate.
 #[derive(Debug, Clone)]
@@ -110,6 +115,27 @@ struct Args {
     /// `--information-force-cost <x>`: the part of the cost of force that no
     /// justification removes. The calibration dial for the derived war rate.
     information_force_cost: f64,
+    /// `--strategies`: compare buying the peace against buying the war.
+    strategies: bool,
+    /// `--strategy-intensity <x>`: how much of the optimal programme is funded.
+    strategy_intensity: f64,
+    /// `--strategy-discount <x>`: the strategist's annual discount rate. The single
+    /// parameter the verdict is most sensitive to, because it decides whether the
+    /// cooperator's flow is ever worth waiting for.
+    strategy_discount: f64,
+    /// `--strategy-horizon <years>`: the clock both strategies are priced over.
+    strategy_horizon: f64,
+    /// `--strategy-depletion <x>`: how fast a conflict consumes the prize it is paid
+    /// out of. What bounds the spoiler.
+    strategy_depletion: f64,
+    /// `--strategy-coop-gain <x>`: margin moved per unit of `sqrt(spend)`, cooperative.
+    strategy_coop_gain: f64,
+    /// `--strategy-spoil-gain <x>`: the same for the spoiling instrument.
+    strategy_spoil_gain: f64,
+    /// `--strategy-punishment <x>`: how much the victims' retaliation discounts the take.
+    strategy_punishment: f64,
+    /// `--strategy-sensitivity`: sweep the assumptions the verdict turns on.
+    strategy_sensitivity: bool,
 }
 
 impl Default for Args {
@@ -148,6 +174,15 @@ impl Default for Args {
             information_effort: 0.20,
             information_contamination: 0.10,
             information_force_cost: InformationParams::default().force_cost,
+            strategies: false,
+            strategy_intensity: StrategyParams::default().intensity,
+            strategy_discount: StrategyParams::default().discount,
+            strategy_horizon: StrategyParams::default().horizon_years,
+            strategy_depletion: StrategyParams::default().depletion,
+            strategy_coop_gain: StrategyParams::default().coop_gain,
+            strategy_spoil_gain: StrategyParams::default().spoil_gain,
+            strategy_punishment: StrategyParams::default().punishment_scale,
+            strategy_sensitivity: false,
         }
     }
 }
@@ -172,6 +207,13 @@ impl Args {
             "--information-effort" => &mut self.information_effort,
             "--information-contamination" => &mut self.information_contamination,
             "--information-force-cost" => &mut self.information_force_cost,
+            "--strategy-intensity" => &mut self.strategy_intensity,
+            "--strategy-discount" => &mut self.strategy_discount,
+            "--strategy-horizon" => &mut self.strategy_horizon,
+            "--strategy-depletion" => &mut self.strategy_depletion,
+            "--strategy-coop-gain" => &mut self.strategy_coop_gain,
+            "--strategy-spoil-gain" => &mut self.strategy_spoil_gain,
+            "--strategy-punishment" => &mut self.strategy_punishment,
             "--crisis" => &mut self.crisis_probability,
             "--war" => &mut self.war_probability,
             "--breakthrough" => &mut self.breakthrough_probability,
@@ -345,6 +387,30 @@ impl Args {
         layer.lead_cooperation_effect = self.ai_cooperation;
     }
 
+    /// Build the strategy layer for one arm of the comparison.
+    ///
+    /// The regions themselves come from `strategies::default_regions()` rather than being
+    /// rebuilt here, so there is exactly one definition of what each region is and the
+    /// report cannot disagree with the model about it.
+    ///
+    /// `horizon_years` is taken from the run's own `--horizon` unless the caller set
+    /// `--strategy-horizon` explicitly, so that "the strategy is priced over the same
+    /// clock the world is simulated over" holds by default and is only broken on purpose.
+    fn strategy_params(&self, strategy: Strategy) -> StrategyParams {
+        StrategyParams {
+            enabled: true,
+            strategy,
+            intensity: self.strategy_intensity,
+            discount: self.strategy_discount,
+            horizon_years: self.strategy_horizon,
+            depletion: self.strategy_depletion,
+            coop_gain: self.strategy_coop_gain,
+            spoil_gain: self.strategy_spoil_gain,
+            punishment_scale: self.strategy_punishment,
+            ..StrategyParams::default()
+        }
+    }
+
     /// Build an AI layer of the given role with this run's overrides applied.
     ///
     /// The three worlds come from `ai::ai_worlds` rather than being rebuilt here, so
@@ -385,6 +451,14 @@ fn parse_args() -> Args {
             }
             "--information" => {
                 args.information = true;
+                i += 1;
+            }
+            "--strategies" => {
+                args.strategies = true;
+                i += 1;
+            }
+            "--strategy-sensitivity" => {
+                args.strategy_sensitivity = true;
                 i += 1;
             }
             "--scenarios" => {
@@ -517,6 +591,35 @@ OPTIONS:
                              rate comes out of                  (default {inf_force_cost:.2})
   --help                     this message
 
+  --strategies               compare two ways of spending influence on a fragile
+                             region: buying the peace with trade and investment,
+                             or buying the war and taking the rent it releases.
+                             Prices both on the same budget and clock, prints the
+                             crossing horizon and the critical discount rate, then
+                             runs the same seeded world three ways -- layer off,
+                             cooperation on, spoiling on -- and differences every
+                             statistic run by run. See STRATEGY_COMPARISON.md.
+  --strategy-intensity <x>   how much of the optimal programme   (default {st_intensity:.2})
+                             is funded
+  --strategy-discount <x>    the strategist's annual discount    (default {st_discount:.2})
+                             rate; the assumption the verdict
+                             is most sensitive to
+  --strategy-horizon <yrs>   the clock both strategies are       (default {st_horizon:.0})
+                             priced over
+  --strategy-depletion <x>   how fast a conflict consumes the    (default {st_depletion:.2})
+                             prize it is paid out of; this is
+                             what bounds the spoiler
+  --strategy-coop-gain <x>   margin moved per unit of            (default {st_coop:.2})
+                             sqrt(spend), cooperative instrument
+  --strategy-spoil-gain <x>  the same for the spoiling           (default {st_spoil:.2})
+                             instrument; larger by default
+                             (spoiler.rs Corollary 1.1)
+  --strategy-punishment <x>  how much the victims' retaliation  (default {st_punish:.2})
+                             discounts the spoiler's take
+  --strategy-sensitivity     sweep those assumptions and report where the verdict
+                             stops holding; without it the table describes one
+                             parameterisation rather than a finding
+
   `--seed` is printed above in the decimal form it is parsed from, so the value
   can be copied straight back onto the command line.
 
@@ -576,6 +679,13 @@ across parameter ranges and which flip on small changes. See report.rs.",
         inf_effort = d.information_effort,
         inf_contamination = d.information_contamination,
         inf_force_cost = d.information_force_cost,
+        st_intensity = d.strategy_intensity,
+        st_discount = d.strategy_discount,
+        st_horizon = d.strategy_horizon,
+        st_depletion = d.strategy_depletion,
+        st_coop = d.strategy_coop_gain,
+        st_spoil = d.strategy_spoil_gain,
+        st_punish = d.strategy_punishment,
     );
 }
 
@@ -1955,6 +2065,566 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     println!("  differences smaller than that as unresolved rather than as findings.");
 }
 
+/// The statistics the strategy comparison differences, in a fixed order.
+///
+/// Fixed rather than ad hoc so that the paired differences and the export cannot drift
+/// apart, and so that "which of these is a finding" is decided once, here, by the
+/// `higher_is_better` flag rather than by whoever reads the table.
+const STRATEGY_STATS: [(&str, bool); 6] = [
+    ("cooperation index", true),
+    ("conflict-trap years", false),
+    ("Pareto-efficiency loss", false),
+    ("pension security index", true),
+    ("regions in conflict", false),
+    ("rent captured", false),
+];
+
+/// Per-run statistics for one arm of the comparison.
+fn strategy_statistics(config: &Config, ensemble: &Ensemble) -> Vec<[f64; 6]> {
+    let (_, reference) = ensemble.pension_summary(&config.pension);
+    ensemble
+        .outcomes
+        .iter()
+        .map(|outcome| {
+            let (conflict, rent) = outcome
+                .strategy
+                .map_or((0.0, 0.0), |s| (s.mean_regions_in_conflict, s.realised_rent));
+            [
+                outcome.mean_cooperation,
+                outcome.trap_fraction,
+                outcome.mean_efficiency_loss,
+                outcome.pension.security_index(&reference),
+                conflict,
+                rent,
+            ]
+        })
+        .collect()
+}
+
+/// Paired difference of one statistic between two arms: mean, standard error, and the
+/// share of runs in which the first arm was ahead.
+///
+/// Paired rather than unpaired because run `n` of every arm faces the same world shocks
+/// and the same region realisations. Differencing run by run cancels that common noise,
+/// which is the whole reason the comparison can say anything at all with parameters
+/// nobody has measured.
+fn paired_difference(first: &[[f64; 6]], second: &[[f64; 6]], index: usize) -> (f64, f64, f64) {
+    let count = first.len().min(second.len());
+    if count == 0 {
+        return (0.0, 0.0, 0.0);
+    }
+    let differences: Vec<f64> = (0..count)
+        .map(|run| second[run][index] - first[run][index])
+        .collect();
+    let mean = differences.iter().sum::<f64>() / count as f64;
+    let variance = if count > 1 {
+        differences
+            .iter()
+            .map(|value| (value - mean).powi(2))
+            .sum::<f64>()
+            / (count as f64 - 1.0)
+    } else {
+        0.0
+    };
+    let standard_error = (variance / count as f64).sqrt();
+    let ahead = differences.iter().filter(|value| **value > 0.0).count() as f64 / count as f64;
+    (mean, standard_error, ahead)
+}
+
+/// One row of the sensitivity sweep: what to move, how, and over which values.
+struct StrategySweep {
+    name: &'static str,
+    apply: fn(&mut StrategyParams, f64),
+    values: [f64; 6],
+}
+
+/// Compare buying the peace against buying the war: in the model first, then in the world.
+///
+/// # What this mode is for
+///
+/// `THIRD_PARTY_SPOILER.md` establishes that a third party can profit from a conflict
+/// between two others. This mode asks the question that document leaves open -- what the
+/// same influence would have bought if it had been spent on cooperation instead -- and it
+/// answers it twice:
+///
+/// * **In the model**, analytically: both strategies priced on the same budget and the
+///   same clock, region by region, with the crossing horizon and the critical discount
+///   rate computed rather than described.
+/// * **In the world**, by Monte Carlo: the same seeded world run with the layer off, with
+///   the cooperative strategy on, and with the spoiling strategy on, and every statistic
+///   differenced *run by run* so the comparison carries an error bar.
+///
+/// # The caveat, before any number
+///
+/// A region's peace margin is a property of a counterfactual payoff matrix. Nothing here
+/// measures it, and nothing could. So the levels below are not findings and the mode says
+/// so before printing them: what carries information is the *comparison*, and the
+/// sensitivity section, which moves each assumption in turn and reports where the verdict
+/// flips. A verdict that survives its own assumptions being moved is worth something; one
+/// that does not is a description of the assumptions.
+fn run_strategies(base: &Args) {
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("TWO STRATEGIES: BUY THE PEACE, OR BUY THE WAR");
+    println!("{}", "=".repeat(78));
+    println!("  A great power faces fragile regions. It can spend influence on trade,");
+    println!("  investment and security guarantees, which raise a dyad's peace margin; or on");
+    println!("  manufactured grievance and subsidised defection, which lower it, and then take");
+    println!("  the rent the conflict releases. Both are priced here on the same budget and");
+    println!("  the same clock, so the difference between them is the strategy.");
+    println!();
+    println!("  READ THIS BEFORE THE NUMBERS");
+    println!("  ---------------------------");
+    println!("  A region's peace margin is a property of a counterfactual payoff matrix.");
+    println!("  Nobody has measured one and nobody can, so every margin, rent and retaliation");
+    println!("  figure below is DECLARED. The levels are not findings. What the mode is for is");
+    println!("  the comparison, and the sensitivity section at the end, which moves each");
+    println!("  assumption in turn and says where the verdict stops holding.");
+
+    let plan = base.strategy_params(Strategy::Spoil);
+    let comparison = strategies::compare(&plan);
+
+    // ---- 1. the regions, as declared --------------------------------------
+    println!();
+    println!("  1. The regions, as declared");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<14} {:<36} {:>7} {:>6} {:>6} {:>8}",
+        "region", "axis", "margin", "rent", "retal.", "P(peace)"
+    );
+    for row in &comparison.regions {
+        println!(
+            "  {:<14} {:<36} {:>+7.2} {:>6.2} {:>6.2} {:>8.3}",
+            row.region.name,
+            row.region.axis,
+            row.region.margin,
+            row.region.rent,
+            row.region.retaliation,
+            row.base_peace_probability
+        );
+    }
+    println!();
+    println!("  `margin` is the dyad's peace margin: conflict is the equilibrium when it is");
+    println!("  negative, so a negative row is a region already at war and a positive one is a");
+    println!("  peace a strategist would be defending. `rent` is what a conflict there releases");
+    println!("  annually; `retal.` is the victims' capacity to identify and punish a sponsor,");
+    println!("  which is `THIRD_PARTY_SPOILER.md` Theorem 6 reused rather than re-derived.");
+
+    // ---- 2. the verdict, region by region ---------------------------------
+    println!();
+    println!("  2. What the same budget buys in each region");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<14} {:>8} {:>8} {:>9} {:>9} {:>10} {:>9}  {:<11}",
+        "region", "spend c", "spend s", "P(peace)", "P(war)", "worth c", "worth s", "better buy"
+    );
+    for row in &comparison.regions {
+        println!(
+            "  {:<14} {:>8.3} {:>8.3} {:>9.3} {:>9.3} {:>10.3} {:>9.3}  {:<11}",
+            row.region.name,
+            row.cooperative_spend,
+            row.spoiling_spend,
+            row.peace_probability_under_cooperation,
+            row.conflict_probability_under_spoiling,
+            row.value_cooperative,
+            row.value_spoiling,
+            row.prefers().label()
+        );
+    }
+    println!();
+    println!("  `spend` is the funded programme, at the intensity set by --strategy-intensity.");
+    println!("  `worth` is present value over the strategy horizon: for cooperation a maintained");
+    println!("  flow, for spoiling a setup cost paid once against a harvest that decays as the");
+    println!("  conflict consumes the prize. That time shape is assumption A1/A2 in strategies.rs");
+    println!("  and it is the single most consequential choice in this mode.");
+
+    // ---- 3. the two numbers that decide it --------------------------------
+    println!();
+    println!("  3. The two numbers that decide it");
+    println!("  {}", "-".repeat(74));
+    let (preferred, margin) = comparison.preferred();
+    println!(
+        "  totals over {} regions:  cooperation {:>9.3}   spoiling {:>9.3}   margin {:>8.3}",
+        comparison.regions.len(),
+        comparison.total_cooperative,
+        comparison.total_spoiling,
+        margin
+    );
+    println!(
+        "  the framework prefers {} on the declared parameters.",
+        preferred.label()
+    );
+    println!();
+    println!(
+        "  regions at peace: baseline {} of {}, under cooperation {} of {}",
+        comparison.peaceful_at_baseline,
+        comparison.regions.len(),
+        comparison.peaceful_under_cooperation,
+        comparison.regions.len()
+    );
+    println!(
+        "  regions in conflict under spoiling: {} of {}",
+        comparison.in_conflict_under_spoiling,
+        comparison.regions.len()
+    );
+    println!(
+        "  rent captured by spoiling: {:.3}   trade preserved by cooperation: {:.3}",
+        comparison.rent_captured, comparison.trade_preserved
+    );
+    println!();
+    match plan.horizon_verdict() {
+        strategies::HorizonVerdict::Crossing(years) => {
+            println!("  THE CROSSING: spoiling is worth more below {years:.1} years and cooperation");
+            println!("  above it. That is the framework's answer to which of the two wins: the");
+            println!("  spoiler wins short games, because its prize is collected at once, and the");
+            println!("  cooperator wins long ones, because its return is a flow and the spoil-");
+            println!("  er's prize is capped by depletion.");
+        }
+        strategies::HorizonVerdict::CooperationAlways => {
+            println!("  NO CROSSING, AND IT FAVOURS COOPERATION: cooperation is worth more at every");
+            println!("  horizon tried, from {HORIZON_REPORT_LIMIT:.0} years down to half a year. The");
+            println!("  spoiler is never ahead, so there is no window for it to exploit.");
+        }
+        strategies::HorizonVerdict::SpoilingAlways => {
+            println!("  NO CROSSING, AND IT FAVOURS SPOILING: spoiling is worth more at every horizon");
+            println!("  tried, up to {HORIZON_REPORT_LIMIT:.0} years. The cooperator never gets ahead,");
+            println!("  whatever the horizon.");
+        }
+    }
+    match plan.critical_discount_rate() {
+        Some(rate) => {
+            println!("  THE CRITICAL DISCOUNT RATE: {:.3} a year. Below it the crossing exists and", rate);
+            println!("  cooperation eventually wins. Above it there is no crossing at any horizon:");
+            println!("  the strategist is too impatient for a return paid in instalments, and");
+            println!("  spoiling dominates outright. Note the direction -- impatience locks the");
+            println!("  spoiler IN, which is the opposite of the intuition that a deferred return");
+            println!("  suffers from it, because here it is the cooperator who is paid later.");
+        }
+        None => {
+            println!("  THE CRITICAL DISCOUNT RATE: none inside the range searched, so the ordering");
+            println!("  does not reverse with patience alone at these parameters.");
+        }
+    }
+    println!();
+    println!("  `critical rent` per region -- the rent above which spoiling beats cooperation");
+    println!("  there, at any rent below which the region is not worth spoiling:");
+    for row in &comparison.regions {
+        match row.critical_rent {
+            Some(rent) => println!(
+                "    {:<14} {:>7.3}   (declared rent {:.2}, so {})",
+                row.region.name,
+                rent,
+                row.region.rent,
+                if row.region.rent > rent {
+                    "above it: spoilable"
+                } else {
+                    "below it: not worth spoiling"
+                }
+            ),
+            None => println!(
+                "    {:<14}     none   spoiling never beats cooperation here at any rent",
+                row.region.name
+            ),
+        }
+    }
+
+    // ---- 4. the world, by Monte Carlo -------------------------------------
+    println!();
+    println!("  4. The same world, run three ways");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {} runs of {} years each, the SAME seed in all three arms, so the difference",
+        base.runs, base.horizon
+    );
+    println!("  between arms is the strategy and not the shock draws. The region layer draws");
+    println!("  from a stream of its own, so switching it on cannot move the world's numbers.");
+
+    let arms: [(&'static str, StrategyParams); 3] = [
+        ("BASELINE", StrategyParams::off()),
+        ("COOPERATION", base.strategy_params(Strategy::Cooperate)),
+        ("SPOILING", base.strategy_params(Strategy::Spoil)),
+    ];
+
+    let mut statistics: Vec<(&'static str, Vec<[f64; 6]>)> = Vec::new();
+    let mut conflicts_at_horizon: Vec<(f64, f64, f64)> = Vec::new();
+    for (label, layer) in &arms {
+        let mut config = base.to_config();
+        config.strategy = layer.clone();
+        // The declared strategy horizon is the clock the strategies are *priced* over;
+        // the simulated horizon is what they are *run* over. They are the same by
+        // default and the report says so when they are not, because a mismatch would
+        // make the table above and the table below answer different questions.
+        let ensemble = Ensemble::run(&config);
+        let stats = strategy_statistics(&config, &ensemble);
+        conflicts_at_horizon.push((
+            stats.iter().map(|row| row[4]).sum::<f64>() / stats.len().max(1) as f64,
+            stats.iter().map(|row| row[5]).sum::<f64>() / stats.len().max(1) as f64,
+            ensemble.summarize(|o| o.mean_cooperation).0,
+        ));
+        statistics.push((label, stats));
+    }
+    for (index, (label, _)) in arms.iter().enumerate() {
+        let (conflict, rent, cooperation) = conflicts_at_horizon[index];
+        println!(
+            "    {:<12} cooperation {:.3}   regions in conflict {:.2}   rent captured {:.3}",
+            label, cooperation, conflict, rent
+        );
+    }
+
+    if (plan.horizon_years - f64::from(base.horizon)).abs() > 1e-9 {
+        println!();
+        println!(
+            "  NOTE: the strategies are priced over {:.0} years but the world is simulated",
+            plan.horizon_years
+        );
+        println!(
+            "  over {}. The analytic table and the Monte Carlo table are then answering",
+            base.horizon
+        );
+        println!("  questions about different clocks, on purpose or not.");
+    }
+
+    println!();
+    println!("  PAIRED DIFFERENCES -- every statistic is differenced run by run");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:<24} {:>9} {:>9} {:>8}  {:<11}",
+        "contrast", "mean", "std err", "t", "runs ahead"
+    );
+    for (name, index, higher_is_better) in STRATEGY_STATS
+        .iter()
+        .enumerate()
+        .map(|(index, (name, higher))| (*name, index, *higher))
+    {
+        println!("  {name}");
+        // Three contrasts rather than two, because the baseline is the layer switched
+        // OFF: a statistic the layer is the only source of -- how many regions are in
+        // conflict, how much rent is captured -- cannot be compared against a world that
+        // had no regions. For those the informative contrast is spoiling against
+        // cooperation, and printing only the two baseline rows would report "the layer
+        // exists" as though it were "the strategy is worse".
+        let contrasts: [(&str, usize, usize); 3] = [
+            ("cooperation - base", 0, 1),
+            ("spoiling - base", 0, 2),
+            ("SPOILING - COOP", 1, 2),
+        ];
+        for (label, first, second) in contrasts {
+            let (mean, standard_error, ahead) = paired_difference(
+                &statistics[first].1,
+                &statistics[second].1,
+                index,
+            );
+            let t = if standard_error > 0.0 {
+                mean / standard_error
+            } else {
+                0.0
+            };
+            println!(
+                "    {:<22} {:>+9.4} {:>9.4} {:>+8.1}  {:>7.1}%  {}",
+                label,
+                mean,
+                standard_error,
+                t,
+                ahead * 100.0,
+                if (mean > 0.0) == higher_is_better {
+                    "2nd arm better"
+                } else {
+                    "2nd arm worse"
+                }
+            );
+        }
+    }
+    println!();
+    println!("  The t column is the mean divided by its own standard error. Note how small");
+    println!("  those errors are: with {} runs the *unpaired* noise on a cooperation rate is", base.runs);
+    println!("  around {:.4}, an order of magnitude larger, and comparing two arms run", 0.5 / (base.runs as f64).sqrt());
+    println!("  independently would drown the effect. Pairing is what makes the comparison");
+    println!("  readable -- run `n` of every arm faces the same shocks and the same region");
+    println!("  realisations, so the difference is taken with that noise already cancelled.");
+
+    // This is the part a reader would otherwise get wrong, so it is stated rather than
+    // left to be inferred from a table whose largest numbers point the wrong way.
+    println!();
+    println!("  WHAT THESE AGGREGATES DO NOT SHOW, AND WHY THAT IS NOT A RESULT ABOUT");
+    println!("  STRATEGIES");
+    println!("  {}", "-".repeat(74));
+    println!("  Read the cooperation row before believing it. In this simulator, accumulated");
+    println!("  tension erodes the payoff of mutual competition (`conflict_wear`), so a tenser");
+    println!("  system leaves the pure dilemma *sooner* and the measured cooperation rate can");
+    println!("  RISE. Both arms add conflict relative to a baseline that models none, so both");
+    println!("  can push that index up, and the spoiling arm can push it up further than the");
+    println!("  cooperative one. That is a property of the tension channel this simulator");
+    println!("  happens to have -- the same one `--scenarios` documents for a crisis shock --");
+    println!("  and not a finding that spoiling produces cooperation.");
+    println!();
+    println!("  The same caveat covers conflict-trap years, Pareto loss and the pension index,");
+    println!("  because all four are read off the same tension-eroded payoff matrix. In this");
+    println!("  world they move together and they move the way the tension channel says, which");
+    println!("  is why none of them can adjudicate the strategy question on its own.");
+    println!();
+    println!("  So the two statistics that actually discriminate here are:");
+    println!("    * `regions in conflict`, which counts the modelled mechanism directly;");
+    println!("    * `rent captured`, which is zero by construction unless the arm is the");
+    println!("      spoiling one -- a region releases its rent whoever is standing there, but");
+    println!("      capturing it is the strategy.");
+    println!("  Read those against the SPOILING - COOP contrast and not against the baseline: a");
+    println!("  statistic the region layer is the only source of cannot be compared against a");
+    println!("  world that had no regions in it.");
+    println!("  The world cannot adjudicate the strategy question on the aggregate, and this");
+    println!("  mode does not pretend it does. The analytic comparison in sections 2 and 3 is");
+    println!("  where the question is answered; the Monte Carlo is where the answer is checked");
+    println!("  against a world that was not built to make it look good.");
+
+    // ---- 5. where the verdict flips ---------------------------------------
+    if base.strategy_sensitivity {
+        println!();
+        println!("  5. Where the verdict stops holding");
+        println!("  {}", "-".repeat(74));
+        println!("  Each row moves one declared assumption and re-derives the whole comparison.");
+        println!("  A verdict that only holds at the default is a description of the default.");
+
+        let sweeps: [StrategySweep; 4] = [
+            StrategySweep {
+                name: "discount rate",
+                apply: |p: &mut StrategyParams, v: f64| p.discount = v,
+                values: [0.0, 0.02, 0.04, 0.08, 0.15, 0.30],
+            },
+            StrategySweep {
+                name: "depletion rate",
+                apply: |p: &mut StrategyParams, v: f64| p.depletion = v,
+                values: [0.02, 0.06, 0.12, 0.25, 0.50, 1.00],
+            },
+            StrategySweep {
+                name: "spoiling price (gain)",
+                apply: |p: &mut StrategyParams, v: f64| p.spoil_gain = v,
+                values: [0.30, 0.45, 0.60, 0.90, 1.20, 1.80],
+            },
+            StrategySweep {
+                name: "victims' retaliation (punishment scale)",
+                apply: |p: &mut StrategyParams, v: f64| p.punishment_scale = v,
+                values: [0.0, 0.35, 0.70, 1.05, 1.40, 2.00],
+            },
+        ];
+
+        for sweep in sweeps {
+            println!();
+            println!("  Varying {}", sweep.name);
+            println!(
+                "  {:<9} {:>11} {:>11} {:>11} {:>11} {:>10}",
+                "value", "cooperation", "spoiling", "prefers", "margin", "crossing"
+            );
+            for value in sweep.values {
+                let mut probe = plan.clone();
+                (sweep.apply)(&mut probe, value);
+                let priced = strategies::compare(&probe);
+                let (winner, gap) = priced.preferred();
+                let crossing = probe.horizon_verdict().label();
+                println!(
+                    "  {:<9.2} {:>11.3} {:>11.3} {:>11} {:>+11.3} {:>10}",
+                    value,
+                    priced.total_cooperative,
+                    priced.total_spoiling,
+                    winner.label(),
+                    gap,
+                    crossing
+                );
+            }
+        }
+        println!();
+        println!("  The discount-rate row is the one to read first, because it is the assumption");
+        println!("  the verdict is most sensitive to and the one least often argued about: the");
+        println!("  model says an impatient strategist spoils, and it says so for a reason that");
+        println!("  has nothing to do with appetite for risk.");
+    } else {
+        println!();
+        println!("  Run again with --strategy-sensitivity to move each declared assumption in turn");
+        println!("  and see where this verdict stops holding. Without it, the table above is a");
+        println!("  description of one parameterisation rather than a finding about strategies.");
+    }
+
+    // ---- 6. export ---------------------------------------------------------
+    if let Some(dir) = &base.export {
+        let mut run_rows: Vec<export::StrategyRunRow> = Vec::new();
+        for (label, stats) in &statistics {
+            for (run, row) in stats.iter().enumerate() {
+                run_rows.push(export::StrategyRunRow {
+                    run,
+                    arm: label,
+                    cooperation: row[0],
+                    trap: row[1],
+                    pareto_loss: row[2],
+                    pension: row[3],
+                    conflict_years: row[4],
+                    realised_rent: row[5],
+                });
+            }
+        }
+        let region_rows: Vec<export::StrategyRegionRow> = comparison
+            .regions
+            .iter()
+            .map(|row| export::StrategyRegionRow {
+                region: row.region.name.to_string(),
+                bloc_a: row.region.bloc_a.to_string(),
+                bloc_b: row.region.bloc_b.to_string(),
+                margin: row.region.margin,
+                rent: row.region.rent,
+                retaliation: row.region.retaliation,
+                trade_benefit: row.region.trade_benefit,
+                base_peace: row.base_peace_probability,
+                proceeds_in_conflict: row.starts_in_conflict,
+                cooperative_spend: row.cooperative_spend,
+                spoiling_spend: row.spoiling_spend,
+                peace_under_cooperation: row.peace_probability_under_cooperation,
+                conflict_under_spoiling: row.conflict_probability_under_spoiling,
+                value_cooperative: row.value_cooperative,
+                value_spoiling: row.value_spoiling,
+                difference: row.difference,
+                critical_rent: row.critical_rent,
+            })
+            .collect();
+        // The horizon curve, from the same plan the report was priced with: each point
+        // re-prices the whole comparison at that horizon rather than scaling it.
+        let horizon_curve: Vec<export::StrategyHorizonRow> = (1..=40)
+            .map(|step| {
+                let years = f64::from(step) * 2.0;
+                let mut probe = plan.clone();
+                probe.horizon_years = years;
+                let priced = strategies::compare(&probe);
+                export::StrategyHorizonRow {
+                    years,
+                    value_cooperative: priced.total_cooperative,
+                    value_spoiling: priced.total_spoiling,
+                }
+            })
+            .collect();
+        match export::write_strategies(
+            dir,
+            &run_rows,
+            &region_rows,
+            &horizon_curve,
+            "all parameters declared, not measured; read the difference, not the level",
+        ) {
+            Ok(files) => {
+                println!();
+                println!("  EXPORTED for plotting ({}):", dir.display());
+                for file in &files {
+                    println!("    {}", file.display());
+                }
+                println!();
+                println!("  Draw the figures with:");
+                println!("    python tools/plot_strategies.py {}", dir.display());
+            }
+            Err(error) => eprintln!("warning: could not write the strategy export: {error}"),
+        }
+    }
+
+    println!("{}", "=".repeat(78));
+}
+
+/// The longest horizon the crossing search tries, echoed in the report so that "no
+/// crossing" is a statement with a range attached rather than an absolute.
+const HORIZON_REPORT_LIMIT: f64 = 400.0;
+
 fn main() {
     let args = parse_args();
 
@@ -1965,6 +2635,11 @@ fn main() {
 
     if args.ai {
         run_ai(&args);
+        return;
+    }
+
+    if args.strategies {
+        run_strategies(&args);
         return;
     }
 
