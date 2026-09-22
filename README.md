@@ -364,6 +364,7 @@ life-optimizer/
 ├── SWISS_TAX_DATA.md             Tax data provenance, coverage and known defects
 ├── MULTIPOLAR_GAME.md            Theory the companion simulator operationalises
 ├── CRITICS_CURRENT_WORK.md       External criticism, and §7: what is implemented, what is not
+├── TEAM_DEPENDENCIES.md          Why a reduced schedule is not a private transaction
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
@@ -389,7 +390,10 @@ life-optimizer/
   coefficients so you can test what your answer depends on. All default to neutral.
 - Team dependencies are **not modelled**: the constraint treats your reduced
   availability as having no effect on colleagues, so a schedule that really pushes
-  work onto your team will look better here than it is.
+  work onto your team will look better here than it is. The design for that channel
+  — including why the externality belongs to *retaining the full portfolio* rather
+  than to the reduced hours — is in [`TEAM_DEPENDENCIES.md`](TEAM_DEPENDENCIES.md),
+  and it is not implemented.
 
 This tool is meant to inform a conversation with a financial advisor or pension
 fund — not replace one.

@@ -421,6 +421,55 @@ change every recommendation in the model.
 `--utilization-discipline`, `--quasi-inelastic-share`, `--required-output-index`,
 `--ai-productivity-gain`.
 
+**Later refinements to §5.2, driven by `CRITICS_CURRENT_WORK.md` §1.4.** The
+constraint as first shipped tested a point AI gain against a fixed goal. The six
+practical tests the critique asks for are now in the code as neutral-by-default
+knobs: a declared gain *range* with feasibility judged at the pessimistic end and
+a `Robustness` verdict; two quality channels (gain surviving rework, and defects
+induced by pace); hidden work reported as workload and never added to leisure; a
+replacement-risk coefficient with `strict` and `risk-weighted` enforcement; and an
+evaluation period amortised into the average workload. `--monthly-debt` closes the
+consumption gap in §2. The parameter table, the two modelling decisions that are
+choices rather than plumbing, and the list of what is still absent are in
+`CRITICS_CURRENT_WORK.md` §7. Every new input defaults to its neutral value, so
+the pre-critique answers are unchanged and the existing suites pass untouched.
+
+### 5.5 Team dependencies (designed, not implemented)
+
+The largest remaining gap in Track B is named in `CRITICS_CURRENT_WORK.md` §7.7
+and specified in `TEAM_DEPENDENCIES.md`. The model assumes a worker's deliverable
+capacity depends on their own hours and nobody else's, so every shortfall it
+reports is reported as fully internalised by the worker who caused it. In a real
+staffing system a shortfall has four possible destinations — absorbed by the
+worker, transferred to colleagues, missed, or absorbed by the employer — and the
+current code can express only the first and part of the third.
+
+Three things in that document are worth carrying into the roadmap as decisions
+rather than as background:
+
+1. **The externality belongs to the scope, not to the hours.** If an employer
+   reduces the assigned portfolio in proportion to the hours ($s_j = w_j$), the
+   team channel is empty and the current model is correct. It is fully open only
+   for the fixed-goal case ($s_j = 1$). The consequence is a change to the shape
+   of the output rather than an extra coefficient: the recommendation should be a
+   pair — a work percentage *and* a handback — because that is the form of the
+   question an employer is actually asked.
+2. **Sustainability is a stock, not a flow.** If absorption draws on accumulated
+   goodwill that others extend voluntarily, the binding constraint is a balance
+   that can be exhausted, which a per-year flow constraint cannot represent. That
+   is a candidate answer to §4's open question about what evidence would show an
+   80% schedule to be sustainable.
+3. **Every coefficient is declared, with its provenance visible.** Coupling,
+   substitutability, team slack, credit decay and the normative weight on
+   colleagues' welfare are all unmeasurable from a standalone binary, and the
+   chapter says so per parameter rather than choosing a number. The cheapest
+   first step needs no new coefficient at all: expose `--assigned-scope` and
+   report the conservation identity, which makes `hidden_work_percentage` honest
+   by naming the assumption it already makes.
+
+Status: a chapter and an implementation sketch. No code, no CLI flag, no report
+line. The limitation in §2 of this document stands until it is built.
+
 ---
 
 ## 6. Strategic Priorities, Ranked
