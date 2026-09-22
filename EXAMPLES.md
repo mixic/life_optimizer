@@ -544,6 +544,99 @@ by raising the required index alongside the AI gain:
 Now 100% is forced again. AI only buys you time if the gains are not fully
 captured as higher output expectations.
 
+### Refining the AI assumption
+
+The plain `--ai-productivity-gain` assumes one number, usable as delivered, for
+every hour you compress into. Five optional flags let you attack that
+assumption instead of accepting it. All of them are off by default, and with the
+defaults the constraint behaves exactly as in the examples above.
+
+| Flag | Meaning | Default |
+|---|---|---|
+| `--ai-productivity-gain-high` | Optimistic end of a productivity *range*. `--ai-productivity-gain` becomes the pessimistic end | unset (= pessimistic) |
+| `--ai-quality-retention` | Share of the AI gain that survives verification and rework | `1.0` |
+| `--compression-quality-sensitivity` | Output per hour lost per unit of pace above your sustainable rate | `0.0` |
+| `--replacement-risk` | Replacement probability per unit of relative goal shortfall | `0.0` |
+| `--enforcement` | `strict` refuses a schedule that does not deliver; `risk-weighted` offers it and prices the risk | `strict` |
+| `--evaluation-period-years` | Years at full time before the reduction becomes credible | `0.0` |
+| `--monthly-debt` | Debt repayment or other unavoidable contractual outflow | `0.0` |
+
+Feasibility is always judged at the **pessimistic** end of the range, so the
+report tells you which kind of claim the recommendation is:
+
+- `ROBUST across the AI range` — delivers even if AI only returns the low gain;
+- `OPTIMISTIC ONLY` — delivers only at the top of the range, i.e. a bet on the tool;
+- `UNREACHABLE at any point in the AI range` — even full time falls short.
+
+```bash
+./life-optimizer optimize \
+  --salary 150000 --age 40 \
+  --required-output-index 1.0 \
+  --ai-productivity-gain 0.5 --ai-productivity-gain-high 0.8 \
+  --compression-quality-sensitivity 0.5 \
+  --evaluation-period-years 2 \
+  --monthly-debt 300
+```
+
+```text
+Employer Achievement Capacity:
+  AI gain range:   50% pessimistic … 80% optimistic
+  Capacity (A):    1.20
+  Quality factor:  0.88   usable output per unit of capacity
+  Delivered:       1.05
+  Required (G):    1.00
+  Robustness:      ROBUST across the AI range
+  Status:          MEETS REQUIRED OUTPUT ✓ (margin +0.05)
+  Average workload:81.6%   over the years to retirement, including
+                     the evaluation period worked at full time
+```
+
+Read it as: the goals still hold up if AI returns only half the optimistic
+gain, so 80% is robust rather than a bet — but compressing the same portfolio
+into the reduced week costs about 12% of the output per hour, which is why the
+margin is only 0.05. The average workload is 81.6% rather than the contractual
+80% because the first two years are served at full time.
+
+### Hidden work and replacement risk
+
+`--replacement-risk` prices a missed goal as a probability of losing the job.
+On its own it does not change what strict mode will offer — strict simply
+declines to recommend a schedule that does not deliver:
+
+```bash
+./life-optimizer optimize --salary 150000 --age 40 \
+  --required-output-index 1.0 --replacement-risk 0.5
+```
+
+With `--enforcement risk-weighted`, the same shortfall is offered instead, and
+the workload it hides is printed rather than absorbed:
+
+```bash
+./life-optimizer optimize --salary 150000 --age 40 \
+  --required-output-index 1.0 --replacement-risk 0.5 \
+  --enforcement risk-weighted
+```
+
+```text
+Employer Achievement Capacity:
+  Capacity (A):    0.50
+  Required (G):    1.00
+  Robustness:      UNREACHABLE at any point in the AI range
+  Status:          OFFERED BUT NOT DELIVERED (50% short)
+  Hidden work:     21.0 h/week if AI lands at the pessimistic end
+    (counted as workload, not as extra leisure: at that outcome you would
+    be working a full-time load whatever the contract says.)
+  Replacement risk:  25%   from the goal shortfall
+```
+
+A 50% work contract here would really be a full-time job with a half-time
+salary. Hidden work is never added to your free hours, and a large enough
+`--replacement-risk` makes the optimizer return to 100% on its own — the risk is
+a real trade-off, not a decoration.
+
+The reasoning behind these knobs, and an explicit list of what is *not*
+modelled, is in `CRITICS_CURRENT_WORK.md` §7.
+
 ---
 
 ## Interactive Exploration

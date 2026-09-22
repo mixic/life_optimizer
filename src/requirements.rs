@@ -60,6 +60,16 @@ pub struct PersonalRequirements {
     pub vacation: f64,
     pub savings_goal: f64,
     pub discretionary: f64,
+    /// `D_t`: debt repayment and other unavoidable contractual outflows
+    /// (`CRITICS_CURRENT_WORK.md` §2.1).
+    ///
+    /// Kept separate from `discretionary` and from `savings_goal` because it has a
+    /// different character from both: it is not trimmable, and it does not fall
+    /// when hours fall. A household that reduces its work percentage still owes
+    /// the same instalment, which is precisely why the critique wants it visible
+    /// rather than folded into a generic requirement.
+    #[serde(default)]
+    pub debt_repayment: f64,
 }
 
 impl PersonalRequirements {
@@ -73,7 +83,8 @@ impl PersonalRequirements {
         self.education +
         self.vacation +
         self.savings_goal +
-        self.discretionary
+        self.discretionary +
+        self.debt_repayment
     }
 
     pub fn total_annual(&self) -> f64 {
@@ -91,7 +102,8 @@ impl PersonalRequirements {
     /// household may declare as quasi-inelastic via `quasi_inelastic_share`.
     pub fn elasticity_tiers(&self, config: &ConsumptionProfileConfig) -> ConsumptionTiers {
         let inelastic =
-            self.housing + self.food + self.transport + self.insurance + self.childcare + self.healthcare;
+            self.housing + self.food + self.transport + self.insurance + self.childcare + self.healthcare
+                + self.debt_repayment;
 
         // `discretionary` is the nominally elastic tier; `education` behaves the
         // same way (activities and materials are trimmable, unlike Kita fees).
@@ -182,6 +194,7 @@ impl PersonalRequirements {
             vacation: 450.0,                              // Annual trips amortized
             savings_goal: 900.0,                          // Emergency + goals
             discretionary: 450.0,                         // Fun money
+            debt_repayment: 0.0,                          // No debt assumed by default
         }
     }
 

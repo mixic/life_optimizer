@@ -102,16 +102,72 @@ pub fn print_optimal_result_for(scenario: &WorkScenario, tax_basis: Option<&str>
     // ── Employer-side achievement capacity (§5.2) ────────────────────────────
     if let Some(a) = scenario.achievement {
         println!("\n{}", "Employer Achievement Capacity:".bold());
+        if a.ai_gain_high > a.ai_gain_low {
+            println!(
+                "  AI gain range:   {:.0}% pessimistic … {:.0}% optimistic",
+                a.ai_gain_low * 100.0,
+                a.ai_gain_high * 100.0
+            );
+        } else if a.ai_gain_low > 0.0 {
+            println!("  AI gain:         {:.0}%", a.ai_gain_low * 100.0);
+        }
         println!("  Capacity (A):    {:.2}", a.capacity);
+        if a.quality_factor < 1.0 {
+            println!(
+                "  Quality factor:  {:.2}   usable output per unit of capacity",
+                a.quality_factor
+            );
+            println!("  Delivered:       {:.2}", a.delivered);
+        }
         println!("  Required (G):    {:.2}", a.required_output);
+        println!("  Robustness:      {}", a.robustness.label());
         if a.satisfied {
             println!("  Status:          {} (margin {:+.2})",
                 "MEETS REQUIRED OUTPUT ✓".green().bold(), a.margin);
-        } else {
+        } else if a.blocks_recommendation {
             println!("  Status:          {} (shortfall {:.2})",
                 "BELOW REQUIRED OUTPUT ✗".red().bold(), -a.margin);
             println!("  {}", "  Note: a reduced work percentage is not credible here — the".dimmed());
             println!("  {}", "  organisation's goals would not be delivered.".dimmed());
+        } else {
+            // Risk-weighted enforcement: offered, with its shortfall priced.
+            println!("  Status:          {} ({:.0}% short)",
+                "OFFERED BUT NOT DELIVERED".yellow().bold(),
+                a.relative_shortfall() * 100.0);
+            println!("  {}", "  This mode prices the shortfall as replacement risk instead of".dimmed());
+            println!("  {}", "  ruling the schedule out; see the risk line below.".dimmed());
+        }
+
+        // §1.4 item 4: work the contract does not mention. Reported as workload,
+        // so it can never be mistaken for the leisure the reduction promised.
+        if scenario.hidden_work_hours_per_week > 0.0 {
+            println!(
+                "  Hidden work:     {:.1} h/week if AI lands at the pessimistic end",
+                scenario.hidden_work_hours_per_week
+            );
+            println!(
+                "  {}",
+                "  (counted as workload, not as extra leisure: at that outcome you would"
+                    .dimmed()
+            );
+            println!("  {})", "  be working a full-time load whatever the contract says.".dimmed());
+        }
+
+        // §1.4 item 5.
+        if a.replacement_risk > 0.0 {
+            println!(
+                "  Replacement risk:{:>4.0}%   from the goal shortfall",
+                a.replacement_risk * 100.0
+            );
+        }
+
+        // §1.4 item 6.
+        if (a.amortised_work_percentage - scenario.work_percentage).abs() > 1e-9 {
+            println!(
+                "  Average workload:{:>4.1}%   over the years to retirement, including",
+                a.amortised_work_percentage * 100.0
+            );
+            println!("  {}", "                   the evaluation period worked at full time".dimmed());
         }
     }
 
@@ -147,6 +203,17 @@ pub fn print_consumption_breakdown(scenario: &WorkScenario) {
     println!("  {}", "─".repeat(49));
     println!("  {:<38} {:>10}", "Mandatory floor".bold(), format!("CHF {:.0}", scenario.mandatory_monthly).bold());
     println!("  {:<38} {:>10}", "Full lifestyle basket".bold(), format!("CHF {:.0}", scenario.target_monthly).bold());
+
+    // `S_t = Y_t - T_t - C_t` (CRITICS_CURRENT_WORK.md §2.1): what is left for
+    // saving and investing. Reported even when negative, because a negative saving
+    // capacity is the finding rather than an error.
+    let saving = scenario.saving_capacity_monthly;
+    let saving_coloured = if saving >= 0.0 {
+        format!("CHF {:.0}", saving).green()
+    } else {
+        format!("CHF {:.0}", saving).red()
+    };
+    println!("  {:<38} {:>10}", "Saving capacity (Y − T − C)".bold(), saving_coloured);
 
     if t.applied_multiplier < 1.0 {
         let saved = t.unadjusted_discretionary() * (1.0 - t.applied_multiplier);

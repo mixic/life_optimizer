@@ -270,9 +270,50 @@ struct OptimizeArgs {
     required_output_index: Option<f64>,
 
     /// Productivity gain from AI and other tools, as a decimal — e.g. 0.25
-    /// for +25%. Only meaningful with --required-output-index.
+    /// for +25%. This is the *pessimistic* end of the range when a range is
+    /// declared. Only meaningful with --required-output-index.
     #[arg(long, default_value = "0.0")]
     ai_productivity_gain: f64,
+
+    /// Optimistic end of the AI productivity-gain range — e.g. 0.60 for +60%.
+    /// Feasibility is still judged at the pessimistic end: a schedule that only
+    /// works if AI delivers at the top of the range is reported as a bet on the
+    /// tool rather than a credible reduction.
+    #[arg(long)]
+    ai_productivity_gain_high: Option<f64>,
+
+    /// Share of the AI gain that survives verification and rework, in [0, 1].
+    /// 1.0 (default) assumes AI output is usable as delivered.
+    #[arg(long, default_value = "1.0")]
+    ai_quality_retention: f64,
+
+    /// Delivered quality lost per unit of pace above your sustainable rate.
+    /// 0.0 (default) assumes output per hour can be raised freely.
+    #[arg(long, default_value = "0.0")]
+    compression_quality_sensitivity: f64,
+
+    /// Replacement probability per unit of relative goal shortfall: 2.5 means a
+    /// 10% shortfall implies a 25% chance of replacement. Only meaningful with
+    /// --required-output-index.
+    #[arg(long, default_value = "0.0")]
+    replacement_risk: f64,
+
+    /// Years that must be worked at full time before a reduction becomes
+    /// credible. Averaged into the workload, so the leisure gain is not
+    /// overstated.
+    #[arg(long, default_value = "0.0")]
+    evaluation_period_years: f64,
+
+    /// What a missed goal does to the search: `strict` (default) does not offer
+    /// the work percentage at all, `risk-weighted` offers it and prices the
+    /// replacement probability into its security.
+    #[arg(long, default_value = "strict")]
+    enforcement: String,
+
+    /// Monthly debt repayment or other unavoidable contractual outflow, in CHF.
+    /// Added to the mandatory floor: an instalment does not shrink when hours do.
+    #[arg(long, default_value = "0.0")]
+    monthly_debt: f64,
 }
 
 fn main() {
@@ -303,6 +344,13 @@ fn main() {
                 quasi_inelastic_share,
                 required_output_index,
                 ai_productivity_gain,
+                ai_productivity_gain_high,
+                ai_quality_retention,
+                compression_quality_sensitivity,
+                replacement_risk,
+                evaluation_period_years,
+                enforcement,
+                monthly_debt,
                 imputed_rental_value,
                 pensioner,
                 insurance_premiums,
@@ -332,7 +380,23 @@ fn main() {
                 canton: canton.as_deref(),
                 conversion: resolve_conversion(conversion_rate, pension_fund),
                 consumption_profile: consumption,
-                achievement: achievement_constraint(required_output_index, ai_productivity_gain),
+                employer: match EmployerInputs::new(EmployerInputs {
+                    required_output_index,
+                    ai_productivity_gain,
+                    ai_productivity_gain_high,
+                    ai_quality_retention,
+                    compression_quality_sensitivity,
+                    replacement_risk,
+                    evaluation_period_years,
+                    enforcement,
+                }) {
+                    Ok(inputs) => inputs,
+                    Err(message) => {
+                        eprintln!("{} {}", "error:".red().bold(), message);
+                        std::process::exit(2);
+                    }
+                },
+                monthly_debt,
                 household_facts: HouseholdFacts {
                     imputed_rental_value,
                     receives_pension: pensioner,
@@ -418,6 +482,19 @@ fn print_infeasibility_hint(
                         gain * 100.0
                     ),
                     _ => {}
+                }
+                if c.ai_quality_retention < 1.0 {
+                    println!(
+                        "  That figure already assumes only {:.0}% of an AI gain survives \
+                         verification and rework.",
+                        c.ai_quality_retention * 100.0
+                    );
+                }
+                if c.compression_quality_sensitivity > 0.0 {
+                    println!(
+                        "  It also includes the quality cost of producing above your \
+                         sustainable pace."
+                    );
                 }
             }
             println!("  Consider: renegotiating the project portfolio, or modelling an AI");
@@ -594,14 +671,111 @@ fn consumption_config(
         .with_quasi_inelastic_share(quasi_inelastic_share))
 }
 
-/// Build the employer-side achievement constraint. Absent a required output
-/// index the constraint is not applied, preserving the previous behaviour in
-/// which work percentage is fully discretionary.
-fn achievement_constraint(
+/// The employer-side inputs, grouped because none of them means much alone.
+///
+/// Every field comes from `CRITICS_CURRENT_WORK.md` §1.4. [`Default`] reproduces
+/// the pre-critique behaviour exactly: no constraint at all, no quality drag, no
+/// replacement risk, no evaluation period, strict enforcement. A household that
+/// supplies only `--required-output-index` therefore gets the same answer it got
+/// before these knobs existed.
+#[derive(Debug, Clone)]
+struct EmployerInputs {
     required_output_index: Option<f64>,
     ai_productivity_gain: f64,
-) -> Option<optimizer::AchievementConstraint> {
-    required_output_index.map(|g| optimizer::AchievementConstraint::new(g, ai_productivity_gain))
+    ai_productivity_gain_high: Option<f64>,
+    ai_quality_retention: f64,
+    compression_quality_sensitivity: f64,
+    replacement_risk: f64,
+    evaluation_period_years: f64,
+    enforcement: String,
+}
+
+impl Default for EmployerInputs {
+    fn default() -> Self {
+        Self {
+            required_output_index: None,
+            ai_productivity_gain: 0.0,
+            ai_productivity_gain_high: None,
+            ai_quality_retention: 1.0,
+            compression_quality_sensitivity: 0.0,
+            replacement_risk: 0.0,
+            evaluation_period_years: 0.0,
+            enforcement: "strict".to_string(),
+        }
+    }
+}
+
+impl EmployerInputs {
+    /// Validate the raw flag values, so a typo is refused rather than silently
+    /// changing the model.
+    ///
+    /// The parameters worth rejecting are the ones that would *quietly* produce a
+    /// different answer: a retention outside `[0, 1]`, a negative coefficient
+    /// (all of which are clamped internally, and a clamp is not a correction), and
+    /// an enforcement string that is not recognised — that last one would
+    /// otherwise fall back to strict and look like the user's choice.
+    fn new(raw: EmployerInputs) -> Result<Self, String> {
+        if !(0.0..=1.0).contains(&raw.ai_quality_retention) {
+            return Err(format!(
+                "--ai-quality-retention must be between 0 and 1, got {}",
+                raw.ai_quality_retention
+            ));
+        }
+        for (flag, value) in [
+            ("--compression-quality-sensitivity", raw.compression_quality_sensitivity),
+            ("--replacement-risk", raw.replacement_risk),
+            ("--evaluation-period-years", raw.evaluation_period_years),
+            ("--ai-productivity-gain", raw.ai_productivity_gain),
+        ] {
+            if value < 0.0 {
+                return Err(format!("{flag} cannot be negative, got {value}"));
+            }
+        }
+        if let Some(high) = raw.ai_productivity_gain_high {
+            if high < 0.0 {
+                return Err(format!(
+                    "--ai-productivity-gain-high cannot be negative, got {high}"
+                ));
+            }
+            if high < raw.ai_productivity_gain {
+                return Err(format!(
+                    "--ai-productivity-gain-high ({high}) is below the pessimistic end \
+                     ({}); the range must bracket the pessimistic value",
+                    raw.ai_productivity_gain
+                ));
+            }
+        }
+        if optimizer::Enforcement::parse(&raw.enforcement).is_none() {
+            return Err(format!(
+                "--enforcement must be `strict` or `risk-weighted`, got {:?}",
+                raw.enforcement
+            ));
+        }
+        Ok(raw)
+    }
+
+    fn enforcement(&self) -> optimizer::Enforcement {
+        optimizer::Enforcement::parse(&self.enforcement)
+            .unwrap_or(optimizer::Enforcement::Strict)
+    }
+
+    /// Build the employer-side constraint. Absent a required output index it is
+    /// not applied, preserving the previous behaviour in which work percentage is
+    /// fully discretionary.
+    fn constraint(&self) -> Option<optimizer::AchievementConstraint> {
+        let required = self.required_output_index?;
+        let mut constraint = optimizer::AchievementConstraint::new(required, self.ai_productivity_gain)
+            .with_quality(
+                self.ai_quality_retention,
+                self.compression_quality_sensitivity,
+            )
+            .with_replacement_risk(self.replacement_risk)
+            .with_evaluation_period(self.evaluation_period_years);
+        if let Some(high) = self.ai_productivity_gain_high {
+            constraint = constraint.with_ai_gain_range(high);
+        }
+        Some(constraint)
+    }
 }
 
 /// Validate an age/retirement-age pair before it reaches the optimizer.
@@ -650,7 +824,11 @@ struct OptimizeParams<'a> {
     canton: Option<&'a str>,
     conversion: monte_carlo::ConversionRateScenario,
     consumption_profile: consumption::ConsumptionProfileConfig,
-    achievement: Option<optimizer::AchievementConstraint>,
+    /// Employer-side inputs; see [`EmployerInputs`].
+    employer: EmployerInputs,
+    /// `--monthly-debt`: unavoidable contractual outflows, added to the
+    /// mandatory floor (`CRITICS_CURRENT_WORK.md` §2.1).
+    monthly_debt: f64,
     /// Extra household facts the deduction model uses; see [`HouseholdFacts`].
     household_facts: HouseholdFacts,
 }
@@ -673,7 +851,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
         canton,
         conversion,
         consumption_profile,
-        achievement,
+        employer,
+        monthly_debt,
         household_facts,
     } = p;
 
@@ -688,7 +867,10 @@ fn run_optimization(p: OptimizeParams<'_>) {
         resolve_tax_schedule(canton, custom_tax_rate, married, children);
     tax_schedule.family_tax_mode = family_tax_mode || (married && children > 0);
 
-    let requirements = PersonalRequirements::bern_family_default(children);
+    let mut requirements = PersonalRequirements::bern_family_default(children);
+    // Debt repayment is unavoidable and does not shrink when hours do, so it joins
+    // the mandatory floor rather than the discretionary tier (§2.1).
+    requirements.debt_repayment = monthly_debt.max(0.0);
 
     let child_ages_vec = if let Some(youngest) = youngest_child_age {
         vec![youngest]
@@ -704,6 +886,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
         _ => PreferenceWeights::balanced(),
     };
 
+    let achievement = employer.constraint();
     let mut config = OptimizerConfig::new(
         salary,
         tax_schedule.clone(),
@@ -714,6 +897,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
     config.retirement_age = retirement_age;
     config.conversion_scenario = conversion;
     config.consumption = consumption_profile;
+    config.enforcement = employer.enforcement();
     config.achievement = achievement;
 
     let optimizer = LifeOptimizer::new(config);
@@ -1246,7 +1430,8 @@ fn run_interactive() {
         canton: None,
         conversion: monte_carlo::ConversionRateScenario::Statutory,
         consumption_profile: consumption::ConsumptionProfileConfig::default(),
-        achievement: None,
+        employer: EmployerInputs::default(),
+        monthly_debt: 0.0,
         // The interactive prompt does not ask about these, and assuming them
         // would be exactly the guessing the deduction model refuses to do.
         household_facts: HouseholdFacts::default(),

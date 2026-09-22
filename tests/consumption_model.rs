@@ -316,3 +316,143 @@ fn default_baskets_have_positive_totals() {
         assert!(tiers.lifestyle_target_monthly() >= tiers.mandatory_monthly());
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRITICS_CURRENT_WORK.md §2: the consumption side made financially complete.
+//
+// The critique names debt repayment as `D_t` in `C_t = R_t + L_t + D_t` and asks
+// for the remaining resources `S_t = Y_t - T_t - C_t` to be visible. Both are
+// tested here because both change what "can I afford to work 80%?" means.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Debt is unavoidable, so it belongs in the mandatory floor and must not be
+/// reachable by the sparing discipline that trims discretionary spending.
+#[test]
+fn debt_repayment_is_unavoidable_and_joins_the_floor() {
+    let disciplined = ConsumptionProfileConfig::new(ConsumptionProfile::ExtremeSaving)
+        .with_sparing_ratio(1.0)
+        .with_utilization_discipline(1.0);
+
+    let mut no_debt = requirements(CHILDLESS);
+    no_debt.debt_repayment = 0.0;
+    let mut with_debt = requirements(CHILDLESS);
+    with_debt.debt_repayment = 1_200.0;
+
+    let bare = no_debt.elasticity_tiers(&disciplined);
+    let owing = with_debt.elasticity_tiers(&disciplined);
+
+    assert!(
+        (owing.mandatory_monthly() - bare.mandatory_monthly() - 1_200.0).abs() < 1e-9,
+        "the instalment must raise the floor by exactly its own size"
+    );
+    assert!(
+        (owing.lifestyle_target_monthly() - bare.lifestyle_target_monthly() - 1_200.0).abs() < 1e-9,
+        "and raise total consumption by the same amount"
+    );
+    // Maximum sparing cannot touch it: it is not in the elastic tier.
+    assert!(
+        (owing.inelastic - bare.inelastic - 1_200.0).abs() < 1e-9,
+        "debt is an inelastic cost, not a sparing-eligible one"
+    );
+    assert!((no_debt.total_monthly() + 1_200.0 - with_debt.total_monthly()).abs() < 1e-9);
+}
+
+/// A debt large enough to swallow a month's net income must make a work
+/// percentage unaffordable that was affordable before — the mechanism the
+/// critique says the model could not previously represent.
+#[test]
+fn a_large_debt_can_turn_an_affordable_schedule_into_an_unaffordable_one() {
+    use life_optimizer::consumption::ConsumptionProfile;
+    use life_optimizer::monte_carlo::ConversionRateScenario;
+    use life_optimizer::optimizer::{LifeOptimizer, OptimizerConfig};
+    use life_optimizer::requirements::{LifeStage, PreferenceWeights};
+    use life_optimizer::tax::TaxSchedule;
+
+    let build = |debt: f64| -> LifeOptimizer {
+        let mut req = requirements(CHILDLESS);
+        req.debt_repayment = debt;
+        let mut config = OptimizerConfig::new(
+            110_000.0,
+            TaxSchedule::bern_city_default(false, 0),
+            req,
+            LifeStage::YoungSingle { age: 40 },
+            PreferenceWeights::balanced(),
+        );
+        config.consumption = ConsumptionProfileConfig::new(ConsumptionProfile::Normal)
+            .with_utilization_discipline(1.0);
+        config.conversion_scenario = ConversionRateScenario::Statutory;
+        LifeOptimizer::new(config)
+    };
+
+    let before = build(0.0).evaluate_scenario(0.8);
+    assert!(
+        before.meets_requirements,
+        "the baseline household can afford 80% work"
+    );
+
+    // A monthly instalment equal to the whole net income doubles the floor and
+    // therefore exceeds it, whatever the household does to its discretionary
+    // spending.
+    let after = build(before.monthly_after_tax).evaluate_scenario(0.8);
+    assert!(
+        !after.meets_requirements,
+        "an instalment the size of a month's income cannot leave the floor covered"
+    );
+    assert!(after.surplus_deficit < 0.0);
+}
+
+/// `S_t = Y_t - T_t - C_t` must be reported, must match that definition, and must
+/// fall as the lifestyle rises — an 80% week is feasible under one spending
+/// profile and not under another, which is §2.2's whole claim.
+#[test]
+fn saving_capacity_follows_income_minus_consumption() {
+    use life_optimizer::consumption::ConsumptionProfile;
+    use life_optimizer::monte_carlo::ConversionRateScenario;
+    use life_optimizer::optimizer::{LifeOptimizer, OptimizerConfig};
+    use life_optimizer::requirements::{LifeStage, PreferenceWeights};
+    use life_optimizer::tax::TaxSchedule;
+
+    let build = |profile: ConsumptionProfile| -> LifeOptimizer {
+        let req = requirements(CHILDLESS);
+        let mut config = OptimizerConfig::new(
+            110_000.0,
+            TaxSchedule::bern_city_default(false, 0),
+            req.clone(),
+            LifeStage::YoungSingle { age: 40 },
+            PreferenceWeights::balanced(),
+        );
+        config.consumption = ConsumptionProfileConfig::new(profile).with_utilization_discipline(1.0);
+        config.conversion_scenario = ConversionRateScenario::Statutory;
+        LifeOptimizer::new(config)
+    };
+
+    let scenario = build(ConsumptionProfile::Normal).evaluate_scenario(0.8);
+    let expected =
+        scenario.monthly_after_tax - (scenario.target_monthly - requirements(CHILDLESS).savings_goal);
+    assert!(
+        (scenario.saving_capacity_monthly - expected).abs() < 1e-9,
+        "saving capacity must be Y - T - C, got {} vs {expected}",
+        scenario.saving_capacity_monthly
+    );
+
+    let frugal = build(ConsumptionProfile::ExtremeSaving).evaluate_scenario(0.8);
+    let luxurious = build(ConsumptionProfile::Luxury).evaluate_scenario(0.8);
+
+    assert!(
+        frugal.saving_capacity_monthly > scenario.saving_capacity_monthly,
+        "extreme saving must leave more capacity to save: {} vs {}",
+        frugal.saving_capacity_monthly,
+        scenario.saving_capacity_monthly
+    );
+    assert!(
+        luxurious.saving_capacity_monthly < scenario.saving_capacity_monthly,
+        "a luxury profile must leave less: {} vs {}",
+        luxurious.saving_capacity_monthly,
+        scenario.saving_capacity_monthly
+    );
+    // Same income, same hours, opposite answer — the point of §2.2.
+    assert!(
+        (frugal.monthly_after_tax - luxurious.monthly_after_tax).abs() < 1e-9,
+        "consumption is the only thing being varied"
+    );
+}

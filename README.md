@@ -101,6 +101,32 @@ Projects the optimal work percentage across your whole career (age 30–65+), si
 the right answer at 28 (single, building a foundation) is not the right answer at 38
 (kids, time is scarce) or at 60 (health, winding down).
 
+### 5. Employer achievement capacity, honestly constrained
+
+A work percentage is not purely yours to choose: it is bounded by what your employer
+requires you to deliver. Pass `--required-output-index` and the optimizer only
+recommends percentages that actually deliver the assigned goals, with or without AI
+leverage:
+
+- **AI as a range, not a point** — feasibility is judged at the *pessimistic* end of
+  the declared productivity range, so a schedule that only works if AI performs at
+  the top is reported as a bet on the tool (`OPTIMISTIC ONLY`) rather than a credible
+  reduction
+- **Quality channels** — the share of the AI gain that survives verification and
+  rework, and the defects induced by compressing the same output into fewer hours
+- **Hidden work counted as workload** — if the pessimistic AI outcome would demand
+  evenings or weekends, that is printed in h/week and never added to your free hours
+- **Replacement risk** — a missed goal can be priced as a probability of job loss
+  (`--enforcement risk-weighted`), or refused outright (`strict`, the default)
+- **Two-level consumption** — rent, debt instalments and other unavoidable costs form
+  a mandatory floor that does not shrink when hours do, while lifestyle profiles
+  (extreme-saving / moderate / normal / luxury) show what the same schedule costs at
+  each living standard
+
+The reasoning, the provenance of every coefficient, and an explicit list of what is
+*not* modelled are in [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §7, with
+worked commands in [`EXAMPLES.md`](EXAMPLES.md).
+
 ---
 
 ## Companion tool: the multipolar world simulator
@@ -272,6 +298,16 @@ Key flags (`optimize` / `pension`):
 | `--life-expectancy` | Planning horizon for retirement | `90` |
 | `--pillar3a` | Annual Pillar 3a contribution (CHF, max 7,056) | `0` |
 | `--profile` | `balanced` / `family` / `career` preference weighting | `balanced` |
+| `--consumption-profile` | `extreme-saving` / `moderate` / `normal` / `luxury` lifestyle baseline | `normal` |
+| `--monthly-debt` | Debt repayment or other unavoidable monthly outflow (CHF) — joins the mandatory floor | `0` |
+| `--required-output-index` | Required project output for your role. Engages the employer achievement constraint | unset |
+| `--ai-productivity-gain` | AI/tool productivity gain (decimal); pessimistic end when a range is given | `0.0` |
+| `--ai-productivity-gain-high` | Optimistic end of the productivity range | unset |
+| `--ai-quality-retention` | Share of the AI gain surviving verification and rework | `1.0` |
+| `--compression-quality-sensitivity` | Output per hour lost per unit of pace above your sustainable rate | `0.0` |
+| `--replacement-risk` | Replacement probability per unit of relative goal shortfall | `0.0` |
+| `--evaluation-period-years` | Years at full time before a reduction becomes credible, averaged into the workload | `0.0` |
+| `--enforcement` | `strict` (refuse undelivered schedules) / `risk-weighted` (offer and price them) | `strict` |
 
 ---
 
@@ -327,6 +363,7 @@ life-optimizer/
 ├── PENSION_OPTIMIZATION.md       Pension sustainability methodology
 ├── SWISS_TAX_DATA.md             Tax data provenance, coverage and known defects
 ├── MULTIPOLAR_GAME.md            Theory the companion simulator operationalises
+├── CRITICS_CURRENT_WORK.md       External criticism, and §7: what is implemented, what is not
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
@@ -346,6 +383,13 @@ life-optimizer/
   returns.
 - The retirement "needs" figure defaults to 75% of current net income, a common
   rule of thumb, not a personalized budget.
+- The achievement-capacity coefficients (AI productivity gain, quality retention,
+  compression sensitivity, replacement risk) are **illustrative sensitivities, not
+  estimates**. Nothing in the tool predicts your AI productivity; it exposes the
+  coefficients so you can test what your answer depends on. All default to neutral.
+- Team dependencies are **not modelled**: the constraint treats your reduced
+  availability as having no effect on colleagues, so a schedule that really pushes
+  work onto your team will look better here than it is.
 
 This tool is meant to inform a conversation with a financial advisor or pension
 fund — not replace one.

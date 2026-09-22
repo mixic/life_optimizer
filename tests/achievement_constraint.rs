@@ -29,7 +29,8 @@
 use life_optimizer::consumption::{ConsumptionProfile, ConsumptionProfileConfig};
 use life_optimizer::monte_carlo::ConversionRateScenario;
 use life_optimizer::optimizer::{
-    AchievementConstraint, InfeasibilityReason, LifeOptimizer, OptimizerConfig,
+    AchievementConstraint, Enforcement, InfeasibilityReason, LifeOptimizer, OptimizerConfig,
+    Robustness,
 };
 use life_optimizer::requirements::{LifeStage, PersonalRequirements, PreferenceWeights};
 use life_optimizer::tax::TaxSchedule;
@@ -37,6 +38,14 @@ use life_optimizer::tax::TaxSchedule;
 const CANDIDATES: [f64; 6] = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
 fn optimizer_with(constraint: Option<AchievementConstraint>, salary: f64) -> LifeOptimizer {
+    optimizer_with_enforcement(constraint, salary, Enforcement::Strict)
+}
+
+fn optimizer_with_enforcement(
+    constraint: Option<AchievementConstraint>,
+    salary: f64,
+    enforcement: Enforcement,
+) -> LifeOptimizer {
     let mut config = OptimizerConfig::new(
         salary,
         TaxSchedule::bern_city_default(false, 0),
@@ -48,6 +57,7 @@ fn optimizer_with(constraint: Option<AchievementConstraint>, salary: f64) -> Lif
     config.consumption =
         ConsumptionProfileConfig::new(ConsumptionProfile::Normal).with_utilization_discipline(1.0);
     config.achievement = constraint;
+    config.enforcement = enforcement;
     config.conversion_scenario = ConversionRateScenario::Statutory;
     LifeOptimizer::new(config)
 }
@@ -258,4 +268,284 @@ fn degenerate_goals_are_handled() {
     let negative_ai = AchievementConstraint::new(0.8, -0.5);
     assert!(negative_ai.ai_productivity_gain >= 0.0);
     assert!((negative_ai.capacity_at(1.0) - 1.0).abs() < 1e-9);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The six outcome-based scenarios of CRITICS_CURRENT_WORK.md §1.4.
+//
+// Items 1 and 2's fixed-goal half are covered above. What follows is one test
+// per remaining item, so that a future change which quietly drops one of them
+// fails here rather than in prose.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// §1.4 item 2 — AI productivity as an explicit **range**, not a constant.
+///
+/// A schedule that delivers only at the optimistic end is a bet on the tool, and
+/// the model must say so rather than averaging the two ends into a single
+/// reassuring number.
+#[test]
+fn a_gain_range_separates_robust_schedules_from_bets() {
+    // Goal 1.0, AI somewhere between +0% and +25%. At 80% work the goals are met
+    // only if the optimistic end materialises.
+    let ranged = AchievementConstraint::new(1.0, 0.0).with_ai_gain_range(0.25);
+
+    assert_eq!(ranged.robustness_at(0.8), Robustness::OptimisticOnly);
+    assert!(
+        !ranged.is_satisfied_at(0.8),
+        "meeting the goals only at the top of the range is not a credible reduction"
+    );
+    assert!(
+        ranged.is_satisfied_optimistically_at(0.8),
+        "but the optimistic case must be reported, not hidden"
+    );
+
+    // Full time is robust across the whole range: +0% already suffices.
+    assert_eq!(ranged.robustness_at(1.0), Robustness::Robust);
+
+    // A goal beyond the optimistic end is unreachable at any point in the range.
+    let impossible = AchievementConstraint::new(1.4, 0.0).with_ai_gain_range(0.25);
+    assert_eq!(impossible.robustness_at(1.0), Robustness::Unreachable);
+    assert!(!impossible.is_satisfied_optimistically_at(1.0));
+
+    // The range must never make a schedule look better than its pessimistic end:
+    // widening it downwards cannot rescue a schedule.
+    let widened = AchievementConstraint::new(1.0, 0.0).with_ai_gain_range(0.25);
+    let narrowed = AchievementConstraint::new(1.0, 0.0).with_ai_gain_range(0.05);
+    assert_eq!(widened.robustness_at(0.8), Robustness::OptimisticOnly);
+    assert_eq!(
+        narrowed.robustness_at(0.8),
+        Robustness::Unreachable,
+        "the optimistic end is what decides reachability, and 5% is not enough"
+    );
+
+    // And a single-valued constraint is the degenerate range it always was.
+    let point = AchievementConstraint::new(0.8, 0.0);
+    assert_eq!(point.ai_productivity_gain_high, point.ai_productivity_gain);
+    assert_eq!(point.robustness_at(0.8), Robustness::Robust);
+}
+
+/// §1.4 item 3, first channel — **quality**: AI throughput does not arrive free of
+/// rework, so only the gain that survives verification can be banked.
+#[test]
+fn rework_retention_makes_the_ai_justification_harder() {
+    // +25% naive, half of which survives verification: +12.5% effective.
+    let naive = AchievementConstraint::new(1.0, 0.25);
+    let realistic = AchievementConstraint::new(1.0, 0.25).with_quality(0.5, 0.0);
+
+    assert_eq!(naive.robustness_at(0.8), Robustness::Robust);
+    assert_eq!(
+        realistic.robustness_at(0.8),
+        Robustness::Unreachable,
+        "0.8 * 1.125 = 0.9, which does not deliver a goal of 1.0"
+    );
+
+    // The question "how much AI would 80% need?" doubles when half the gain is
+    // eaten by rework: 0.25 naive, 0.5 after retention.
+    assert!((naive.required_ai_gain_for(0.8).unwrap() - 0.25).abs() < 1e-9);
+    assert!((realistic.required_ai_gain_for(0.8).unwrap() - 0.5).abs() < 1e-9);
+
+    // Zero retention means no amount of AI helps: the gain is entirely rework.
+    let useless = AchievementConstraint::new(1.0, 0.25).with_quality(0.0, 0.0);
+    assert_eq!(
+        useless.required_ai_gain_for(0.8),
+        None,
+        "if none of the gain survives, a larger gain buys nothing"
+    );
+    assert_eq!(useless.robustness_at(0.8), Robustness::Unreachable);
+}
+
+/// §1.4 item 3, second channel — the **compression** cost of squeezing the same
+/// output into fewer hours. Raw capacity can meet the target exactly and the
+/// schedule still fails, because the pace needed to do it degrades delivery.
+#[test]
+fn compressing_the_same_output_into_fewer_hours_costs_quality() {
+    // Raw capacity at 80% with +25% AI is exactly 1.0, which "meets" a goal of 1.0.
+    let naive = AchievementConstraint::new(1.0, 0.25);
+    assert!((naive.capacity_at(0.8) - 1.0).abs() < 1e-9);
+    assert_eq!(naive.robustness_at(0.8), Robustness::Robust);
+
+    // With a quality cost of one unit per unit of pace above baseline, the same
+    // schedule delivers 0.75 and fails.
+    let honest = AchievementConstraint::new(1.0, 0.25).with_quality(1.0, 1.0);
+    assert!((honest.quality_factor_at(0.8) - 0.75).abs() < 1e-9);
+    assert!((honest.delivered_pessimistic(0.8) - 0.75).abs() < 1e-9);
+    assert_eq!(
+        honest.robustness_at(0.8),
+        Robustness::Unreachable,
+        "meeting the target while producing defects is not meeting the target"
+    );
+
+    // Full time needs no stretch and so pays no quality penalty.
+    assert!((honest.quality_factor_at(1.0) - 1.0).abs() < 1e-9);
+    assert_eq!(honest.robustness_at(1.0), Robustness::Robust);
+
+    // The lowest viable percentage is now above the raw-capacity answer, and the
+    // answer must still be a real percentage rather than a bisection artefact.
+    let minimum = honest
+        .minimum_viable_work_percentage()
+        .expect("full time still delivers");
+    assert!(
+        minimum > 0.8 && minimum <= 1.0,
+        "quality drag must push the minimum above the raw 0.8, got {minimum}"
+    );
+    assert!(
+        honest.delivered_pessimistic(minimum) >= 1.0 - 1e-6,
+        "and the returned percentage must actually deliver the goal"
+    );
+}
+
+/// §1.4 item 4 — **hidden work**: a schedule that needs more capacity than the
+/// contract provides is worked at the higher figure whatever the contract says.
+/// It is reported as workload and must never be presented as spare time.
+#[test]
+fn hidden_work_is_counted_as_workload_not_as_leisure() {
+    // Goal 1.0 with no AI: 80% delivers 0.8, so holding the job would take 100%.
+    let constraint = AchievementConstraint::new(1.0, 0.0);
+    assert!((constraint.hidden_work_percentage(0.8) - 0.2).abs() < 1e-9);
+
+    let optimizer = optimizer_with(Some(constraint), 150_000.0);
+    let part_time = optimizer.evaluate_scenario(0.8);
+
+    assert!(
+        (part_time.hidden_work_hours_per_week - 42.0 * 0.2).abs() < 1e-9,
+        "hidden work must be reported in hours, got {}",
+        part_time.hidden_work_hours_per_week
+    );
+    // The trap the critique names: free time computed from the contract alone
+    // would claim 20% more leisure than the job actually allows.
+    let contract_only_free_hours = 168.0 - 0.8 * 42.0 - 56.0;
+    assert!(
+        (part_time.free_hours_per_week - contract_only_free_hours).abs() < 1e-9,
+        "leisure is taken from the contract here, and the hidden hours are reported \
+         separately rather than silently added to it"
+    );
+    assert!(
+        !part_time.achievement_satisfied(),
+        "and the schedule is not offered as a reduction"
+    );
+
+    // A robust schedule needs no cover at all.
+    let robust = optimizer_with(Some(AchievementConstraint::new(0.8, 0.0)), 150_000.0)
+        .evaluate_scenario(0.8);
+    assert_eq!(
+        robust.hidden_work_hours_per_week, 0.0,
+        "delivering at the pessimistic end means nothing is hidden"
+    );
+}
+
+/// §1.4 item 5 — **replacement risk**, as a price rather than a catastrophe.
+///
+/// Strict enforcement refuses to offer a missed schedule. Risk-weighted
+/// enforcement offers it and charges the implied chance of losing the job against
+/// its security, which is what makes the trade-off visible.
+#[test]
+fn replacement_risk_is_priced_when_it_is_declared() {
+    let goal = 1.0;
+    let unpriced = AchievementConstraint::new(goal, 0.0);
+    assert_eq!(
+        unpriced.replacement_risk_at(0.8),
+        0.0,
+        "with no declared sensitivity, job loss is not priced at all"
+    );
+
+    // A sensitivity of 2.5 means a 20% shortfall implies a 50% chance of replacement.
+    let priced = AchievementConstraint::new(goal, 0.0).with_replacement_risk(2.5);
+    assert!((priced.replacement_risk_at(0.8) - 0.5).abs() < 1e-9);
+    assert!((priced.replacement_risk_at(1.0) - 0.0).abs() < 1e-9);
+    assert!(
+        priced.replacement_risk_at(0.5) <= 1.0,
+        "risk is a probability and must stay bounded"
+    );
+
+    // Strict: the search is forced to full time. Risk-weighted with a modest
+    // price: the reduced schedule is offered, and carries its risk with it.
+    let strict = optimizer_with_enforcement(
+        Some(priced),
+        150_000.0,
+        Enforcement::Strict,
+    );
+    let weighted = optimizer_with_enforcement(
+        Some(priced),
+        150_000.0,
+        Enforcement::RiskWeighted,
+    );
+
+    let strict_outcome = strict.search_outcome(&CANDIDATES).unwrap();
+    assert!(
+        (strict_outcome.scenario.work_percentage - 1.0).abs() < 1e-9,
+        "strict enforcement must refuse the shortfall"
+    );
+
+    let weighted_outcome = weighted.search_outcome(&CANDIDATES).unwrap();
+    assert!(
+        weighted_outcome.all_scenarios.iter().any(|s| !s.achievement_satisfied()
+            && s.is_feasible()),
+        "risk-weighted enforcement must offer at least one shortfall, priced"
+    );
+    for scenario in &weighted_outcome.all_scenarios {
+        assert_eq!(
+            scenario.is_feasible(),
+            scenario.meets_requirements,
+            "under risk-weighted enforcement only affordability can block"
+        );
+    }
+
+    // And the price must bite: at a swingeing sensitivity, the shortfall is no
+    // longer worth choosing and 100% wins again. This is what makes it a
+    // trade-off rather than decoration.
+    let punitive = AchievementConstraint::new(goal, 0.0).with_replacement_risk(100.0);
+    let punished = optimizer_with_enforcement(
+        Some(punitive),
+        150_000.0,
+        Enforcement::RiskWeighted,
+    );
+    let punished_outcome = punished.search_outcome(&CANDIDATES).unwrap();
+    assert!(
+        (punished_outcome.scenario.work_percentage - 1.0).abs() < 1e-9,
+        "a near-certain replacement must outweigh the leisure, got {}",
+        punished_outcome.scenario.work_percentage
+    );
+}
+
+/// §1.4 item 6 — **adaptation**: a reduction is only available after a period of
+/// demonstrated delivery, so the first years are worked at full time and the
+/// average workload — which is what leisure is measured from — is higher than the
+/// contract.
+#[test]
+fn an_evaluation_period_is_averaged_into_the_workload() {
+    // Age 40, retirement 65: a 25-year horizon.
+    let constraint = AchievementConstraint::new(0.8, 0.0).with_evaluation_period(2.0);
+    // 2 years at 1.0 and 23 at 0.8.
+    let expected = (2.0 * 1.0 + 23.0 * 0.8) / 25.0;
+    assert!((constraint.amortised_work_percentage(0.8, 25.0) - expected).abs() < 1e-9);
+
+    let optimizer = optimizer_with(Some(constraint), 150_000.0);
+    let scenario = optimizer.evaluate_scenario(0.8);
+
+    assert!(
+        (scenario.work_hours_per_week - 0.8 * 42.0).abs() < 1e-9,
+        "the contract is unchanged"
+    );
+    assert!(
+        scenario.effective_work_hours_per_week > scenario.work_hours_per_week,
+        "the probation must raise the average workload: {} vs {}",
+        scenario.effective_work_hours_per_week,
+        scenario.work_hours_per_week
+    );
+    assert!(
+        (scenario.effective_work_hours_per_week - 42.0 * expected).abs() < 1e-9,
+        "effective hours must be the amortised figure"
+    );
+    assert!(
+        scenario.free_hours_per_week < 168.0 - 0.8 * 42.0 - 56.0,
+        "and leisure must be taken from the average, not the contract"
+    );
+
+    // With no evaluation period the two collapse back together, which is what
+    // keeps the original model's answers intact.
+    let immediate = optimizer_with(Some(AchievementConstraint::new(0.8, 0.0)), 150_000.0)
+        .evaluate_scenario(0.8);
+    assert!(
+        (immediate.effective_work_hours_per_week - immediate.work_hours_per_week).abs() < 1e-9
+    );
 }

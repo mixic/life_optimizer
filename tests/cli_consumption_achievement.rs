@@ -371,3 +371,209 @@ fn consumption_and_achievement_flags_combine() {
     assert!(out.contains("Consumption by Elasticity Tier"));
     assert!(out.contains("Employer Achievement Capacity"));
 }
+
+// ─── The §1.4 refinement flags and §2.1 debt ────────────────────────────────
+
+/// The five refinement flags must be accepted and must reach the output, so that
+/// each of the critique's items is reachable from the command line rather than
+/// only from the library.
+///
+/// The parameters are chosen so that the recommendation really is a reduced week
+/// with a quality drag on it: a goal of 1.0 met at 80% with a +50% AI gain and a
+/// compression coefficient of 0.5. At 70% the same settings fail, so 80% is the
+/// lowest feasible percentage and the report has to show why.
+#[test]
+fn refinement_flags_reach_the_report() {
+    let output = run(&[
+        "optimize",
+        "--salary",
+        "150000",
+        "--age",
+        "40",
+        "--required-output-index",
+        "1.0",
+        "--ai-productivity-gain",
+        "0.5",
+        "--ai-productivity-gain-high",
+        "0.8",
+        "--compression-quality-sensitivity",
+        "0.5",
+        "--evaluation-period-years",
+        "2",
+        "--monthly-debt",
+        "300",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "refinement flags failed: {}",
+        stderr(&output)
+    );
+    let out = stdout(&output);
+
+    assert!(
+        out.contains("AI gain range"),
+        "the pessimistic/optimistic range must be printed: {out}"
+    );
+    assert!(
+        out.contains("Quality factor"),
+        "the quality drag must be visible when it is not neutral: {out}"
+    );
+    assert!(
+        out.contains("Robustness:"),
+        "every constrained run must state where it sits relative to the AI range"
+    );
+    assert!(
+        out.contains("Average workload"),
+        "an evaluation period must change the reported average workload: {out}"
+    );
+    assert!(out.contains("Saving capacity"), "S_t must be reported");
+}
+
+/// A sensitivity that prices the shortfall must be able to offer a schedule the
+/// strict mode refuses — the point of the risk-weighted mode — and it must say
+/// that the goals are not delivered rather than quietly calling it a success.
+#[test]
+fn risk_weighted_mode_offers_what_strict_mode_refuses() {
+    let common = [
+        "optimize",
+        "--salary",
+        "150000",
+        "--age",
+        "40",
+        "--required-output-index",
+        "1.0",
+        "--replacement-risk",
+        "0.5",
+    ];
+
+    let strict = run(&common);
+    assert!(
+        strict.status.success(),
+        "strict run failed: {}",
+        stderr(&strict)
+    );
+    let strict_out = stdout(&strict);
+
+    let weighted = run(&[common.as_slice(), &["--enforcement", "risk-weighted"]].concat());
+    assert!(
+        weighted.status.success(),
+        "risk-weighted run failed: {}",
+        stderr(&weighted)
+    );
+    let weighted_out = stdout(&weighted);
+
+    // Strict will only ever offer a schedule that delivers, so it never prints the
+    // shortfall status; here that leaves full time, which does deliver.
+    assert!(
+        !strict_out.contains("OFFERED BUT NOT DELIVERED"),
+        "strict mode must not offer a shortfall: {strict_out}"
+    );
+    assert!(strict_out.contains("Robustness:"));
+
+    // Risk-weighted offers the reduced week and prices what it costs.
+    assert!(
+        weighted_out.contains("OFFERED BUT NOT DELIVERED"),
+        "risk-weighted mode must offer the shortfall and say so: {weighted_out}"
+    );
+    assert!(
+        weighted_out.contains("Replacement risk"),
+        "and must print the probability it implies: {weighted_out}"
+    );
+    assert!(
+        weighted_out.contains("Hidden work"),
+        "and the workload the pessimistic AI outcome would demand: {weighted_out}"
+    );
+}
+
+/// Garbage in the new numeric flags must be refused with exit code 2 rather than
+/// clamped into a different model.
+#[test]
+fn invalid_refinement_values_are_refused() {
+    for (flag, value) in [
+        ("--ai-quality-retention", "1.5"),
+        ("--ai-quality-retention", "-0.1"),
+        ("--compression-quality-sensitivity", "-1"),
+        ("--replacement-risk", "-2"),
+        ("--evaluation-period-years", "-1"),
+        ("--enforcement", "lenient"),
+        ("--monthly-debt", "-100"),
+    ] {
+        let output = run(&[
+            "optimize",
+            "--salary",
+            "120000",
+            "--age",
+            "40",
+            flag,
+            value,
+        ]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{flag} {value} should be refused"
+        );
+        assert!(
+            stderr(&output).contains("error:"),
+            "{flag} {value} should explain itself"
+        );
+    }
+}
+
+/// A high end below the pessimistic end is a contradiction, not a range.
+#[test]
+fn an_inverted_ai_range_is_refused() {
+    let output = run(&[
+        "optimize",
+        "--salary",
+        "120000",
+        "--age",
+        "40",
+        "--required-output-index",
+        "0.9",
+        "--ai-productivity-gain",
+        "0.40",
+        "--ai-productivity-gain-high",
+        "0.10",
+    ]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stderr(&output).contains("below the pessimistic end"),
+        "got: {}",
+        stderr(&output)
+    );
+}
+
+/// Debt must reach the mandatory floor end to end: the same household with an
+/// instalment has a higher floor than without one.
+#[test]
+fn monthly_debt_raises_the_reported_floor() {
+    let without = run(&["optimize", "--salary", "130000", "--age", "40"]);
+    let with = run(&[
+        "optimize",
+        "--salary",
+        "130000",
+        "--age",
+        "40",
+        "--monthly-debt",
+        "700",
+    ]);
+
+    assert!(without.status.success() && with.status.success());
+
+    let floor = |text: &str| -> f64 {
+        text.lines()
+            .find(|line| line.contains("Mandatory floor"))
+            .and_then(|line| line.rsplit("CHF ").next())
+            .and_then(|value| value.trim().parse::<f64>().ok())
+            .unwrap_or_else(|| panic!("no mandatory floor line in: {text}"))
+    };
+
+    let bare = floor(&stdout(&without));
+    let owing = floor(&stdout(&with));
+    assert!(
+        (owing - bare - 700.0).abs() < 1.0,
+        "the floor must rise by the instalment: {bare} -> {owing}"
+    );
+}

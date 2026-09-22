@@ -226,3 +226,144 @@ The following publications provide useful evidence and frameworks for extending 
 	Useful for current employer expectations about changing skills, job creation, job displacement, and reskilling needs. It should be treated as a survey-based scenario source, not as a precise forecast.
 
 These sources support a research position rather than a predetermined conclusion. They justify modeling several AI adoption, employment, productivity, and distribution scenarios and reporting the uncertainty around each one. 
+
+## 7. Implementation Status in This Repository
+
+This section is the response to §1 to §5. It records what the code now does, what it deliberately refuses to do, and where every new coefficient comes from. The rule is unchanged from `FutureWork.md` §7: a parameter may be illustrative, but it may not be presented as measured, and no figure may be invented to make a narrative close.
+
+Every input added here defaults to the *neutral* value, so the pre-critique answers are reproducible and the new machinery is inert unless it is declared.
+
+### 7.1 The achievement-capacity constraint (§1.2 and §1.3)
+
+Implemented in `src/optimizer.rs` (`AchievementConstraint`, `AchievementStatus`, `Robustness`, `Enforcement`), reachable from `src/main.rs`, and reported by `src/display.rs`.
+
+$$
+A_t(w) = w \, P \, (1 + \alpha \rho),
+\qquad
+\text{compression}(w) = \max\left(\frac{G}{w P},\, 1\right),
+$$
+
+$$
+q(w) = \mathrm{clamp}\Bigl(1 - \rho_{\text{comp}}\,\bigl(\text{compression}(w) - 1\bigr),\ 0,\ 1\Bigr),
+\qquad
+\text{delivered}(w) = A_t(w)\, q(w),
+$$
+
+$$
+A_t \geq G \iff \text{delivered}(w) \geq G ,
+$$
+
+where $w$ is the contractual work percentage (with $H_t$ normalized so that full time is 1), $P$ is baseline productivity per unit of work time, $\alpha$ is the AI productivity gain, $\rho \in [0,1]$ is the share of that gain which survives verification and rework, $\rho_{\text{comp}}$ is the delivered quality lost per unit of pace above the sustainable rate, and $G$ is the required output index for the period.
+
+Two decisions have to be stated explicitly, because otherwise the equations can be read as claiming more than they do:
+
+1. **The quality drag is measured against baseline pace, not AI-assisted pace.** `compression` divides $G$ by $w P$, so a given portfolio stretches the worker by the same amount whether or not AI is in use. Crediting AI with *relieving* the stretch as well as *raising* output would assume a substitution elasticity between human and machine effort that nobody has measured, and it would take two benefits out of one gain. The asymmetry is deliberate, and it disappears when the user declares no drag: with `--compression-quality-sensitivity 0` (the default), $q(w) \equiv 1$ and the model collapses exactly onto the critique's linear formulation $A_t = H_t P_t (1 + \alpha_t)$.
+2. **A goal is met only at the pessimistic end of the declared range.** Feasibility is judged by `delivered_pessimistic`, which makes the recommendation a claim about the worker rather than about the tool. `Robustness` reports the difference: `ROBUST` (delivers across the whole declared range), `OPTIMISTIC ONLY` (delivers only if AI lands at the top of the range — reported as a bet on the tool, not as a credible reduction), and `UNREACHABLE` (not even full time delivers it, which is a finding about the assignment rather than an error in the run).
+
+The derived quantities, and the critique question each one answers:
+
+| Quantity | Question it answers |
+| --- | --- |
+| `minimum_viable_work_percentage` | §3: the lowest percentage at which the required goals are still delivered |
+| `required_ai_gain_for` | §1.2 directly — how much AI gain would be needed to justify a given reduction. Returns `None` when the declared retention is zero: if none of the gain survives verification, a larger gain buys nothing |
+| `hidden_work_percentage` | §1.4 item 4 — the cover the pessimistic AI outcome would demand, as a fraction of full time |
+| `replacement_risk_at` | §1.4 item 5 — shortfall mapped to a probability of replacement through one linear coefficient |
+| `amortised_work_percentage` | §1.4 item 6 — workload averaged over the remaining career, including the years served before a reduction is granted |
+
+### 7.2 The six practical tests of §1.4
+
+| §1.4 test | What the code does | Knob | Neutral default |
+| --- | --- | --- | --- |
+| 1. Fixed-goal scenario | The optimizer searches only over work percentages that deliver the assigned goals; if none does, it reports a workload problem and names the AI gain that would be required | `--required-output-index` | absent: work percentage stays fully discretionary, exactly as before |
+| 2. AI productivity scenario | Feasibility is tested across a declared range rather than at a point; `Robustness` classifies each schedule | `--ai-productivity-gain` (pessimistic), `--ai-productivity-gain-high` (optimistic) | `0.0` / unset: no AI gain is assumed |
+| 3. Quality constraint | Two channels: the share of the AI gain that survives verification, and the defects induced by compressing the same output into fewer hours. Both act on *delivered* output, not on capacity | `--ai-quality-retention`, `--compression-quality-sensitivity` | `1.0` / `0.0`: delivered equals capacity, no drag |
+| 4. Hidden-work constraint | Work beyond the contract that the pessimistic outcome requires is counted and reported as workload — in h/week and as a percentage — and is never added to leisure | `--required-output-index` (the shortfall is derived; there is no separate knob) | no constraint, hence no hidden work |
+| 5. Replacement-risk scenario | Failure to deliver raises a replacement probability, which reduces the security component of utility | `--replacement-risk`, `--enforcement` | `0.0` and `strict` |
+| 6. Adaptation scenario | A required probationary period is averaged into the workload, so the leisure gain is not overstated | `--evaluation-period-years` | `0.0`: the declared percentage is the average |
+
+Two of these need a word of explanation, because the implementation takes a position rather than merely exposing a number.
+
+**Hidden work (item 4).** A nominal 80% schedule that needs 95% of a full-timer's capacity is worked at 95%, whatever the contract says, and the difference arrives as evenings, weekends, or unpaid availability. The critique's instruction is that this be counted as workload rather than treated as free productivity, so the report prints it beside the contract. It is deliberately *not* added to free hours as a bonus, and free hours are computed from the amortised workload rather than the nominal one: the cover is required only if AI lands at the pessimistic end, so booking it unconditionally would double-count that case. By construction it is zero for any schedule that is `ROBUST` — if the goals are delivered at the pessimistic end, no cover is needed.
+
+**Enforcement (item 5).** `--enforcement strict` (the default) keeps the critique's own reading of the constraint: a percentage that does not deliver is not offered at all. `--enforcement risk-weighted` offers it, marks it "OFFERED BUT NOT DELIVERED", and prices the replacement risk as $security = \beta_{security} \cdot pension\_value \cdot (1 - r)$, so the shortfall becomes a trade-off rather than a hidden failure. The trade-off is real and not decorative, which is testable: with a punitive sensitivity the search returns to full time on its own.
+
+### 7.3 Consumption (§2)
+
+The critique's decomposition is implemented as stated:
+
+$$C_t = R_t + L_t + D_t, \qquad S_t = Y_t - T_t - C_t,$$
+
+where $R_t$ is `housing`, $L_t$ is the profile-scaled elastic tier plus the quasi-inelastic share the household declares, and $D_t$ is debt repayment. Debt repayment is new (`--monthly-debt`) and is placed in the *inelastic* tier, joined to the mandatory floor: it is not trimmable, and it does not shrink when hours do, which is exactly why the critique wants it visible rather than folded into a generic requirement. The profile also carries committed outflows (savings goal, vacation sinking fund) which stay in the target basket.
+
+Savings capacity is reported as $S_t = Y_t - T_t - C_t$ with the savings goal removed from $C_t$ first, so that the same money is not counted both as consumption and as capacity to save.
+
+The lifestyle profiles use discretionary multipliers of 0.50 (extreme saving), 0.80 (moderate), 1.00 (normal), and 1.75 (luxury), taken from this project's own calibration table (`MATHEMATICS.md` §3.1) and themselves illustrative rather than measured.
+
+Feasibility is tested against the **mandatory floor**, not the full lifestyle basket. The reason is stated in the code: a household is not unable to afford 80% merely because it would have to trim discretionary spending. The full lifestyle-inclusive target is still reported beside it, so the squeeze is visible rather than hidden — reporting only the floor would have been the mirror-image mistake.
+
+The five checks of §2.2 map onto the code as follows:
+
+| §2.2 check | Status |
+| --- | --- |
+| 1. Cover rent and other essential expenses | Implemented: the mandatory floor includes housing and debt repayment |
+| 2. Cover the selected lifestyle level | Reported: the lifestyle-inclusive basket is shown against income, but it is a target, not a feasibility test |
+| 3. Maintain an emergency reserve | Partial: carried inside `savings_goal` and reported; there is no separate reserve-balance check, so the model does not verify that the reserve is actually maintained |
+| 4. Continue required pension and investment contributions | Partial: the savings goal and pillar 3a contributions feed the pension layer, but the floor does not enforce them — they can be flexed |
+| 5. Preserve the desired future pension outcome | Yes, in a separate layer: the pension and Monte Carlo modules consume $S_t$ and report the resulting pension quality |
+
+### 7.4 Backwards compatibility
+
+All new knobs are neutral by default. With $\alpha_{high} = \alpha$, $\rho = 1$, $\rho_{comp} = 0$, zero replacement risk, a zero evaluation period, zero debt, and strict enforcement, `delivered` is identically equal to `capacity` and the constraint degenerates to the original linear test. This is not an assertion but a checked property: the pre-existing suites (`optimizer_behavior`, `cli`, `cli_canton`, `pension_fund_and_stochastic`, `conversion_rate`, and the deduction suites) continue to pass unchanged, together with the tests added for the critique.
+
+### 7.5 Provenance of the new coefficients
+
+| Input | Symbol | Default | Status |
+| --- | --- | --- | --- |
+| Baseline productivity per unit of work time | $P$ | 1.0 | Normalization, not a measurement |
+| AI productivity gain, pessimistic end | $\alpha$ | 0.0 | User-declared and illustrative. The model never estimates it |
+| AI productivity gain, optimistic end | $\alpha_{high}$ | = $\alpha$ | User-declared and illustrative |
+| Share of the AI gain surviving verification and rework | $\rho$ | 1.0 | Unmeasured. 1.0 is the assumption-free default ("output usable as delivered"); departing from it is the user's judgement, not the model's |
+| Quality lost per unit of pace above the sustainable rate | $\rho_{comp}$ | 0.0 | Unmeasured. No published coefficient maps schedule compression onto defect rates for knowledge work. Exposed so a user can test the sensitivity instead of having one invented for them |
+| Replacement probability per unit of relative shortfall | — | 0.0 | Unmeasured. Deliberately one linear coefficient rather than a curve, because nobody has measured how a 10% delivery gap maps onto a dismissal probability |
+| Required evaluation period | — | 0.0 | A policy choice, not a measurement |
+| Monthly debt repayment | $D_t$ | 0.0 | The user's own contract value |
+| Lifestyle discretionary multipliers | — | see §7.3 | From this project's own calibration table, itself illustrative |
+
+**No figure from the publications in §6 is encoded anywhere in this model.** They are a reading list: they indicate which questions have a literature, and the model exposes the coefficients that literature would have to supply. Encoding an IMF, ILO, OECD, or WEF aggregate as a Swiss household coefficient would be exactly the "plausible narrative wrapped around unfitted parameters" that `FutureWork.md` §7 forbids.
+
+### 7.6 Worked example
+
+```text
+cargo run -- optimize --salary 150000 --age 40 --required-output-index 1.0 \
+  --ai-productivity-gain 0.5 --ai-productivity-gain-high 0.8 \
+  --compression-quality-sensitivity 0.5 --evaluation-period-years 2 --monthly-debt 300
+```
+
+```text
+Employer Achievement Capacity:
+  AI gain range:   50% pessimistic … 80% optimistic
+  Quality factor:  0.88   usable output per unit of capacity
+  Robustness:      ROBUST across the AI range
+  Status:          MEETS REQUIRED OUTPUT ✓ (margin +0.05)
+  Average workload:81.6%   over the years to retirement, including
+Consumption by Elasticity Tier:
+  Mandatory floor                          CHF 4060
+  Saving capacity (Y − T − C)              CHF 2150
+```
+
+How to read it: the goals are still delivered even if AI returns only half of the optimistic gain, so the reduction is robust rather than a bet; compressing the portfolio into the reduced week costs about 12% of the output per hour, which is why the margin is thin; and the average workload is 81.6% rather than the contractual 80% because the first two years are served at full time. A reader who thinks the quality coefficient or the evaluation period is wrong can change it and see the answer move — which is the point of exposing them.
+
+### 7.7 What is deliberately not modelled
+
+- **Team dependencies (§4, third question).** Not modelled at all, and this is the most consequential gap. The model treats the worker as a resource whose reduced availability has no effect on anyone else, while a real 80% schedule may push work onto colleagues. Representing that needs an explicit team-coupling model and data this project does not have; asserting a coupling coefficient would be invention. The omission should be read as a known limitation of every result here, not as a finding that the effect is zero.
+- **Per-task AI gains (§4, first question).** One scalar with a range, not a task-level decomposition. A single gain also cannot represent the plausible case where AI helps with some of the portfolio and not with the rest.
+- **The employer's response (§4, second question, and §5).** $G_t$ is an input. The model can be *run* with a higher required output to represent an employer who raises targets after a productivity gain, but it does not endogenise that response. The second bullet of §5 is therefore a scenario the user can construct, not something the model predicts.
+- **An evidence standard for sustainability (§4, fourth question).** Proxies only: amortised workload, hidden work, and the evaluation period. No empirical evidence that an 80% schedule is sustainable is encoded, and none is claimed. The model reports what the schedule demands; it cannot certify the worker's endurance.
+- **The joint employer-worker problem (§4, fifth question).** Partial. Replacement risk is priced on the worker's side; there is no employer-side objective, so the employer bears no cost when a worker is lost. The model answers the worker's question, not the joint one.
+- **Deciding only after weighing finance and goal probability (§4, sixth question).** Yes, this is what the strict/risk-weighted split and the report exist to do.
+- **Meaningful activity and the paid-work/meaningful-activity distinction (§5).** Not modelled. The optimizer reports free hours and says nothing about what fills them: it cannot distinguish a 60% schedule spent learning, caring, or contributing from the same schedule spent isolated and inactive. Of the four dimensions §5 lists, only economic security is addressed, and only as income, tax, and pension arithmetic; distribution, human development, and public finance are outside the present scope. The one place the model does take a position on human capability is the hidden-work constraint: it refuses to book unverified AI output as free time.
+- **The 40% schedule in ten years.** Reachable as a scenario through the AI-gain and required-output inputs, and still not a forecast. Nothing in the model fits a curve to it, and nothing in it should be quoted as a projection.
+
+### 7.8 Reproduction
+
+`cargo test --workspace --all-targets` runs 284 tests (55 in the library, plus the integration suites, plus the simulator's own). The tests that pin the behaviour described above are `tests/achievement_constraint.rs` (18), `tests/consumption_model.rs` (16), and `tests/cli_consumption_achievement.rs` (16), which exercise the critique's items through both the library and the command line.
