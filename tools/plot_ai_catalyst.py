@@ -135,6 +135,51 @@ LITERATURE_RANGE = (ALPHA_METR, ALPHA_PENG)
 # must not be swapped: -55.8 and +1.26 are different quantities by construction.
 TIME_RANGE = (-55.8, 19.0)
 
+# ── Constants read off the CLI, for the §2 panel of Figure 5 ────────────────
+#
+# Salary 150k, age 40, Bern, normal profile, no sparing. Taken from the tool's own
+# report rather than hand-derived from the tax tables, so the panel shows what the
+# program computes; `--verify` re-checks each against the binary so a change to the
+# tax engine fails the check instead of silently redrawing the panel.
+CLI_NET_80 = 7248.0     # CHF/month net at 80% work  (report: "Monthly Net")
+CLI_NET_100 = 8832.0    # CHF/month net at 100% work
+CLI_FLOOR_BASE = 3760.0  # mandatory floor with no debt (housing + essentials + debt)
+FULL_TIME_HOURS = 42.0  # the model's full-time week
+
+
+def hidden_work_hours(goal, work, alpha, retention=1.0,
+                      full_time_hours=FULL_TIME_HOURS):
+    """`§1.4` item 4: the cover the pessimistic outcome demands, in h/week.
+
+    Mirrors `AchievementConstraint::hidden_work_percentage`, including its
+    `unwrap_or(1.0)`: when *no* percentage delivers the goal, the shortfall is
+    measured against a full-time load rather than reported as zero.
+    """
+    needed = minimum_viable_work(goal, alpha, retention)
+    if needed is None:
+        needed = 1.0
+    return max(0.0, needed - work) * full_time_hours
+
+
+def replacement_risk(goal, work, alpha, sensitivity, retention=1.0):
+    """`§1.4` item 5: `clamp(relative shortfall * sensitivity, 0, 1)`.
+
+    Mirrors `AchievementConstraint::replacement_risk_at`, which measures the
+    shortfall against the *pessimistic, quality-adjusted* delivery.
+    """
+    if sensitivity <= 0.0 or goal <= 0.0:
+        return 0.0
+    delivered = work * (1.0 + alpha * retention)
+    shortfall = max(0.0, (goal - delivered) / goal)
+    return min(1.0, shortfall * sensitivity)
+
+
+def amortised_work(work, horizon_years, evaluation_years):
+    """`§1.4` item 6: the career average, with the first years at full time."""
+    horizon = max(1.0, horizon_years)
+    probation = min(max(0.0, evaluation_years), horizon)
+    return (probation * 1.0 + (horizon - probation) * work) / horizon
+
 
 def minimum_viable_work(goal, alpha, retention=1.0, productivity=1.0):
     """`G / (P * (1 + alpha * rho))`, or `None` when no percentage delivers.
@@ -548,6 +593,184 @@ def figure_quality_breakeven(out_dir):
 
 # ── Verification against the real binary ────────────────────────────────────
 
+def figure_critique_extensions(out_dir):
+    """One panel per critique extension: §1.4 items 4, 5, 6 and §2.
+
+    Items 1-3 are already covered by Figures 3 and 4 (the fixed-goal constraint, the
+    AI gain as a range, and the quality channel). This figure draws the four that had
+    no picture, so every extension the critique asked for is inspectable rather than
+    only asserted in prose.
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(13.6, 9.4))
+    fig.subplots_adjust(top=0.845, bottom=0.085, left=0.075, right=0.975,
+                        hspace=0.42, wspace=0.26)
+    (ax_hidden, ax_risk), (ax_amort, ax_debt) = axes
+    works = [0.5 + 0.002 * i for i in range(251)]
+
+    # ── §1.4 item 4: hidden work ────────────────────────────────────────────
+    for alpha, colour in [(0.10, "#d62728"), (0.25, "#1f77b4"), (0.50, "#2ca02c")]:
+        hours = [hidden_work_hours(1.0, w, alpha) for w in works]
+        ax_hidden.plot([w * 100 for w in works], hours, color=colour, lw=2.3,
+                       label=f"AI gain +{alpha*100:.0f}%")
+        # The kink is where the schedule becomes robust and the cover goes to zero.
+        w_min = minimum_viable_work(1.0, alpha)
+        if w_min is not None:
+            ax_hidden.plot([w_min * 100], [0], marker="v", color=colour, markersize=8,
+                           zorder=4)
+    ax_hidden.set_xlim(50, 100)
+    ax_hidden.set_ylim(0, 22)
+    ax_hidden.set_xlabel("contracted work percentage, %", fontsize=9.5)
+    ax_hidden.set_ylabel("hidden work, h/week", fontsize=9.5)
+    ax_hidden.set_title("§1.4 item 4 — hidden work\n(full portfolio, G = 1)",
+                        fontsize=11, fontweight="bold")
+    ax_hidden.legend(fontsize=8.5, frameon=False, loc="upper right")
+    ax_hidden.grid(color="#dddddd", lw=0.7)
+    ax_hidden.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax_hidden.spines[side].set_visible(False)
+    ax_hidden.annotate(
+        "▲ = the lowest percentage that delivers;\nright of it the cover is exactly zero",
+        xy=(0.53, 0.56), xycoords="axes fraction", fontsize=8, color="#444444")
+
+    # ── §1.4 item 5: replacement risk ───────────────────────────────────────
+    for k, colour in [(1.0, "#2ca02c"), (2.5, "#1f77b4"), (5.0, "#d62728")]:
+        risk = [replacement_risk(1.0, w, 0.25, k) * 100 for w in works]
+        ax_risk.plot([w * 100 for w in works], risk, color=colour, lw=2.3,
+                     label=f"--replacement-risk {k:g}")
+    ax_risk.axvline(80, color="#666666", lw=1.1, ls="--")
+    ax_risk.annotate("80%", (80, 4), fontsize=8.5, color="#666666", rotation=90, va="bottom")
+    ax_risk.set_xlim(50, 100)
+    ax_risk.set_ylim(0, 105)
+    ax_risk.set_xlabel("contracted work percentage, %", fontsize=9.5)
+    ax_risk.set_ylabel("implied replacement risk, %", fontsize=9.5)
+    ax_risk.set_title("§1.4 item 5 — replacement risk\n(G = 1, AI gain +25%)",
+                      fontsize=11, fontweight="bold")
+    ax_risk.legend(fontsize=8.5, frameon=False, loc="lower left")
+    ax_risk.grid(color="#dddddd", lw=0.7)
+    ax_risk.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax_risk.spines[side].set_visible(False)
+
+    # ── §1.4 item 6: evaluation period ──────────────────────────────────────
+    years = [0.2 * i for i in range(76)]
+    for work, colour in [(0.8, "#1f77b4"), (0.7, "#9467bd"), (0.6, "#8c564b")]:
+        avg = [amortised_work(work, 25.0, y) * 100 for y in years]
+        ax_amort.plot(years, avg, color=colour, lw=2.3, label=f"{work:.0%} contract")
+    ax_amort.plot([5], [amortised_work(0.8, 25.0, 5.0) * 100], marker="o", color="#1f77b4",
+                  markersize=9, markeredgecolor="white", markeredgewidth=1.4, zorder=5)
+    ax_amort.annotate(
+        "CLI-verified: 5 years\n→ 84.0% average",
+        xy=(5, amortised_work(0.8, 25.0, 5.0) * 100), xytext=(6.4, 76.5),
+        fontsize=8.5, color="#1f77b4",
+        arrowprops=dict(arrowstyle="->", color="#1f77b4", lw=1.0))
+    ax_amort.set_xlim(0, 15)
+    ax_amort.set_ylim(58, 101)
+    ax_amort.set_xlabel("evaluation period worked at full time, years", fontsize=9.5)
+    ax_amort.set_ylabel("average workload to retirement, %", fontsize=9.5)
+    ax_amort.set_title("§1.4 item 6 — evaluation period\n(age 40, horizon 25 years)",
+                       fontsize=11, fontweight="bold")
+    ax_amort.legend(fontsize=8.5, frameon=False, loc="lower right")
+    ax_amort.grid(color="#dddddd", lw=0.7)
+    ax_amort.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax_amort.spines[side].set_visible(False)
+
+    # ── §2: debt and the mandatory floor ────────────────────────────────────
+    debts = [120.0 * i for i in range(76)]
+    floors = [CLI_FLOOR_BASE + d for d in debts]
+    ax_debt.plot(debts, floors, color="#333333", lw=2.4, label="mandatory floor = 3760 + debt")
+    ax_debt.axhline(CLI_NET_80, color="#1f77b4", lw=1.8, ls="--",
+                    label="net income at 80% work (7 248)")
+    ax_debt.axhline(CLI_NET_100, color="#2ca02c", lw=1.8, ls="--",
+                    label="net income at 100% work (8 832)")
+    cross80 = CLI_NET_80 - CLI_FLOOR_BASE
+    cross100 = CLI_NET_100 - CLI_FLOOR_BASE
+    for cross, colour, text, label_at in [
+        (cross80, "#1f77b4", f"the 80% week stops being\naffordable at CHF {cross80:,.0f}",
+         (3560, 5250)),
+        (cross100, "#2ca02c", f"and full time at CHF {cross100:,.0f}", (1900, 10300)),
+    ]:
+        ax_debt.plot([cross, cross], [0, CLI_FLOOR_BASE + cross], color=colour, lw=1.0, ls=":")
+        ax_debt.plot([cross], [CLI_FLOOR_BASE + cross], marker="o", color=colour,
+                     markersize=9, markeredgecolor="white", markeredgewidth=1.4, zorder=5)
+        ax_debt.annotate(text, xy=(cross, CLI_FLOOR_BASE + cross),
+                         xytext=label_at,
+                         fontsize=8.5, color=colour,
+                         arrowprops=dict(arrowstyle="->", color=colour, lw=1.0))
+    ax_debt.set_xlim(0, 9000)
+    ax_debt.set_ylim(3000, 13000)
+    ax_debt.set_xlabel("monthly debt repayment, CHF", fontsize=9.5)
+    ax_debt.set_ylabel("CHF per month", fontsize=9.5)
+    ax_debt.set_title("§2 — debt raises the floor one-for-one\n(salary 150k, age 40, Bern)",
+                      fontsize=11, fontweight="bold")
+    ax_debt.legend(fontsize=8.5, frameon=False, loc="upper left")
+    ax_debt.grid(color="#dddddd", lw=0.7)
+    ax_debt.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax_debt.spines[side].set_visible(False)
+
+    fig.suptitle(
+        "The critique's extensions, one panel each",
+        fontsize=14.5,
+        fontweight="bold",
+        y=0.955,
+    )
+    _banner(
+        fig,
+        "MODEL OUTPUT — not measurements. The three achievement panels use the same closed forms as the "
+        "optimizer;\nthe §2 panel draws the floor and the net-income lines the tool itself reports. "
+        "Every constant is re-checked by --verify.",
+        "#8a3d00",
+    )
+    _cite(fig, "Model: src/optimizer.rs, default zero compression sensitivity. Salary 150k, age 40, Bern, "
+               "normal profile, no sparing.")
+    path = os.path.join(out_dir, "ai-catalyst-5-critique-extensions.png")
+    fig.savefig(path, dpi=165)
+    plt.close(fig)
+    return path
+
+
+def verify_extension_quantities(repo_root):
+    """Check the constants and closed forms behind Figure 5 against the binary.
+
+    Each case names a string the report must contain. If the optimizer's arithmetic
+    or the tax engine moves, this fails rather than the figure quietly redrawing
+    itself around a stale constant.
+    """
+    cases = [
+        (["optimize", "--salary", "150000", "--age", "40", "--required-output-index", "1.0",
+          "--enforcement", "risk-weighted", "--replacement-risk", "0.5"],
+         "Hidden work:     21.0 h/week",
+         "hidden work at 50% work and no AI (the cover is measured against full time)"),
+        (["optimize", "--salary", "150000", "--age", "40", "--required-output-index", "1.0",
+          "--ai-productivity-gain", "0.25", "--evaluation-period-years", "5"],
+         "Average workload:84.0%",
+         "the 5-year evaluation period amortised into an 80% contract over 25 years"),
+        (["optimize", "--salary", "150000", "--age", "40", "--required-output-index", "1.0",
+          "--ai-productivity-gain", "0.25"],
+         "Monthly Net:     7248 CHF/month",
+         "net income at 80% work — the line the §2 panel crosses"),
+        (["optimize", "--salary", "150000", "--age", "40", "--monthly-debt", "1000"],
+         "mandatory floor of CHF 4760/month",
+         "the floor moving one-for-one with declared debt"),
+    ]
+    results = []
+    for argv, needle, why in cases:
+        try:
+            out = subprocess.run(
+                ["cargo", "run", "-q", "--"] + argv,
+                cwd=repo_root, capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=600,
+            ).stdout
+        except (OSError, subprocess.SubprocessError) as exc:  # pragma: no cover
+            results.append((needle, why, False, f"not run: {exc}"))
+            continue
+        normalised = " ".join(out.split())
+        ok = " ".join(needle.split()) in normalised
+        results.append((needle, why, ok, "" if ok else "not found in the report"))
+    return results
+
+
 def verify_against_cli(repo_root):
     """Check the closed form in this file against the optimizer's own answer.
 
@@ -616,6 +839,7 @@ def main():
         figure_belief_gap(out_dir),
         figure_model_phase(out_dir),
         figure_quality_breakeven(out_dir),
+        figure_critique_extensions(out_dir),
     ]
     for path in written:
         print(f"wrote {os.path.relpath(path, repo_root)}")
@@ -655,6 +879,14 @@ def main():
                 ok = False
             print(f"  G={case['goal']} gain={case['gain']}: formula w_min={f}, "
                   f"CLI recommends {r} (grid point {e})  {match}")
+
+        print("\nFigure 5 quantities, read back from the report:")
+        for needle, why, passed, note in verify_extension_quantities(repo_root):
+            if not passed:
+                ok = False
+            print(f"  {'OK      ' if passed else 'MISMATCH'}  {needle!r:44} {why}"
+                  + (f"  -- {note}" if note else ""))
+
         if not ok:
             print("\n  the closed form in this script does not reproduce the binary")
             return 1

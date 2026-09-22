@@ -10,7 +10,7 @@ contains **no measurements** of AI productivity in software engineering. Everyth
 here has ever been in the field. So there are two kinds of figure below, and they are
 not the same kind of object:
 
-| | Figures 1–2 | Figures 3–4 |
+| | Figures 1–2 | Figures 3–5 |
 | --- | --- | --- |
 | What they show | **Published estimates**, each cited | **Model output** over declared parameters |
 | Source | Four field experiments and RCTs | `w_min = G / (1 + αρ)`, the default case of `src/optimizer.rs` |
@@ -19,9 +19,10 @@ not the same kind of object:
 
 Every figure carries its kind in a banner on its own face, so a screenshot cannot
 travel without it. The script that draws them
-(`tools/plot_ai_catalyst.py`) reproduces the model's closed form rather than calling
-the binary, and `--verify` checks three points against the real CLI so the two cannot
-drift apart silently.
+(`tools/plot_ai_catalyst.py`) reproduces the model's closed forms rather than calling
+the binary, and `--verify` checks them against the real CLI — three `(goal, gain)`
+pairs for the recommended percentage, and four reported quantities for Figure 5 —
+so the two cannot drift apart silently.
 
 ---
 
@@ -193,7 +194,23 @@ The transferable point: **"45% of generated code has a flaw" and "45% of the gai
 lost" are different claims**, and the distance between them is a measurement nobody has
 made.
 
-## 6. How to validate delivered quality against what the corporation needs
+## 6. The critique's extensions, one panel each
+
+![The critique's extensions](figures/ai-catalyst-5-critique-extensions.png)
+
+§1.4 asks for six practical tests, and §2 adds consumption. Figures 3 and 4 covered three of them — the fixed-goal constraint, AI as a *range*, and the quality channel. This panel set covers the rest, so no part of the extension is left as prose only.
+
+**Item 4 — hidden work.** The cover the pessimistic outcome demands, in hours per week, against the contracted percentage. Read it right to left: at +25% AI the kink (▲) sits at 80%, so a contract at or above 80% needs no cover at all while anything below it does — 4.2 h/week at 70%, 12.6 at 50%. The line is straight because the shortfall is linear in the hours given up, and the *kink* is the informative part: it marks the boundary between a real reduction and a nominal one topped up from evenings. The assumed gain moves that boundary a long way, which is the argument for declaring it rather than picking it — at +10% AI, a 70% contract hides 8.8 h/week, more than a fifth of a working week.
+
+**Item 5 — replacement risk.** One linear coefficient, as declared, and the mechanism to notice is saturation. At a sensitivity of 5, any contract below about 64% implies certain replacement, and the model stops distinguishing between bad and worse. At a sensitivity of 1 it never saturates in this range. Nothing measured chooses between those two, which is why the figure is drawn for three values instead of asserting one.
+
+**Item 6 — evaluation period.** A reduction is only available after a probation, and the *average* workload is what leisure is measured against. A 5-year probation on an 80% contract over a 25-year horizon gives 84.0% — the marked point, read back from the CLI. The item is not cosmetic for deeper reductions: the same probation on a 60% contract gives 68%, so two thirds of the promised leisure is deferred rather than delivered.
+
+**§2 — debt.** The cleanest panel, because it is arithmetic the tool already prints. The mandatory floor moves one-for-one with declared debt, so the *reduction* stops being affordable at CHF 3 488 a month while full time survives to CHF 5 072. Two thresholds rather than one, and the gap between them is the finding: debt does not make a schedule unaffordable uniformly, it removes the *reduction* first. This is the critique's §2.2 claim demonstrated on the model's own floor, and it is the one panel whose inputs are the tool's reported figures rather than a closed form re-derived in Python.
+
+Every constant in the §2 panel — the 3 760 floor, the 7 248 and 8 832 net incomes — is re-checked against the binary by `--verify`, so a change to the tax engine fails the check instead of silently redrawing the panel. All four panels are **model output over declared parameters**, not measurements.
+
+## 7. How to validate delivered quality against what the corporation needs
 
 The question contains its own answer if you take it literally: quality is *delivered*
 quality, and it is defined by the corporation's outcome, not the developer's output.
@@ -220,7 +237,7 @@ the time went: tests pass, review by a human who is accountable, dependency prov
 checked, security scan clean for the classes below. A gate that the generating tool can
 self-certify is not a gate — §2 is the empirical case for that sentence.
 
-## 7. Agentic QA and cyber defence: applicable, with one real adaptation
+## 8. Agentic QA and cyber defence: applicable, with one real adaptation
 
 Both are applicable, and the frameworks are real. I am naming them without having read
 them in this session, which is why they are pointers rather than claims:
@@ -260,26 +277,29 @@ real registry before it is installed.
 
 ---
 
-## 8. What is not established here
+## 9. What is not established here
 
 - **This repository measured nothing.** §3's prediction about Scrum is a prediction.
-  §6's instrument proposals are proposals. Neither has been run.
+  §7's instrument proposals are proposals. Neither has been run.
 - **The literature is early and heterogeneous.** Four studies, different outcomes,
   populations and tasks; one of them contradicts the other three. Nothing here should
   be quoted as "AI makes developers N% faster".
 - **α and ρ are inputs to this model, not fitted parameters.** The figures show what
   follows from them; they do not estimate them. That is the same rule `FutureWork.md` §7
   sets for the tax model, applied to a quantity that is softer still.
-- **No framework named in §7 has been implemented here.** They are the right shapes for
+- **No framework named in §8 has been implemented here.** They are the right shapes for
   the problem; adopting one is a project, not a commit.
 
-## 9. Reproducing the figures
+## 10. Reproducing the figures
 
 ```bash
-python tools/plot_ai_catalyst.py             # writes figures/*.png
-python tools/plot_ai_catalyst.py --verify    # also checks the closed form against the CLI
+python tools/plot_ai_catalyst.py             # writes figures/ai-catalyst-*.png
+python tools/plot_ai_catalyst.py --verify    # also checks the closed forms against the CLI
 ```
 
-`--verify` runs the optimizer on three `(goal, gain)` pairs and checks that the script's
-closed form predicts the percentage the binary recommends. If the model's arithmetic
-changes, the check fails rather than the figures quietly going stale.
+Five figures come out of one script: two of published evidence and three of model
+output. `--verify` runs the optimizer on three `(goal, gain)` pairs, checks that the
+script's closed form predicts the percentage the binary recommends, and reads back the
+four constants behind Figure 5 — the hidden-work figure, the amortised workload, and
+the §2 floor and net-income lines. If the model's arithmetic or the tax engine changes,
+the check fails rather than the figures quietly going stale.
