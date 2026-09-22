@@ -45,6 +45,18 @@ _xlsx_dump = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_xlsx_dump)
 read_xlsx = _xlsx_dump.read_xlsx
 
+# The ESTV "Tarife" exports live in `source-documents/` at the repository root. A
+# bare filename on the command line resolves against that directory, so the
+# documented command works from any working directory; an explicit path still wins.
+_SOURCES = os.path.join(os.path.dirname(_HERE), "source-documents")
+
+
+def source_path(name):
+    """Absolute path for a source workbook, or `name` if it already resolves."""
+    if os.path.isabs(name) or os.path.exists(name):
+        return name
+    return os.path.join(_SOURCES, name)
+
 
 def clean(text):
     """Normalise header text: strip, collapse spaces, drop a UTF-8 BOM."""
@@ -440,7 +452,13 @@ def main():
         federal_out_path = argv[i + 1]
         del argv[i:i + 2]
     out_path = argv[0]
-    srcs = argv[1:]
+    srcs = [source_path(name) for name in argv[1:]]
+
+    # A missing input is worth naming here rather than failing later inside the zip
+    # reader, where the message is about a file object rather than about the document.
+    for src in srcs:
+        if not os.path.exists(src):
+            raise SystemExit(f"no such source workbook: {src}")
 
     cantons = {}
     factors = {}

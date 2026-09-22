@@ -41,13 +41,20 @@ the multiplier have to come from different sources.
 
 ### Steuerfüsse — **sourced and generated**
 
-The two workbooks at the repository root are official publications of the
+The two workbooks in `source-documents/` are official publications of the
 Eidgenössische Steuerverwaltung (ESTV):
 
 | File | Content | Relevant? |
 |---|---|---|
 | `steuerfuesse-np-1995-2026.xlsx` | *"Steuerfüsse in den Kantonshauptorten"* — income and wealth taxes of **natural persons** | **Yes** — this is the one that matters |
 | `steuerfuesse-jp-1995-2026.xlsx` | Profit and capital taxes of **legal persons** (companies) | No — corporate tax does not apply to personal work-life planning |
+
+Every external source document — the workbooks, the ESTV "Tarife" exports and the
+three PDFs — lives in `source-documents/`, which also has a
+[manifest](source-documents/README.md) recording each file's origin, vintage and
+which generated module consumes it. `src/` contains only generated Rust tables, so
+the repository root stays a list of code and documentation rather than a filing
+cabinet.
 
 `tools/generate_steuerfuss.py` reads the natural-persons workbook and emits
 `src/canton_steuerfuss_data.rs`, containing **832 rows — 26 cantons × 32 years
@@ -64,6 +71,10 @@ Regenerate with:
 ```bash
 python tools/generate_steuerfuss.py steuerfuesse-np-1995-2026.xlsx src/canton_steuerfuss_data.rs
 ```
+
+A bare filename resolves against `source-documents/`, so the command above works
+from any working directory; pass a path explicitly to override it. The same is true
+of every importer in `tools/` that takes a workbook argument.
 
 ### Why the raw text and the blank flag exist
 

@@ -19,6 +19,10 @@ spec = importlib.util.spec_from_file_location(
 xl = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(xl)
 
+# The ESTV "Tarife" exports live in `source-documents/` at the repository root, so
+# the sweep finds them regardless of the working directory it is run from.
+SOURCES = os.path.join(os.path.dirname(HERE), "source-documents")
+
 
 def clean(t):
     if t is None:
@@ -36,7 +40,7 @@ def to_float(t):
         return None
 
 
-files = sorted(glob.glob("estv_scales_*.xlsx"))
+files = sorted(glob.glob(os.path.join(SOURCES, "estv_scales_*.xlsx")))
 print(f"found {len(files)} export files\n")
 
 for path in files:

@@ -1,8 +1,13 @@
 """Generate Rust Steuerfuss constants from the ESTV workbooks.
 
-Input : steuerfuesse-np-<start>-<end>.xlsx  (natural persons)
-        steuerfuesse-jp-<start>-<end>.xlsx  (legal persons)
+Input : source-documents/steuerfuesse-np-<start>-<end>.xlsx  (natural persons)
 Output: src/canton_steuerfuss_data.rs
+
+Only the *natural persons* workbook is read. The legal-persons workbook
+(`steuerfuesse-jp-...xlsx`) is also in `source-documents/` but no script consumes
+it: corporate tax does not bear on a personal work-life decision, and the sheet
+finder below is pinned to the `NP <year>` sheet names. It is kept for
+completeness, not because anything imports it.
 
 The ESTV sheets list, for each cantonal capital, the cantonal / municipal /
 church multipliers applied to the *simple* tax ("Vielfaches der einfachen
@@ -31,6 +36,18 @@ _spec = importlib.util.spec_from_file_location(
 _xlsx_dump = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_xlsx_dump)
 read_xlsx = _xlsx_dump.read_xlsx
+
+# The ESTV workbooks live in `source-documents/` at the repository root. A bare
+# filename on the command line resolves against that directory, so the documented
+# command works from any working directory; an explicit path still wins.
+_SOURCES = os.path.join(os.path.dirname(_here), "source-documents")
+
+
+def source_path(name):
+    """Absolute path for a source workbook, or `name` if it already resolves."""
+    if os.path.isabs(name) or os.path.exists(name):
+        return name
+    return os.path.join(_SOURCES, name)
 
 # Cantonal capital (as spelled in the ESTV sheet) -> official canton code.
 CAPITAL_TO_CODE = {
@@ -139,7 +156,7 @@ def extract_capital_rows(rows):
 
 
 def main():
-    xlsx_path = sys.argv[1]
+    xlsx_path = source_path(sys.argv[1])
     out_path = sys.argv[2]
 
     sheets = {name: rows for name, rows in read_xlsx(xlsx_path)}
@@ -215,7 +232,14 @@ def main():
     lines.append("//! workbooks.")
     lines.append("//!")
     lines.append(f"//! Generated on {stamp} by `tools/generate_steuerfuss.py` from")
-    lines.append(f"//! `{xlsx_path}`. Do not edit by hand -- re-run the generator.")
+    # The *basename*, not the resolved path: `source_path` may return an absolute
+    # path, and baking a machine-specific one into a committed file would make the
+    # header wrong for every other checkout. The sibling generated modules cite the
+    # document by name for the same reason.
+    lines.append(
+        f"//! `{os.path.basename(xlsx_path)}`. Do not edit by hand -- "
+        "re-run the generator."
+    )
     lines.append("//!")
     lines.append("//! Source: Eidgenössische Steuerverwaltung (ESTV), \"Steuerfüsse in den")
     lines.append("//! Kantonshauptorten\", income and wealth taxes of natural persons.")

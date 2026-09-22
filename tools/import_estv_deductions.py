@@ -68,6 +68,18 @@ _spec2 = importlib.util.spec_from_file_location(
 _lic = importlib.util.module_from_spec(_spec2)
 _spec2.loader.exec_module(_lic)
 
+# The ESTV workbooks live in `source-documents/` at the repository root. Resolving
+# a bare filename against that directory keeps the documented command runnable from
+# any working directory, which a plain relative default did not.
+_SOURCES = os.path.join(os.path.dirname(_HERE), "source-documents")
+
+
+def source_path(name):
+    """Absolute path for a source document, or `name` if it already resolves."""
+    if os.path.isabs(name) or os.path.exists(name):
+        return name
+    return os.path.join(_SOURCES, name)
+
 
 def clean(text):
     """Normalise cell text: strip, collapse whitespace, drop a UTF-8 BOM."""
@@ -368,13 +380,13 @@ def main():
             "[--scales <file>]"
         )
     out_path = sys.argv[1]
-    rules_path = "estv_deductions.xlsx"
-    scales_path = "estv_deduction_scales.xlsx"
+    rules_path = source_path("estv_deductions.xlsx")
+    scales_path = source_path("estv_deduction_scales.xlsx")
     argv = sys.argv[2:]
     if "--rules" in argv:
-        rules_path = argv[argv.index("--rules") + 1]
+        rules_path = source_path(argv[argv.index("--rules") + 1])
     if "--scales" in argv:
-        scales_path = argv[argv.index("--scales") + 1]
+        scales_path = source_path(argv[argv.index("--scales") + 1])
 
     rules_year, rules = parse_rules(rules_path)
     scales_year, scales = parse_scales(scales_path)

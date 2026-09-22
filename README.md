@@ -358,6 +358,9 @@ life-optimizer/
 │   ├── display.rs                Work-life balance result formatting
 │   ├── mc_display.rs             Pension simulation result formatting
 │   └── *_data.rs                 GENERATED tables (ESTV scales, deductions, Steuerfuss)
+├── source-documents/             The external sources themselves: ESTV workbooks,
+│                                 ESTV "Tarife" exports, and the DBG / tariff PDFs,
+│                                 with a manifest recording what each one feeds
 ├── MATHEMATICS.md                Full mathematical formulation
 ├── ECONOMIC_SCENARIOS.md         Regime-switching model & stress test details
 ├── PENSION_OPTIMIZATION.md       Pension sustainability methodology

@@ -15,6 +15,9 @@ spec = importlib.util.spec_from_file_location("xl", os.path.join(HERE, "xlsx_dum
 xl = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(xl)
 
+# The ESTV "Tarife" exports live in `source-documents/` at the repository root.
+SOURCES = os.path.join(os.path.dirname(HERE), "source-documents")
+
 
 def clean(t):
     return re.sub(r"\s+", " ", str(t or "").replace("\ufeff", "")).strip()
@@ -24,7 +27,7 @@ expected = set("AG AI AR BE BL BS FR GE GL GR JU LU NE NW OW SG SH SO SZ TG TI U
 seen = set()
 
 print(f"{'file':26} {'sheets':8} {'header row':60} cantons")
-for path in sorted(glob.glob("estv_scales_*.xlsx")):
+for path in sorted(glob.glob(os.path.join(SOURCES, "estv_scales_*.xlsx"))):
     name = os.path.basename(path)
     sheets = list(xl.read_xlsx(path))
     sheet_names = [n for n, _ in sheets]
