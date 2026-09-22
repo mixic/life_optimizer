@@ -681,14 +681,194 @@ other for.
 
 ## 5. The historical record
 
-*(This section is being completed from sourced material. It will report, for each case, what
-the third party is documented to have done as distinct from what is alleged, what benefit is
-on the record as distinct from inferred, whether any punishment occurred, whether the
-instrument later turned on its sponsor, and exactly which parts are contested. The
-Yugoslavia material in particular will separate the documented administrative history — the
-creation of the "Muslim" nationality category, the constitutional changes, the external
-actors and their dates — from the interpretive claim that the war was engineered from
-outside, and will cite the strongest versions of both readings.)*
+This section reports, for each case, what the third party is **documented** to have done as
+distinct from what is alleged, what benefit is **on the record** as distinct from inferred,
+whether any punishment occurred, whether the instrument later turned on its sponsor, and
+which parts are contested.
+
+**How the record is read.** Three notation rules, applied throughout:
+
+* A citation is to a primary document wherever one exists — a treaty or resolution text, a
+  judgment, a parliamentary record, a declassified file, an official inquiry. Secondary and
+  participant accounts are labelled as such.
+* **"No sourced figure located" means exactly that.** No figure appears below unless a named
+  source states it. Where a popular claim is contradicted by the primary text, the primary
+  text is quoted and the claim is named as contradicted.
+* Where two official bodies differ on a date, a number, or a finding, **both are reported**.
+  Reconciling them is not this document's business and would hide the disagreement.
+
+**Two records are kept apart.** The *administrative and legal record* — what a court found,
+what a resolution says, what a treaty requires, what a statute number is — is a different
+kind of thing from the *interpretive claim* that a conflict was engineered from outside. The
+first can be checked. The second usually cannot, and this section says so rather than
+dressing it as the first.
+
+### 5.1 Four corrections to this document's own working assumptions
+
+Recorded because the method is part of the result, and because each was an assumption that
+would have produced a confident false sentence.
+
+**(i) The framework was expected to find a court holding a sponsor liable.**
+It does not, in the case where it most looked as though it might. A **peace margin and
+harvest are declared; the legal record is not**, and the record's answer is the opposite of
+the expected one. France's responsibility in Rwanda is a finding of the **Duclert report**
+(*La France, le Rwanda et le génocide des Tutsi (1990-1994)*, remis au Président de la
+République le 26 mars 2021, pp. 971–972): *"La recherche établit donc un ensemble de
+responsabilités, lourdes et accablantes… Elles sont de nature politique."* It is expressly
+**political, not legal**, and the same report uses *complice* only to reject it. The courts
+never reached the merits: **Tribunal administratif de Paris, jugement n° 2309845/4-1 du
+14 novembre 2024** declined jurisdiction — the acts *"ne sont pas détachables de la conduite
+des relations internationales de la France"* — the appeal was rejected (**CAA Paris, arrêt
+n° 25PA00083, 28 mars 2025**) and the **Conseil d'État, n° 504595, 18 mars 2026** refused
+leave. **Duclert and the courts are not in conflict about a finding of fault; the courts
+never reached the merits.** These are two different kinds of "no".
+
+**(ii) A parliamentary claim that turned out not to be in the statute.** The **Indian
+Councils Act 1909 (9 Edw. 7 c. 4)** does **not** contain the phrase "separate electorate",
+nor "electorate", "communal", "Muhammadan", "Muslim", "Hindu", "Sikh", nor the word
+"religion" at all. Section 6 is a bare enabling power to **make regulations**. The communal
+electorate was created by regulation under that section, not by the Act. The phrase itself
+appears in the parliamentary record not in the statute but in **Morley's answer to Curzon,
+HL Deb 4 May 1909, vol. 1, c.756**, reading the Viceroy's telegram: *"Our intention was that
+Mahomedans should have, by means of separate electorates, a number of seats closely
+approaching that to which their numerical proportion in the population would entitle them."*
+**The Gazette notification containing the 1909 regulations could not be located, and no
+citation for it is offered.**
+
+**(iii) Three dates and one report title that do not exist.** The **Smithwick Tribunal**
+report was published **3 December 2013**; the **de Silva review** (HC 802) on **12 December
+2012**; the **Ballymurphy** deaths were in **August 1971** — and **no official report named
+"Cassel" exists**. The phrase "connectivity, coincidence and correlation" could not be
+sourced anywhere. All four were working assumptions; all four were wrong.
+
+**(iv) The dossier's own arithmetic error, kept rather than quietly fixed.** The Angola
+draft attributed the vote "13 to none, with 2 abstentions" to **S/RES/545 (1983)**. That vote
+belongs to **S/RES/546 (1984)**, adopted at the 2511th meeting from S/16247/Rev.1.
+**S/RES/545 (1983), 20 December 1983, 2508th meeting, from S/16226, was adopted 14–0–1 with
+the United States abstaining.** The substantive point survives and is sharper with the
+correction: a US abstention is weaker censure than a unanimous vote, which is the pattern.
+
+### 5.2 The cases
+
+Read the table as the record's answer to four questions, and note where the answer is
+"nothing located" — which is a result and not a blank.
+
+| Case | Documented conduct *(primary source)* | Documented benefit | Punishment | Blowback |
+| --- | --- | --- | --- | --- |
+| **Yugoslavia / Bosnia, Kosovo** (1991–99) | FRY "made its considerable military and financial support available to the Republika Srpska" (*Bosnia v. Serbia*, ICJ, 26 Feb 2007, press release 2007/8). Arms embargo S/RES/713 (1991); ICTY indictments IT-02-54, IT-04-81 | **No sourced figure** for value or volume | ICJ: **declaration only** — "(9) … the findings constitute appropriate satisfaction, and … the case is not one in which an order for payment of compensation would be appropriate". Milosevic died before judgment (11 Mar 2006); Perišić, the most senior FRY officer, **acquitted on appeal** (28 Feb 2013). UN sanctions lifted by S/RES/1021 (1995), 1074 (1996) | **None confirmed.** Foreign-mujahideen and "green light" claims not verified |
+| **Iran–Iraq** (1980–88), third-party supply to both sides | The **Riegle** material's actual subject: "U.S. **Chemical and Biological Warfare-Related Dual Use Exports** to Iraq and their Possible Impact on the Health Consequences of the Gulf War" (hearing S. Hrg. 103-900 and committee print, 25 May 1994) — **dual-use and biological exports**, listed with ATCC numbers | No sourced figure for supplier revenue. Riegle's own quantified datum: specimens averaging "less than $60" | **No UN sanctions on any third-party supplier located.** Council action addresses the parties: S/RES/540 (1983), 582 (1986), 598 (1987), 612 and 620 (1988) | The Riegle hearing's troop-exposure theory, disputed under oath **in the same hearing**: DoD's Dr Theodore Prociv — *"I do not believe that any chemical agents entered the theater of operations and exposed any of our soldiers."* Genuine intra-record contradiction |
+| **Afghanistan** (1979–92) | CRS R41070 (Rollins, 25 Jan 2011): the US "did covertly finance (about $3 billion during 1981-1991) and arm (via Pakistan) the Afghan mujahedin factions". Presidential Finding **3 July 1979** (FRUS 1977–80, vol. XII, Doc 214); DCI Turner, 21 Feb 1980: total programme **$30 million**; Turner, 28 Dec 1979 (Doc 107): "will ultimately cost only $10 million" | **No sourced figure** for any sponsor's gain. The "Saudi dollar-for-dollar match" has **no document**; best source is participant recollection (Bearden, PBS Frontline) | **None located** for the US, Saudi Arabia or Pakistan | **Documented, but not in the popular direction.** 9/11 Commission Report, official edition, p. 56, verbatim: *"But Bin Ladin and his comrades had their own sources of support and training, and they received little or no assistance from the United States."* The same page affirms that the US and Saudi Arabia "supplied billions of dollars worth of secret assistance to rebel groups". DCI Tenet to the Joint Inquiry, 17 Oct 2002: *"we have no record of any direct US Government contact with Bin Ladin at that time."* Brzezinski's sourced words (*Le Nouvel Observateur*, 15–21 Jan 1998, p. 76) are *"We now have an opportunity of giving to the USSR its Vietnam war"* — **not** the widely circulated variant |
+| **Nicaragua** (1980s) | ICJ, *Military and Paramilitary Activities in and against Nicaragua*, 27 June 1986, **operative part paragraph 292, subparagraphs (1)–(16)**. 292(3), 12–3: the US, "by training, arming, equipping, financing and supplying the *contra* forces … has acted … in breach of its obligation under customary international law not to intervene". The Court was **"not able to satisfy itself"** that the US "created" the contra force, but found it "largely financed, trained, equipped, armed and organized the FDN" | **Nothing on the record as a gain.** The record holds a finding of **intent to coerce** and the US's pleaded justification of collective self-defence, **rejected 12–3** in 292(2) | **A binding merits judgment and no enforcement.** **Five US vetoes** on the official UN veto list: S/16463 (4 Apr 1984, S/PV.2529), S/17172 (10 May 1985, S/PV.2580), S/18250 (31 Jul 1986, S/PV.2704), S/18428 (28 Oct 1986, S/PV.2718), S/21084 (17 Jan 1990, S/PV.2905). Reparations **never assessed**: 292(13)–(15) imposed the obligation and reserved form and amount; Nicaragua's **requested** interim award of $370.2m was never made. Case removed from the Court's list 26 Sept 1991 after Nicaragua renounced further action (ICJ press release 91/28) | Five vetoes and the discontinuance are the documented diplomatic cost. Iran–Contra is **attributed, not verified here** |
+| **Angola** (1975–2002) | South African **TRC, Final Report, Vol. 2, Ch. 2**: Operation Savannah (second half of 1975) was an "**undeclared act of war**" that "did not receive the approval of the South African cabinet" and was illegal under the 1957 Defence Act, which Parliament amended in January 1976 **retroactively to August 1975**; the TRC "**was not able to access any files on Operation Savannah in the SADF archives**". Operation Protea (Aug 1981) occupied **50,000 km²** of Cunene, parts held "until 1989"; Askari (Dec 1983): "**324 Angolan and Cuban troops and twenty-one South Africans were killed**" | **No official document states a benefit.** The Council's documented response to the sponsor was to **resource the target**: S/RES/574 (1985) op. 6 and S/RES/577 (1985) request assistance to strengthen Angola's defence | Compensation demanded in S/RES/387 (1976), 475 (1980), 577 (1985) and **never paid**. The decisive datum is the veto: the only draft proposing **Chapter VII mandatory sanctions** — **S/14664/Rev.2, 31 Aug 1981 (S/PV.2300)** — **vetoed by the United States** (13–1–1); **S/18163, 18 Jun 1986 (S/PV.2693)** vetoed by the **US and the UK**. Where the Council acted with teeth — S/RES/864 (1993), 1127 (1997), 1173 (1998), 1295 (2000) — it acted **from 1993, after the Cold War, against UNITA, a non-state actor** | TRC Vol. 2, Ch. 2, para. 68, verbatim: "The town was shelled by SADF 155mm artillery for several weeks, and largely destroyed. **The SADF failed, however, to capture the town** and the stalemate led eventually to negotiations…" Causal weighting is disputed and is **not** asserted here |
+| **Mozambique** (1977–92) | **TRC Vol. 2, Ch. 2, para. 192**: "**South Africa took over responsibility for RENAMO in March 1980**"; para. 195, from SADF file HSOPS/309/4: the 25 May 1983 drop of sixty palettes including **450 AK-47s, 894,888 rounds** and 800 hand grenades; para. 196: "**support for RENAMO never ceased; it simply changed its form**… **a two-year stockpile of weaponry was delivered to RENAMO in the two months preceding the signing of the Accord**"; para. 187: "all the files on surrogate operations were **destroyed by DST when it was closed in the early 1990s**". Nkomati Accord, **UNTS vol. 1352, No. I-22802**, 16 March 1984, Arts. 2(3), 3(1)–(2), 5, and Art. 9's Joint Security Commission | The treaty itself documents the reciprocal benefit in Arts. 3 and 5: Mozambican commitments to eliminate ANC presence, bases, transit and broadcasting. **No sourced figure** for any economic or transit gain | **The only official body to find a breach is the sponsor's own.** TRC para. 196: the Gorongosa diaries "provided **firm evidence of continuing SADF involvement with RENAMO in violation of the Accord**", whose authenticity **Pik Botha confirmed on oath**. **No Joint Security Commission finding located; no UN finding of breach located; no sanctions on South Africa on account of Mozambique located; no legal action by Mozambique located** | **Political, not military, and documented:** the diaries became "a major embarrassment to the government", and para. 197: "both the cabinet and the SSC, including even State President PW Botha, were **kept in ignorance**" — the instrument escaped civilian control inside the sponsor state |
+| **Syria** (2011– ), chemical-weapons attribution | OPCW **Investigation and Identification Team**, established by C- SS-4/DEC.3 (27 Jun 2018): S/1867/2020 (Ltamenah), S/1943/2021 (Saraqib), S/2125/2023 (Douma): "**reasonable grounds to believe that the Syrian Arab Air Forces were the perpetrators**". **Correction to a common assumption: Khan Shaykhun (4 Apr 2017) was attributed by the OPCW-UN Joint Investigative Mechanism, S/2017/904 (26 Oct 2017), not by the IIT** | **No sourced figure** for any sponsor's gain | **No sponsor of the Assad government punished by any body** in anything verified. Russia's vetoes are the mechanism; the Council's P5 structure makes a Security Council consequence legally unavailable | **Entirely unverified** in this record. Every candidate item is listed as unverified rather than asserted |
+| **Yemen** (2014– ) | **R (Campaign Against Arms Trade) v Secretary of State for International Trade [2019] EWCA Civ 1020**, 20 June 2019, ¶7: a coalition of nine states led by Saudi Arabia "responded to a request for assistance by President Hadi and commenced military operations". **Panel of Experts on Yemen, S/2018/594** (letter dated 26 Jan 2018), ¶90(i): Iran "**in non-compliance with paragraph 14 of resolution 2216 (2015)**" for failing to take measures to prevent supply of missile components — **in the same document**, ¶90(h): "the Panel has **no evidence as to the identity of the supplier, or any intermediary third party**" | **The only case with even a qualitative on-the-record finding**, and it is not a figure: **[2023] EWHC 1343 (Admin)** ¶51(ii) records UK evidence of "logistical and technical support and training provided to Saudi Arabia, which the details in the closed evidence suggest is considerable"; ¶13: "By June 2021 the Coalition had launched tens of thousands of air delivered weapons". **The quantification is qualitative and the support detail derives from closed evidence** | **No sanctions measure against Saudi Arabia or the UAE for coalition conduct located.** The arms-control architecture runs against the **Houthis** and, via the ¶14 findings, **Iran**. The one verified consequence for a coalition sponsor is **domestic UK judicial review**, producing a procedural remedy — the Secretary of State's New Decision announced by written statement of **7 July 2020** — and not a sanction | **Unverified:** Abqaiq–Khurais (14 Sept 2019), Abu Dhabi (17 Jan 2022), *Galaxy Leader* (19 Nov 2023), the US–UK strikes (11 Jan 2024). **On the record** from [2019] EWCA Civ 1020 ¶9: Saudi-*reported* figures of "745 Saudi soldiers and border guards killed along the Southern front, and over 10,000 injured since March 2015" — **reported figures recited by the court, not independent findings** |
+| **Nagorno-Karabakh** (1988–94, 2020) | Four Council resolutions, **all 15–0–0**: S/RES/822 (30 Apr 1993), 853 (29 Jul 1993), 874 (14 Oct 1993), 884 (12 Nov 1993) — cessation of hostilities and withdrawal from Kelbadjar, Agdam, Zangelan and Goradiz. The **9 Nov 2020 trilateral statement** provides for a Russian peacekeeping contingent of **1,960 servicemen** and Russian FSS Border Guard control of transport links | **The one clean on-the-record benefit to a third party is written into a signed text:** Russia receives the peacekeeping mandate and control of the Lachin corridor, agreed by both belligerents | **None located for any external sponsor.** **None of the four 1993 resolutions imposed sanctions or any Chapter VII measure, and no UN sanctions regime on Nagorno-Karabakh at any time was located.** The ICJ orders of 7 Dec 2021 (cases 180 and 181) bind **only Armenia and Azerbaijan** | **None confirmed.** The strongest candidate — Russian peacekeepers failing to prevent the September 2023 offensive — is unverified and **not** asserted |
+| **Rwanda** (1990–94) | The 1975 military technical assistance agreement, confirmed verbatim by a French court: *"le traité d'assistance militaire conclu le **18 juillet 1975** entre la France et le Rwanda"* (TA Paris, n° 2309845/4-1). The **Quilès report**, Assemblée nationale **n° 1271**, 15 Dec 1998, contains "La livraison d'armes au Rwanda par la France de 1990 à 1994" (p. 179) and the operations Noroît, Volcan, Chimère, Amaryllis, Turquoise. **UN Commission of Experts, S/1994/1405**, §183: "**overwhelming evidence**… acts of genocide against the Tutsi group were perpetrated by Hutu elements in a concerted, planned, systematic and methodical way" | Duclert frames the policy as a **failure**: *"La crise rwandaise s'achève en désastre pour le Rwanda, en défaite pour la France."* **No sourced figure** for any material gain | **None, and this is the sharpest instance of the pattern.** Duclert: responsibility found, **expressly political, not legal**. The courts: **non-justiciable** (*actes de gouvernement*), through three stages to the Conseil d'État, 18 mars 2026. Operation Turquoise criminal investigation: **non-lieu général, October 2023** (AFP, 14 Nov 2024) | **Documented and long:** 27 years of Franco-Rwandan rupture after 1994, ended by the Kigali speech of 27 May 2021; Rwanda not invited to the Biarritz summit of 8 Nov 1994 |
+| **British India** (1906–47) | **Indian Councils Act 1909** — read in full: **communally neutral**, no reference to any religious community. **HC Deb 1 Apr 1909, vol. 3, cc496–601**, Under-Secretary **Buchanan**: the Government's own preferred alternative — "some general system of minority representation" — "**was viewed with the utmost suspicion and distrust by those chiefly concerned… and it found no friends in other quarters in India. The result of that was that it was dropped the moment it got to India**"; and "**a firm, stable, and permanent official majority in the Governor-General's Council. That we have secured.**" **Communal Award**, text dated London **4 August 1932**, ¶6: "Election to the seats allotted to Muhammadan, European and Sikh constituencies will be **by voters voting in separate communal electorates**"; ¶4 gave each community an effective veto over revision | **Nothing on the record states that the Raj benefited from communal division.** The stated objectives are the "**solemn promises**" to the Mahomedan community and the preservation of official control | **None.** No adjudication, no sanction, no compensation mechanism. Separate electorates were abolished by the successor state's Constitution of 1950 — **a change of policy by the successor, not a punishment of the sponsor** | **On the record as a contemporary warning, not a finding.** **Sir Henry Cotton, HC Deb 26 Apr 1909**: "making statutory for the first time in the history of this Empire this discrimination between different religious bodies… would be to introduce into India **that hostility which exists between Catholic and Protestant in Ireland**". Whether partition is "blowback" is a historiographical claim, and **no official body was found making that causal finding** |
+| **Northern Ireland** (1970s–90s) | **Stevens Enquiries, *Overview and Recommendations*, April 2003**, ¶1.3: "**collusion, the wilful failure to keep records, the absence of accountability… and the extreme of agents being involved in murder**"; ¶4.7: "**I conclude there was collusion in both murders**" (Finucane, Lambert); ¶3.1: "**I was being obstructed**"; ¶3.4: "the night before the new operation **my Incident room was destroyed by fire**… I believe it was a deliberate act of arson." **Smithwick Tribunal**, report published 3 Dec 2013: satisfied "there was collusion in the murders" of Breen and Buchanan, while recording "**no record of a phone call, no traceable payment, no smoking gun**" and being "**unable to identify the IRA mole in Dundalk Station**". **de Silva review (HC 802, 12 Dec 2012)**, accepted "unequivocally" by the Government on 16 Jan 2015: "a series of positive actions by employees of the State actively furthered and facilitated [Finucane's] murder" | Stevens ¶1.7: in 1987–89 the RUC dealt with over **3,000** terrorist-related incidents, of which **261** were deaths related to the security situation; ¶4.2: **94 convictions from 144 arrests**. **No official source quantifies any individual agent's intelligence value** | **No criminal liability has ever attached to any collusion finding.** Stevens: 94 convictions, **none for collusion**; the Stobie prosecution **collapsed in November 2001** and he was shot dead two weeks later; **no one has ever been charged with Finucane's murder**. Operation Kenova: all **28 files declined** (PPS, 6 and 29 Feb 2024) for "insufficient evidence to provide a reasonable prospect of conviction", because intelligence records were inadmissible and "**original source materials were no longer available**". Ballymurphy: "**No one has ever been charged or convicted**" | **Officially found.** Saville (HC Deb 15 Jun 2010) as summarised by the Prime Minister: Bloody Sunday "**strengthened the Provisional IRA, increased nationalist resentment and hostility towards the Army and exacerbated the violent conflict of the years that followed**". And the state's own agents were central to the murders: Stobie supplied the Lambert weapon; Nelson "contributed materially" to the attack on Finucane |
+
+#### Where a sponsor *was* made to pay
+
+Four cases, and their shape is the finding.
+
+| Case | What happened | What distinguishes it |
+| --- | --- | --- |
+| **Libya / Lockerbie** | S/RES/748 (31 Mar 1992, 10–0–5), S/RES/883 (11 Nov 1993, 11–0–4); trial at Camp Zeist, conviction of al-Megrahi **31 Jan 2001**; suspension S/PRST/1999/10; sanctions **lifted by S/RES/1506 (12 Sept 2003), 13–0–2, France and the United States abstaining**. Libya's letter S/2003/818 conveyed acceptance of responsibility "for the actions of Libyan officials" and payment of compensation | **The victims were the nationals of powerful states.** 270 dead of 21 nationalities; the pressure came from the victims' own governments. A negotiated state-level admission unlocked the settlement — **no unpunished sponsor in this record made an equivalent admission** |
+| **Eritrea** | S/RES/1907 (23 Dec 2009) imposed the arms embargo and travel ban; **lifted by S/RES/2444 (14 Nov 2018), 15–0**. Para. 1 verbatim: "**recognises that during the course of its current and four previous mandates the SEMG has not found conclusive evidence that Eritrea supports Al-Shabaab**" | **A small, isolated state with no P5 protector.** And the punishment was reversible: the Council's own final finding is that conclusive evidence was never found across five consecutive mandates |
+| **Charles Taylor** | S/RES/1638 (11 Nov 2005) op. 1, verbatim: UNMIL "to apprehend and detain former President Charles Taylor in the event of a return to Liberia and to transfer him… for prosecution"; S/RES/1688 (16 Jun 2006); **SCSL-03-01**: convicted, 50 years, upheld on appeal 26 Sept 2013 | **An individual, and a defeated one** — an exiled former president. A treaty-based hybrid court created by agreement under S/RES/1315 (2000) supplied a forum a state could not be reached by |
+| **Frans van Anraat** | District Court of The Hague, **23 Dec 2005**, parketnummer 09/751003-04, ECLI:NL:RBSGR:2005:AV6353: **acquitted of complicity in genocide**, convicted of **complicity in war crimes**, 15 years; Court of Appeal, 9 May 2007: 17 years; Hoge Raad, 30 June 2009, ECLI:NL:HR:2009:BG4822: upheld | **A private supplier, reachable by a domestic criminal court.** The court held complicity is an autonomous offence and reasoned that a contrary view "would result in impunity for a considerable number of suspects" |
+
+### 5.3 The pattern
+
+Four discriminators separate the cases where the sponsor paid from those where it did not.
+None of them is the gravity of the conduct.
+
+**1. Whether the sponsor had pre-committed to a forum it could not veto.** In Nicaragua the
+United States had deposited an Article 36(2) declaration and was party to the 1956 Treaty of
+Friendship, Commerce and Navigation, so the Court reached the merits. In Rwanda France had
+made no such commitment covering the conduct at issue and the claim died on **justiciability**,
+not on the facts. In Angola and Mozambique no adjudicative forum was engaged at all. **A
+sponsor pays only where it has already conceded the forum — and even then only if the
+judgment is self-executing.**
+
+**2. Whether the enforcement route ran through a body the sponsor or its ally could veto.**
+Every interstate enforcement route in this record ran through the Security Council. Five US
+vetoes on Nicaragua; the only Angola draft proposing Chapter VII mandatory sanctions vetoed
+by the United States (S/14664/Rev.2) and a later complaint by the US and the UK (S/18163);
+no sanctions on South Africa on account of Mozambique; and, in Northern Ireland, the sponsor
+was the state whose own courts and police conducted the investigation.
+
+**The consequence is structural: an adverse judgment plus a veto is worth less than no
+judgment at all, because it documents the impunity.** Nicaragua is the limiting case.
+
+**3. Whether the sponsor's own records survived and were disclosable.** The SADF's
+Directorate of Special Tasks **destroyed all its surrogate-operation files** when it closed in
+the early 1990s (TRC Vol. 2, Ch. 2, para. 187); the TRC likewise "was not able to access any
+files on Operation Savannah"; Stevens' substantive report was withheld because "the
+overwhelming bulk of the detail has been withheld because of potential future prosecutions",
+and the prosecutions largely did not follow; Kenova failed precisely because "**original
+source materials were no longer available**"; Smithwick found collusion and could identify no
+one. Conversely, the one place where the sponsor's records **did** survive and were
+**compelled** is South Africa after 1994 — a truth commission with subpoena power and an
+amnesty incentive — and it is the only place in this record where an **official body of the
+sponsor state found its own policy in breach**.
+
+**4. Whose nationals were killed, and whether the sponsor was already weak.** The punished
+cases are the ones where a powerful state's own citizens were the victims (Lockerbie,
+UTA 772), or where the sponsor was small, isolated or defeated (Eritrea, Taylor), or where
+the actor was a private individual a domestic court could reach (van Anraat). **No P5 state,
+and no client of a P5 state, was sanctioned for sponsorship in any case above.**
+
+### 5.4 Two results that are results, not gaps
+
+**(i) No official body has quantified any sponsor's material gain, in any case.** Not in
+Yugoslavia, Iran–Iraq, Afghanistan, Syria, Karabakh or — beyond a qualitative finding — Yemen.
+Every "profit" claim in this literature is, on this record, inference. This bears directly on
+the model: the harvest `Λ` is a **declared** quantity in §2, and the record is the reason it
+has to be. It is not that the figure was hard to find; **it is that the cases in which the
+question was asked were asked by bodies with no reason to ask it.**
+
+**(ii) Where the Security Council acted with teeth, it acted against the weak actor.**
+Throughout the Angola file the Council's response to *state* sponsorship was to **condemn and
+to resource the victim** — S/RES/574 and 577 request assistance to strengthen Angola's
+defence — while the **only binding Chapter VII sanctions anywhere in that file attached, from
+1993 and after the Cold War, to UNITA, a non-state actor.** The same asymmetry appears in
+Yemen: the arms-control architecture runs against the Houthis and, via the ¶14 findings,
+Iran, and **no sanctions measure against Saudi Arabia or the UAE for coalition conduct was
+located.** This is Theorem 6's comparative static — `K_max = k·S·e`, punishment capacity
+proportional to the punisher's surplus and the target's exposure — showing up as a
+distribution of *targets* rather than of crimes.
+
+### 5.5 What the historical record does not establish
+
+1. **It does not establish that third parties trigger wars.** Theorem 1 says a spoiler need
+   not trigger anything; it needs to make the dyad's own dilemma cheap enough to fire. The
+   record is consistent with that and does not test it: the observable evidence of spoiling
+   is often *absence*.
+2. **It does not establish intent to divide.** In the case where the claim is oldest and
+   loudest — British India — the statute is communally neutral, the initiative is documented
+   as coming from a section of Muslim elites under a Viceregal pledge, and **no documentary
+   statement of divisive intent was located in the Act, the debates, or the Award**. The
+   divide-and-rule reading rests on inference from structure: the preserved official
+   majority, the proliferation of communal categories, and the ¶4 veto. **That is a real gap
+   in the record, not a refutation**, and it is stated as a gap.
+3. **It does not sort the cases by the prediction that they should be sorted by.** P1 says
+   spoiling concentrates on dyads with a **narrow** peace margin. The record cannot test this,
+   because the margins are the declared quantities of §2 and no source measures them. What
+   the record *can* say is that the observed sponsors are not drawn from the deepest hatreds —
+   and that is a weak observation, not a test.
+4. **It does not show blowback.** P6 and Theorem 4 predict blowback increasing in the
+   sponsor's support and impatience. The record contains **one officially found instance** —
+   Saville's finding that Bloody Sunday strengthened the Provisional IRA — and a documented
+   failure of control inside the sponsor state (Mozambique: the cabinet and SSC "kept in
+   ignorance"), plus the documented collapse of the Stobie prosecution. It does not contain a
+   measured case.
+5. **It does not support the popular Afghanistan causal chain.** The 9/11 Commission's own
+   text on p. 56 denies assistance **to Bin Ladin and the Arab volunteers** while affirming
+   billions to the Afghan rebels. Anyone asserting the mujahideen-to-al-Qaeda chain must
+   engage that sentence, and this document does not assert the chain.
+
 
 ---
 
@@ -757,6 +937,26 @@ evidence of spoiling is often the money and the propaganda rather than the trigg
   happened without the third party" is not a measurable quantity; it is the model's
   perturbative claim and nothing more.
 
+**Two of these are strengthened by §5 rather than merely repeated there.**
+
+On `g`: the record is not that the capture rate is hard to find, but that **no official body
+has quantified any sponsor's material gain in any case examined** — not in Yugoslavia,
+Iran–Iraq, Afghanistan, Syria or Karabakh, and in the one case with any on-the-record finding
+at all (Yemen) the quantification is qualitative and rests on closed evidence. The bodies
+that investigated these conflicts were not constituted to ask what the sponsor gained, so the
+absence is a fact about the inquiries as much as about the world. **`g` is not so much
+unmeasured as unasked.**
+
+On P5: §5.3 finds the record's enforcement pattern is **not** sorted by the severity of the
+conduct but by whether the sponsor had conceded a forum, whether its records survived, and
+whose nationals were killed. §5.4 adds the sharper form — where the Security Council acted
+with teeth it acted against the **weak** actor, the only binding Chapter VII sanctions in the
+Angola file attaching to UNITA rather than to any state. This is Theorem 6's comparative
+static showing up as a distribution of *targets*, and it is the strongest empirical support
+anything in this document has. It is still not a test of P5, because the counterfactual —
+what the same conduct would have met with under a different exposure — is the unobservable
+quantity above.
+
 The honest summary: **the mechanism is fully specified and its comparative statics are
 exact; the two parameters that decide whether the strategy is a transfer or a destruction —
 `g` and `h` — have no measured values at all.**
@@ -767,9 +967,15 @@ exact; the two parameters that decide whether the strategy is a transfer or a de
 
 ```
 cargo test -p multipolar_sim spoiler::          # the theorems, as invariants
-cargo run -p multipolar_sim -- --spoiler        # the strategy, run
-python tools/plot_spoiler.py                    # the figures
+python tools/plot_spoiler.py                    # the six panels, checked against the model
 ```
+
+**There is no `--spoiler` CLI mode, and an earlier version of this section advertised one.**
+The module is a library plus its test module, deliberately: the CLI already has four analysis
+modes, and a fifth that nobody would pass is not a stronger claim than a test that runs. What
+the framework offers instead is `--strategies`, which prices the spoiler's instrument against
+the cooperative one on the same budget and clock and differences the two over a paired Monte
+Carlo — see `STRATEGY_COMPARISON.md`.
 
 `multipolar_sim/src/spoiler.rs` implements §2 and its test module asserts the theorems as
 invariants: the leverage ratio's monotonicity and its divergence at the margin, the
@@ -786,7 +992,7 @@ existing simulation, its figures and its exports are untouched.
 ## References
 
 *(Theory references are listed here; the historical and empirical sources are cited inline
-in §5 and §7, and the sourced case table is in the companion file.)*
+in §5, where every figure asserted is attributed and every gap is named as a gap.)*
 
 - Banzhaf, J. F. (1965). Weighted voting doesn't work: a mathematical analysis. *Rutgers Law Review* 19, 317–343.
 - Jervis, R. (1978). Cooperation under the security dilemma. *World Politics* 30(2), 167–214.
