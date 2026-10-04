@@ -16,7 +16,8 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement};
+use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
 use clap::{Parser, Subcommand, ArgAction};
 use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
@@ -145,6 +146,125 @@ enum Commands {
         #[arg(long)]
         pension_fund: Option<String>,
     },
+
+    /// Optimise an early-retirement plan: when to stop, how to take the money out,
+    /// and how much is enough
+    ///
+    /// Prices the decision rather than projecting a given plan. Projects the AHV and
+    /// BVG entitlements at the retirement age, solves the tax-minimising allocation of
+    /// the capital across the retirement years as a linear program, sweeps the
+    /// retirement age under a Monte Carlo, and prints the four education-contribution
+    /// ledgers side by side without ranking them. See EARLY_RETIREMENT.md.
+    EarlyRetirement(Box<EarlyRetirementArgs>),
+}
+
+/// Parameters for `early-retirement`.
+#[derive(clap::Args, Debug, Clone)]
+struct EarlyRetirementArgs {
+    /// Full-time annual salary in CHF
+    #[arg(short, long, default_value = "120000")]
+    salary: f64,
+
+    /// Your current age
+    #[arg(short, long, default_value = "45")]
+    age: u32,
+
+    /// Are you married?
+    #[arg(short, long, action = ArgAction::Set, default_value_t = false)]
+    married: bool,
+
+    /// Number of children
+    #[arg(short, long, default_value = "0")]
+    children: u32,
+
+    /// AHV contribution years already accrued
+    #[arg(long, default_value = "25")]
+    contribution_years: u32,
+
+    /// Existing BVG retirement capital in CHF
+    #[arg(long, default_value = "180000")]
+    bvg_capital: f64,
+
+    /// Existing Pillar 3a capital in CHF
+    #[arg(long, default_value = "60000")]
+    pillar3a_capital: f64,
+
+    /// Taxable savings outside the pension wrappers, in CHF
+    #[arg(long, default_value = "50000")]
+    savings: f64,
+
+    /// The consumption floor that must be funded, per year in CHF
+    #[arg(long, default_value = "45000")]
+    mandatory: f64,
+
+    /// The lifestyle target the optimisation aims at, per year in CHF
+    #[arg(long, default_value = "65000")]
+    lifestyle: f64,
+
+    /// The retirement age to plan at the centre of the report
+    #[arg(long, default_value = "63")]
+    retirement_age: u32,
+
+    /// Life expectancy
+    #[arg(long, default_value = "90")]
+    life_expectancy: u32,
+
+    /// Work percentage assumed up to retirement (e.g. 0.8 for 80%)
+    #[arg(long, default_value = "1.0")]
+    work_pct: f64,
+
+    /// Conversion rate (Umwandlungssatz) your fund actually applies at the reference
+    /// age, as a decimal. The statutory floor is 0.068, but the average rate applied
+    /// across Swiss funds is about 0.052 — a plan priced at the floor overstates the
+    /// annuity by roughly a quarter, so prefer your fund's own figure
+    #[arg(long, default_value = "0.068")]
+    conversion_rate: f64,
+
+    /// Reduction in the conversion rate per year of early withdrawal. There is no
+    /// statutory schedule: this is a fund-specific figure. Published funds fall near
+    /// 0.0013 to 0.0027 a year, i.e. 0.13 to 0.27 percentage points
+    #[arg(long, default_value = "0.002")]
+    early_reduction: f64,
+
+    /// Fraction of the BVG capital taken as an annuity rather than as capital
+    #[arg(long, default_value = "1.0")]
+    annuity_share: f64,
+
+    /// Marginal rate applied to a capital withdrawal, as a decimal. Left unset, the
+    /// progressive default bands are used, which is the shape a cantonal tariff takes and
+    /// the only case in which spreading a withdrawal across years saves anything. Setting
+    /// it replaces the schedule with that flat rate — which is what Zurich and Thurgau
+    /// effectively levy, and under a flat rate spreading saves nothing
+    #[arg(long)]
+    capital_tax_rate: Option<f64>,
+
+    /// Expected real return on invested capital, as a decimal
+    #[arg(long, default_value = "0.02")]
+    real_return: f64,
+
+    /// Standard deviation of the real return, as a decimal
+    #[arg(long, default_value = "0.10")]
+    return_std: f64,
+
+    /// Monte Carlo paths
+    #[arg(long, default_value = "10000")]
+    paths: usize,
+
+    /// Base seed; the same seed reproduces the same paths
+    #[arg(long, default_value = "20260101")]
+    seed: u64,
+
+    /// Qualification held, for the education ledger
+    #[arg(long, default_value = "master")]
+    degree: String,
+
+    /// Career length in years, for the education ledger
+    #[arg(long, default_value = "35")]
+    career_years: u32,
+
+    /// Write the risk table and the allocation as CSV into this directory
+    #[arg(long)]
+    export: Option<std::path::PathBuf>,
 }
 
 /// Parameters for `optimize`, extracted from the `Commands` variant so that variant
@@ -316,6 +436,534 @@ struct OptimizeArgs {
     monthly_debt: f64,
 }
 
+/// Optimise an early-retirement plan.
+///
+/// # What this prints, and in what order
+///
+/// The order is the argument of the whole document: the **parameters and where each comes
+/// from** first, so a reader knows before seeing any number which ones are law and which
+/// are declared; then the **entitlements** at the retirement age, with the bridge years
+/// called out; then the **allocation** the LP chooses, with the LP checked against the
+/// greedy fill; then the **risk** across retirement ages and the smallest pot that funds
+/// the consumption to a stated confidence; and only then the **education ledgers**, which
+/// are printed together because ranking them is not this program's business.
+fn run_early_retirement(args: &EarlyRetirementArgs) {
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("EARLY RETIREMENT: WHEN TO STOP, HOW TO TAKE IT OUT, AND HOW MUCH IS ENOUGH");
+    println!("{}", "=".repeat(78));
+    println!("  This prices the decision rather than projecting a plan. The capital is");
+    println!("  allocated across the retirement years to minimise tax by linear program,");
+    println!("  and the retirement age is swept under a Monte Carlo over returns and");
+    println!("  longevity. Every risk is printed as a number; none is summarised away.");
+
+    // ---- 1. the parameters, before any result ---------------------------------
+    let mut params = RetirementParameters::default();
+    params.bvg_conversion_rate = args.conversion_rate;
+    params.bvg_early_reduction_per_year = args.early_reduction;
+    if let Some(flat) = args.capital_tax_rate {
+        params.capital_withdrawal_tax = BandedTax {
+            allowance: 0.0,
+            bands: vec![TaxBand {
+                width: 10_000_000.0,
+                marginal_rate: flat,
+            }],
+            provenance: early_retirement::Provenance::Declared {
+                rationale: "a flat rate passed on the command line",
+            },
+        };
+    }
+
+    println!();
+    println!("  1. The parameters, and which of them are law");
+    println!("  {}", "-".repeat(74));
+    for (name, provenance) in params.provenance_table() {
+        println!("    {:<38} {:<9} {}", name, provenance.label(), provenance.detail());
+    }
+    println!();
+    println!("  `sourced` means a statutory figure at the named vintage. `varies` means the");
+    println!("  RULE is law but there is no single number: the conversion rate's");
+    println!("  early-withdrawal reduction and the capital-benefit tariff are both in that");
+    println!("  class, so both are inputs here rather than assumptions buried in the code.");
+
+    // ---- 2. entitlements -------------------------------------------------------
+    let household = Household {
+        current_age: args.age,
+        full_time_salary: args.salary,
+        married: args.married,
+        children: args.children,
+        contribution_years: args.contribution_years,
+        bvg_capital_now: args.bvg_capital,
+        pillar3a_capital_now: args.pillar3a_capital,
+        taxable_savings: args.savings,
+        life_expectancy: args.life_expectancy,
+    };
+    let entitlements = early_retirement::project(&household, &params, args.retirement_age, args.work_pct);
+
+    println!();
+    println!("  2. Entitlements at {}", args.retirement_age);
+    println!("  {}", "-".repeat(74));
+    println!(
+        "    AHV:                  {:>12.0} a year  (record {:.0}%, early reduction {:.1}%)",
+        entitlements.ahv_annual,
+        (entitlements.ahv_annual
+            / if args.married {
+                params.ahv_max_annual_couple
+            } else {
+                params.ahv_max_annual_single
+            })
+            * 100.0,
+        entitlements.ahv_early_reduction * 100.0
+    );
+    println!(
+        "    BVG capital:          {:>12.0}          (conversion rate {:.3}%)",
+        entitlements.bvg_capital,
+        entitlements.effective_conversion_rate * 100.0
+    );
+    println!(
+        "    BVG annuity if whole: {:>12.0} a year",
+        entitlements.bvg_annuity_annual
+    );
+    println!("    Pillar 3a capital:    {:>12.0}", entitlements.pillar3a_capital);
+    println!("    Taxable savings:      {:>12.0}", entitlements.bridge_capital);
+    println!(
+        "    Total capital:        {:>12.0}",
+        entitlements.bvg_capital + entitlements.pillar3a_capital + entitlements.bridge_capital
+    );
+    let bridge_years = 65u32.saturating_sub(args.retirement_age);
+    if bridge_years > 0 {
+        println!();
+        println!(
+            "    THE BRIDGE: {} years between retirement and the AHV reference age carry no",
+            bridge_years
+        );
+        println!(
+            "    AHV at all, and a non-employed person still owes AHV contributions of"
+        );
+        println!(
+            "    CHF {:.0} to {:.0} a year until the reference age (AHVG Art. 3 Abs. 1bis,",
+            params.ahv_non_employed_annual_min, params.ahv_non_employed_annual_max
+        );
+        println!("    Art. 10). That gap is the largest single cost of retiring early.");
+    }
+    if args.conversion_rate <= crate::early_retirement::RetirementParameters::default().bvg_conversion_rate + 1e-9
+    {
+        println!();
+        println!("  ON THE CONVERSION RATE: {:.3}% is at or below the statutory floor of 6.8%.", args.conversion_rate * 100.0);
+        println!("  The floor is what the law guarantees, but the average rate funds actually");
+        println!("  apply is about 5.2% (OAK BV, 1,257 funds). A plan priced at 6.8% overstates");
+        println!("  the annuity by roughly a quarter, so pass your fund's own figure.");
+    }
+
+    // ---- 3. the allocation the LP chooses --------------------------------------
+    let need = ConsumptionNeed {
+        mandatory_annual: args.mandatory,
+        lifestyle_annual: args.lifestyle,
+    };
+    let annuity_share = args.annuity_share.clamp(0.0, 1.0);
+    let capital_to_place = entitlements.bvg_capital * (1.0 - annuity_share)
+        + entitlements.pillar3a_capital;
+    let annuity_income = entitlements.ahv_annual
+        + entitlements.bvg_capital * annuity_share * entitlements.effective_conversion_rate;
+    let years = args
+        .life_expectancy
+        .saturating_sub(args.retirement_age)
+        .max(1) as usize;
+
+    // The committed income each year, and therefore the withdrawal each year *requires*.
+    // Before the AHV reference age there is no AHV in it, which is what makes the bridge
+    // years expensive.
+    let bridge_income: Vec<f64> = (0..years)
+        .map(|offset| {
+            let age = args.retirement_age + offset as u32;
+            if age < 65 {
+                annuity_income - entitlements.ahv_annual
+            } else {
+                annuity_income
+            }
+        })
+        .collect();
+    let required = early_retirement::required_withdrawals(&bridge_income, need.lifestyle_annual);
+    let total_required: f64 = required.iter().sum();
+    let surplus = capital_to_place - total_required;
+
+    println!();
+    println!("  3. The allocation: how the capital comes out");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "    Annuity income {:.0} a year, and a lifestyle target of {:.0}, so the withdrawal",
+        annuity_income, need.lifestyle_annual
+    );
+    println!(
+        "    REQUIRED is {:.0} over {} years — {:.0} of it in the {} bridge years before the",
+        total_required,
+        years,
+        required
+            .iter()
+            .take(65u32.saturating_sub(args.retirement_age) as usize)
+            .sum::<f64>(),
+        bridge_years
+    );
+    println!("    AHV reference age.");
+    println!(
+        "    Capital to place {:.0}, leaving a surplus of {:.0} to spread for tax.",
+        capital_to_place, surplus
+    );
+    if surplus < 0.0 {
+        println!();
+        println!("    THE POT DOES NOT FUND THIS CONSUMPTION AT THIS AGE. The requirement alone");
+        println!("    exceeds the capital by {:.0}. No allocation fixes that: the answer is to", -surplus);
+        println!("    retire later, spend less, or annuitise more. The risk table below reports");
+        println!("    the consequence, which is a statement about arithmetic and not about luck.");
+    }
+    match early_retirement::optimise_withdrawals(
+        surplus.max(0.0),
+        &required,
+        &params.capital_withdrawal_tax,
+    ) {
+        early_retirement::AllocationOutcome::Optimal(plan) => {
+            let greedy = early_retirement::greedy_withdrawals(
+                surplus.max(0.0),
+                &required,
+                &params.capital_withdrawal_tax,
+            );
+            println!();
+            println!(
+                "    tax on the surplus by linear program {:>10.0}    by greedy fill {:>10.0}    agreement {}",
+                plan.total_tax,
+                greedy.total_tax,
+                if (plan.total_tax - greedy.total_tax).abs() < 1.0 {
+                    "yes"
+                } else {
+                    "NO"
+                }
+            );
+            println!(
+                "    marginal rate of the next franc of surplus withdrawn: {:.4}",
+                plan.marginal_rate_at_optimum
+            );
+            println!();
+            println!(
+                "    {:<5} {:>6} {:>12} {:>12} {:>12}",
+                "year", "age", "required", "extra", "marginal"
+            );
+            let mut running = 0.0;
+            for offset in 0..years {
+                let extra = greedy.capital_withdrawn.get(offset).copied().unwrap_or(0.0);
+                if extra <= 0.5 && required[offset] <= 0.5 {
+                    continue;
+                }
+                running += extra;
+                println!(
+                    "    {:<5} {:>6} {:>12.0} {:>12.0} {:>12.4}",
+                    offset + 1,
+                    args.retirement_age + offset as u32,
+                    required[offset],
+                    extra,
+                    params.capital_withdrawal_tax.marginal_rate_at(running)
+                );
+            }
+            println!();
+            println!("    The KKT reading: at the optimum no year offers a cheaper next franc");
+            println!("    than the multiplier above. That is the precise form of \"spread the");
+            println!("    withdrawal until the next franc costs the same wherever it goes\".");
+            println!("    Note the requirement is funded FIRST and is not the LP's to trade");
+            println!("    away: an allocation that spread the capital evenly to save tax would");
+            println!("    leave the bridge years short, which is the failure the risk table");
+            println!("    below exists to catch.");
+        }
+        early_retirement::AllocationOutcome::Infeasible(why) => {
+            println!("    The allocation could not be solved: {why}");
+        }
+    }
+
+    // ---- 4. risk, across retirement ages --------------------------------------
+    let need = ConsumptionNeed {
+        mandatory_annual: args.mandatory,
+        lifestyle_annual: args.lifestyle,
+    };
+    let schedule = TaxSchedule::bern_city_default(args.married, args.children);
+
+    println!();
+    println!("  4. Risk, across retirement ages");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "    {} paths an age, the SAME seed everywhere, so the differences are the age",
+        args.paths
+    );
+    println!("    and not the draws. Real return {:.1}% +/- {:.1}%, life expectancy {}.",
+        args.real_return * 100.0, args.return_std * 100.0, args.life_expectancy);
+    println!();
+    println!(
+        "    {:<5} {:>11} {:>11} {:>9} {:>11} {:>11} {:>10}",
+        "age", "capital", "annuity", "shortfall", "exp. short", "median end", "tax"
+    );
+
+    let mut sweep: Vec<(u32, f64, f64, f64, f64, f64)> = Vec::new();
+    let mut centred: Option<(f64, f64, f64, f64, f64)> = None;
+    for age in 58..=67u32 {
+        let projected = early_retirement::project(&household, &params, age, args.work_pct);
+        let paths = early_retirement::draw_paths(
+            args.paths,
+            args.life_expectancy.saturating_sub(age).max(1),
+            args.real_return,
+            args.return_std,
+            args.life_expectancy,
+            age,
+            args.seed,
+        );
+        let annuity_income = projected.ahv_annual
+            + projected.bvg_capital
+                * args.annuity_share.clamp(0.0, 1.0)
+                * projected.effective_conversion_rate;
+        let taxable = schedule.taxable_income_after_estimated_deductions(annuity_income);
+        let annuity_tax = taxable * schedule.tax_rate_on_taxable(taxable);
+        let profile = early_retirement::evaluate_strategy(
+            age,
+            args.annuity_share,
+            &projected,
+            &need,
+            &TaxTreatment::new(params.capital_withdrawal_tax.clone(), annuity_tax),
+            &paths,
+            args.life_expectancy.saturating_sub(age).max(1),
+        );
+        println!(
+            "    {:<5} {:>11.0} {:>11.0} {:>8.1}% {:>11.0} {:>11.0} {:>10.0}",
+            age,
+            projected.bvg_capital + projected.pillar3a_capital + projected.bridge_capital,
+            annuity_income,
+            profile.probability_of_shortfall * 100.0,
+            profile.expected_shortfall,
+            // The MEDIAN unconsumed wealth, not the mean. The mean is dominated by the
+            // lucky paths, where a fixed real withdrawal leaves a fortune behind, and a
+            // column reading "8,093,427" is not a statement about a retirement — it is a
+            // statement about the right tail of the return draw.
+            profile.median_terminal_wealth,
+            profile.mean_lifetime_tax
+        );
+        if age == args.retirement_age {
+            centred = Some((
+                profile.probability_of_shortfall,
+                profile.expected_shortfall,
+                profile.mean_terminal_wealth,
+                profile.median_terminal_wealth,
+                profile.p10_terminal_wealth,
+            ));
+        }
+        sweep.push((
+            age,
+            projected.bvg_capital + projected.pillar3a_capital + projected.bridge_capital,
+            // The median, for the same reason the table prints it: the mean is the right
+            // tail of the return draw rather than a statement about a retirement. The
+            // first version exported the mean and the plotted figure duly showed unconsumed
+            // wealth in the millions, which is how the inconsistency was found — the table
+            // and the CSV were reporting different statistics under one name.
+            profile.median_terminal_wealth,
+            profile.probability_of_shortfall,
+            profile.mean_lifetime_tax,
+            annuity_income,
+        ));
+    }
+    println!();
+    println!("    `shortfall` is the share of paths in which the money ran out before the end");
+    println!("    of life; `exp. short` is how large the gap was when it did. `median end` is");
+    println!("    the MEDIAN unconsumed wealth at death, and it is a COST of over-saving, not a");
+    println!("    safety margin — a plan that funds the consumption and still leaves a large");
+    println!("    balance has saved too much, not wisely. The median rather than the mean");
+    println!("    because a fixed real withdrawal leaves a fortune on the lucky paths, and a");
+    println!("    mean that reads in the millions is a statement about the right tail of the");
+    println!("    return draw rather than about a retirement.");
+
+    // ---- 5. the least that is enough ------------------------------------------
+    println!();
+    println!("  5. The least that is enough");
+    println!("  {}", "-".repeat(74));
+    let target = 0.10;
+    let paths = early_retirement::draw_paths(
+        args.paths,
+        args.life_expectancy
+            .saturating_sub(args.retirement_age)
+            .max(1),
+        args.real_return,
+        args.return_std,
+        args.life_expectancy,
+        args.retirement_age,
+        args.seed,
+    );
+    let annuity_income = entitlements.ahv_annual
+        + entitlements.bvg_capital * args.annuity_share.clamp(0.0, 1.0) * entitlements.effective_conversion_rate;
+    let taxable = schedule.taxable_income_after_estimated_deductions(annuity_income);
+    let annuity_tax = taxable * schedule.tax_rate_on_taxable(taxable);
+
+    let shortfall_at = |extra: f64| -> f64 {
+        let mut probe = entitlements;
+        probe.bvg_capital += extra;
+        let profile = early_retirement::evaluate_strategy(
+            args.retirement_age,
+            args.annuity_share,
+            &probe,
+            &need,
+            &TaxTreatment::new(params.capital_withdrawal_tax.clone(), annuity_tax),
+            &paths,
+            args.life_expectancy
+                .saturating_sub(args.retirement_age)
+                .max(1),
+        );
+        profile.probability_of_shortfall
+    };
+
+    // Bisect on the extra capital, because the shortfall probability falls monotonically
+    // in it. The upper bound is widened until it qualifies rather than assumed: a bound
+    // that silently failed would report "no amount is enough".
+    let mut high = 100_000.0_f64;
+    let mut widened = 0;
+    while shortfall_at(high) > target && widened < 12 {
+        high *= 2.0;
+        widened += 1;
+    }
+    if shortfall_at(high) > target {
+        println!(
+            "    Even {:.0} of extra capital does not bring the shortfall probability to",
+            high
+        );
+        println!("    {:.0}% at this annuity share. The binding constraint is the annuity,", target * 100.0);
+        println!("    not the pot: annuitising more is the lever that removes this risk.");
+    } else {
+        let mut low = 0.0_f64;
+        for _ in 0..40 {
+            let mid = 0.5 * (low + high);
+            if shortfall_at(mid) > target {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+        let funded = entitlements.bvg_capital + entitlements.pillar3a_capital + entitlements.bridge_capital;
+        println!(
+            "    The smallest extra capital that holds the shortfall probability at or",
+        );
+        println!(
+            "    below {:.0}% is {:.0}, against the {:.0} already held — a total of {:.0}.",
+            target * 100.0,
+            high,
+            funded,
+            funded + high
+        );
+        if high < 1.0 {
+            println!("    Nothing extra is needed: the plan already meets the target.");
+        }
+        println!();
+        println!("    The target is a DECLARED preference, not a standard. 10% was chosen");
+        println!("    here; the same bisection answers any other, and the reason to state it");
+        println!("    is that \"enough\" is a risk appetite before it is a number.");
+    }
+
+    if let Some((shortfall, expected, mean_terminal, median_terminal, p10)) = centred {
+        println!();
+        println!("  At the chosen age {} and annuity share {:.2}:", args.retirement_age, args.annuity_share);
+        println!(
+            "    shortfall {:.1}%, expected gap when it happens {:.0}, terminal wealth mean",
+            shortfall * 100.0,
+            expected
+        );
+        println!(
+            "    {:.0} / median {:.0} / p10 {:.0}. The p10 is the one to plan against.",
+            mean_terminal, median_terminal, p10
+        );
+    }
+
+    // ---- 6. the education ledgers, printed together ----------------------------
+    let degree = Degree::parse(&args.degree).unwrap_or_else(|| {
+        eprintln!("warning: unknown --degree {:?}; using master", args.degree);
+        Degree::Master
+    });
+    let (state_cost, cost_provenance) = degree.declared_state_cost();
+
+    println!();
+    println!("  6. What a qualification costs the state, and what the holder pays back");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "    Qualification: {} — declared state cost {:.0} ({})",
+        degree.label(),
+        state_cost,
+        cost_provenance.label()
+    );
+    println!();
+    println!(
+        "    {:<28} {:>12} {:>14} {:>10}",
+        "principle", "surcharge", "lifetime tax", "x over cost"
+    );
+    let principles = [
+        ContributionPrinciple::AbilityToPay,
+        ContributionPrinciple::EducationCostRecovery {
+            state_cost,
+            recovery_years: args.career_years.max(1),
+        },
+        ContributionPrinciple::BenefitReceived { premium_share: 0.10 },
+        ContributionPrinciple::Flat { annual: 3_000.0 },
+    ];
+    for principle in principles {
+        let ledger = early_retirement::contribution_ledger(
+            principle,
+            state_cost,
+            args.salary,
+            args.career_years,
+            &schedule,
+        );
+        let name = match principle {
+            ContributionPrinciple::AbilityToPay => "ability to pay (existing tax)",
+            ContributionPrinciple::EducationCostRecovery { .. } => "recover the state outlay",
+            ContributionPrinciple::BenefitReceived { .. } => "benefit received (10% premium)",
+            ContributionPrinciple::Flat { .. } => "flat (3,000 a year)",
+        };
+        println!(
+            "    {:<28} {:>12.0} {:>14.0} {:>9.1}x",
+            name, ledger.principle_surcharge, ledger.lifetime_income_tax, ledger.tax_multiple_of_state_cost
+        );
+    }
+    println!();
+    println!("  THE MODEL DOES NOT RANK THESE, AND WILL NOT. Each is a defensible");
+    println!("  distributive principle. What the table establishes is the calculable half of");
+    println!("  the argument: under the ordinary progressive schedule a high earner already");
+    println!("  repays the state's outlay several times over, so the question is not whether");
+    println!("  they pay back but WHICH MULTIPLE is right — and that is a judgement, not a");
+    println!("  derivation. A program that picked one would be presenting an argument as a");
+    println!("  calculation. Note also that the flat charge is a smaller share of a high");
+    println!("  income, which is what \"regressive in effect\" means.");
+
+    // ---- 7. what this does not say --------------------------------------------
+    println!();
+    println!("  7. What this does not say");
+    println!("  {}", "-".repeat(74));
+    println!("  It does not forecast returns. The Monte Carlo draws a declared distribution in");
+    println!("  real terms; it is not fitted and not a market view. It does not model your");
+    println!("  fund's regulations beyond the two figures you passed. It does not model the");
+    println!("  three-step limit on drawing second-pillar capital. And it takes the");
+    println!("  consumption profile as given: change the profile and the answer changes,");
+    println!("  which is the point rather than a defect.");
+
+    // ---- export ---------------------------------------------------------------
+    if let Some(dir) = &args.export {
+        if std::fs::create_dir_all(dir).is_ok() {
+            let mut csv = String::from(
+                "age,capital,median_terminal_wealth,shortfall_probability,mean_tax,annuity_income\n",
+            );
+            for (age, capital, terminal, shortfall, tax, annuity) in &sweep {
+                csv.push_str(&format!(
+                    "{age},{capital:.2},{terminal:.2},{shortfall:.6},{tax:.2},{annuity:.2}\n"
+                ));
+            }
+            let path = dir.join("early-retirement-risk.csv");
+            match std::fs::write(&path, csv) {
+                Ok(()) => println!("\n  EXPORTED for plotting: {}", path.display()),
+                Err(error) => eprintln!("warning: could not write {}: {error}", path.display()),
+            }
+        }
+    }
+
+    println!("{}", "=".repeat(78));
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -437,6 +1085,9 @@ fn main() {
         }
         Commands::Interactive => {
             run_interactive();
+        }
+        Commands::EarlyRetirement(args) => {
+            run_early_retirement(&args);
         }
         Commands::Pension {
             salary,
@@ -1524,3 +2175,7 @@ fn run_pension_simulation(
     );
     mc_display::print_work_pct_pension_comparison(&comparisons, monthly_needs);
 }
+
+
+
+

@@ -385,7 +385,10 @@ life-optimizer/
 │                                 divide-and-conquer, derived impunity and blowback, with the
 │                                 sourced historical record kept separate from the declared
 │                                 parameters
-├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
+├── EARLY_RETIREMENT.md           Early retirement as an optimisation: the withdrawal
+│                                 allocation as a linear program and its dual, a
+│                                 10,000-path risk sweep, and the education-contribution
+│                                 question priced but deliberately not ranked├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
 │                                 budget and one clock: the crossing horizon, the critical
 │                                 discount rate, and a paired Monte Carlo of both
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
@@ -442,4 +445,5 @@ Issues and PRs welcome, particularly:
 - Tax tables for other Swiss cantons
 - Refinements to the regime-switching calibration
 - Additional life-stage/preference profiles
+
 

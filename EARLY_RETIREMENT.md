@@ -320,9 +320,34 @@ choice is left where it belongs.
 ```sh
 cargo test --lib simplex            # the solver, including Beale's cycling example
 cargo test --lib early_retirement   # the model, the three routes, and the trade-offs
+
+# The plan, the allocation, the risk sweep and the four ledgers. Pass your own fund's
+# figures: --conversion-rate is the one that matters most.
+cargo run -- early-retirement --salary 120000 --age 45 --married \
+  --conversion-rate 0.052 --early-reduction 0.002 --annuity-share 1.0 \
+  --retirement-age 63 --paths 10000 --export out/early-retirement
+
+python tools/plot_early_retirement.py out/early-retirement \
+  --out figures/early-retirement-1-risk.png
 ```
 
-**Still to come, and named rather than implied:** a `life-optimizer early-retirement` CLI
-mode that prints the projections, the allocation the LP chooses, the risk table across
-retirement ages, and the four contribution ledgers; and a plotted set of difference figures.
-The model and its tests are complete and committed; the presentation layer is not.
+The mode prints, in order: the parameters and their provenance; the entitlements with the
+bridge years called out; the allocation the LP chooses, checked against the water-filling
+solution; the risk sweep across retirement ages; the smallest extra capital that funds the
+consumption to a declared confidence; and the four education ledgers together. The figure
+refuses to draw unless its three consistency checks pass, one of which is the claim that
+retiring later cannot raise the shortfall probability.
+
+## 9. What the figures show, and one inconsistency found while drawing them
+
+`figures/early-retirement-1-risk.png` plots the shortfall probability, the median
+unconsumed wealth at death, and the total capital, all against the retirement age.
+
+The first version of that figure showed unconsumed wealth in the **millions** while the
+terminal table showed tens of thousands. The cause was a real defect rather than a plotting
+error: the table printed the **median** and the CSV exported the **mean**, under one name.
+The mean is dominated by the lucky paths, where a fixed real withdrawal compounds for
+decades and leaves a fortune, so it is a statement about the right tail of the return draw
+rather than about a retirement. The export was changed to the median, and the check that
+would have caught it is now in the plotting script's own consistency tests.
+
