@@ -474,6 +474,59 @@ impl ConsumptionNeed {
     }
 }
 
+/// Whether a retirement age is something a person may actually do under the BVG.
+///
+/// Recorded because the projection will happily compute an age that the law does not
+/// permit, and a plan for an impossible age looks exactly like a plan for a possible one.
+/// The rules are statutory and are not the model's to relax.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetirementAvailability {
+    /// At or above the statutory early-draw age: a right, not a favour.
+    StatutoryRight,
+    /// Between the regulatory floor and the statutory age: available only if the fund's own
+    /// regulations provide for it, which is a plan feature and not a right.
+    FundMayPermit,
+    /// Below the regulatory floor. Not available under the BVG at all; earlier retirement
+    /// exists only for company restructurings or public-safety employment, neither of which
+    /// is modelled here.
+    NotAvailableUnderBvg,
+}
+
+impl RetirementAvailability {
+    pub fn label(self) -> &'static str {
+        match self {
+            RetirementAvailability::StatutoryRight => "statutory right",
+            RetirementAvailability::FundMayPermit => "only if the fund permits it",
+            RetirementAvailability::NotAvailableUnderBvg => "not available under the BVG",
+        }
+    }
+
+    /// Whether a plan at this age can be presented as something the person is entitled to do.
+    pub fn is_available(self) -> bool {
+        !matches!(self, RetirementAvailability::NotAvailableUnderBvg)
+    }
+}
+
+/// Classify a retirement age against the BVG's own rules.
+///
+/// * `age >= 63` — BVG Art. 13 Abs. 2, the statutory early-draw age.
+/// * `58 <= age < 63` — BVV 2 Art. 1i, which lets a fund's regulations provide for
+///   retirement from completed 58. Permitted, but only by the fund.
+/// * `age < 58` — not available at all, except for company restructurings and public-safety
+///   employment, which this model does not represent.
+///
+/// The AHV draw age is a separate question and is handled in [`project`]: AHV cannot be
+/// drawn before completed 63 under AHVG Art. 40 Abs. 1, whatever the BVG permits.
+pub fn retirement_availability(params: &RetirementParameters, age: u32) -> RetirementAvailability {
+    if age >= params.bvg_earliest_age {
+        RetirementAvailability::StatutoryRight
+    } else if age >= 58 {
+        RetirementAvailability::FundMayPermit
+    } else {
+        RetirementAvailability::NotAvailableUnderBvg
+    }
+}
+
 /// What the household is entitled to, at a given retirement age.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Entitlements {
@@ -481,6 +534,10 @@ pub struct Entitlements {
     pub years_to_retirement: u32,
     /// AHV annual pension, after any early-draw reduction.
     pub ahv_annual: f64,
+    /// The age at which AHV is actually drawn, which is the retirement age only if that is
+    /// at or above the earliest permitted one. Below it there is no AHV at all until the
+    /// earliest age, and that extra bridge is a cost of retiring earlier than 63.
+    pub ahv_draw_age: u32,
     /// The reduction actually applied, as a fraction.
     pub ahv_early_reduction: f64,
     pub bvg_capital: f64,
@@ -491,6 +548,15 @@ pub struct Entitlements {
     pub pillar3a_capital: f64,
     /// Capital available to fund the years between retirement and the AHV/annuity start.
     pub bridge_capital: f64,
+    /// Years between retirement and the AHV reference age in which a non-employed person
+    /// still owes AHV contributions (AHVG Art. 3 Abs. 1bis).
+    pub non_employed_years: u32,
+    /// Those contributions, as a **range**, because the amount is a table assessed on the
+    /// person's wealth and rental income (AHVG Art. 10, AHVV Art. 28) rather than a rate.
+    /// A single figure here would be a claim about the person's wealth, which the model
+    /// does not know.
+    pub bridge_ahv_contributions_min: f64,
+    pub bridge_ahv_contributions_max: f64,
 }
 
 /// Project entitlements for a retirement age and employment level.
@@ -519,6 +585,14 @@ pub fn project(
     // then with the early-draw reduction. Scaling by the record is what makes an early
     // retirement cost something in Pillar 1 as well as Pillar 2, and leaving it out
     // would understate the price of retiring early by a wide margin.
+    //
+    // AHV cannot be drawn before the earliest age (AHVG Art. 40 Abs. 1: completed 63), so
+    // the *draw age* is separate from the *retirement age*. The first version of this
+    // function conflated them: it applied the early-draw reduction to a retirement at 55
+    // as though AHV started at 55 with the reduction capped at two years' worth, and the
+    // caller then also treated AHV as starting at the reference age. So a plan could be
+    // penalised twice — reduced for earliness and delayed past the age it was reduced for
+    // — and no test covering retirement below 63 could have passed either way.
     let accrued_years = household.contribution_years
         + (f64::from(years_to_retirement) * work_fraction).round() as u32;
     let record_fraction =
@@ -528,9 +602,10 @@ pub fn project(
     } else {
         params.ahv_max_annual_single
     };
+    let ahv_draw_age = retirement_age.max(params.ahv_earliest_age);
     let early_years = params
         .ahv_reference_age
-        .saturating_sub(retirement_age)
+        .saturating_sub(ahv_draw_age)
         .min(params.ahv_reference_age.saturating_sub(params.ahv_earliest_age));
     let ahv_early_reduction = f64::from(early_years) * params.ahv_reduction_per_early_year;
     let ahv_annual = full_pension * record_fraction * (1.0 - ahv_early_reduction).max(0.0);
@@ -576,12 +651,20 @@ pub fn project(
         retirement_age,
         years_to_retirement,
         ahv_annual,
+        ahv_draw_age,
         ahv_early_reduction,
         bvg_capital,
         effective_conversion_rate,
         bvg_annuity_annual: bvg_capital * effective_conversion_rate,
         pillar3a_capital: pillar3a,
         bridge_capital: household.taxable_savings,
+        // Contributions run to the *reference* age, not to the draw age: the statute ties
+        // the liability to the reference age, so deferring the pension does not remove it.
+        non_employed_years: params.ahv_reference_age.saturating_sub(retirement_age),
+        bridge_ahv_contributions_min: params.ahv_non_employed_annual_min
+            * f64::from(params.ahv_reference_age.saturating_sub(retirement_age)),
+        bridge_ahv_contributions_max: params.ahv_non_employed_annual_max
+            * f64::from(params.ahv_reference_age.saturating_sub(retirement_age)),
     }
 }
 
@@ -1145,7 +1228,10 @@ pub fn evaluate_strategy(
     let bridge_income: Vec<f64> = (0..years)
         .map(|offset| {
             let age = retirement_age + offset as u32;
-            if age < 65 {
+            // No AHV before the draw age. Using the reference age here instead of the draw
+            // age was the second half of the double-penalty bug: a plan retiring at 63 was
+            // given a reduced AHV *and* denied it until 65.
+            if age < entitlements.ahv_draw_age {
                 annuity - entitlements.ahv_annual
             } else {
                 annuity
@@ -1446,6 +1532,402 @@ mod tests {
             provenance: Provenance::Declared {
                 rationale: "test fixture",
             },
+        }
+    }
+
+    /// The retirement ages the matrix covers. Deliberately includes both sides of every
+    /// statutory boundary the projection depends on: 58 (the regulatory floor under BVV 2
+    /// Art. 1i), 63 (the AHV earliest draw and the statutory BVG early draw), and 65 (the
+    /// reference age at which both reach their full value).
+    const AGE_MATRIX: [u32; 13] = [55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 70];
+
+    /// The whole grid must project without panicking and must produce finite, non-negative
+    /// entitlements. A matrix of ages is exactly where an arithmetic slip — a subtraction
+    /// that goes negative, a division by a saturating zero — shows up as `NaN` rather than
+    /// as an obviously wrong number, and `NaN` propagates silently through every later
+    /// comparison because `NaN < x` is false.
+    #[test]
+    fn every_age_in_the_matrix_projects_to_finite_entitlements() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        for age in AGE_MATRIX {
+            let e = project(&household, &params, age, 1.0);
+            for (name, value) in [
+                ("ahv_annual", e.ahv_annual),
+                ("ahv_early_reduction", e.ahv_early_reduction),
+                ("bvg_capital", e.bvg_capital),
+                ("effective_conversion_rate", e.effective_conversion_rate),
+                ("bvg_annuity_annual", e.bvg_annuity_annual),
+                ("pillar3a_capital", e.pillar3a_capital),
+                ("bridge_capital", e.bridge_capital),
+                ("bridge_ahv_contributions_min", e.bridge_ahv_contributions_min),
+                ("bridge_ahv_contributions_max", e.bridge_ahv_contributions_max),
+            ] {
+                assert!(
+                    value.is_finite() && value >= 0.0,
+                    "age {age}: {name} is {value}"
+                );
+            }
+            assert!(e.effective_conversion_rate <= params.bvg_conversion_rate + 1e-12);
+            assert!(e.ahv_early_reduction <= 0.136 + 1e-12, "age {age}");
+        }
+    }
+
+    /// The classification has to match the statute at every boundary, because the
+    /// projection computes an age the law may not permit and a plan for an impossible age
+    /// looks exactly like a plan for a possible one.
+    #[test]
+    fn the_availability_classification_matches_the_statutory_boundaries() {
+        let params = RetirementParameters::default();
+        let expected = |age: u32| match age {
+            0..=57 => RetirementAvailability::NotAvailableUnderBvg,
+            58..=62 => RetirementAvailability::FundMayPermit,
+            _ => RetirementAvailability::StatutoryRight,
+        };
+        for age in 50..=72u32 {
+            assert_eq!(
+                retirement_availability(&params, age),
+                expected(age),
+                "age {age} classified wrongly"
+            );
+        }
+        // The ages the request named, spelled out so a reader does not have to evaluate the
+        // closure above to see them.
+        assert_eq!(
+            retirement_availability(&params, 55),
+            RetirementAvailability::NotAvailableUnderBvg
+        );
+        assert_eq!(
+            retirement_availability(&params, 57),
+            RetirementAvailability::NotAvailableUnderBvg
+        );
+        assert_eq!(
+            retirement_availability(&params, 60),
+            RetirementAvailability::FundMayPermit
+        );
+        assert_eq!(
+            retirement_availability(&params, 62),
+            RetirementAvailability::FundMayPermit
+        );
+        assert_eq!(
+            retirement_availability(&params, 63),
+            RetirementAvailability::StatutoryRight
+        );
+        assert!(!retirement_availability(&params, 55).is_available());
+        assert!(retirement_availability(&params, 58).is_available());
+    }
+
+    /// AHV cannot be drawn before completed 63 (AHVG Art. 40 Abs. 1), whatever the BVG
+    /// permits. So below 63 the draw age is pinned to 63 and the *bridge* lengthens; the
+    /// pension is not paid from the retirement age.
+    #[test]
+    fn ahv_is_not_drawn_before_its_earliest_age() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        for age in AGE_MATRIX {
+            let e = project(&household, &params, age, 1.0);
+            assert_eq!(
+                e.ahv_draw_age,
+                age.max(params.ahv_earliest_age),
+                "age {age}: AHV draw age is {}",
+                e.ahv_draw_age
+            );
+            assert!(e.ahv_draw_age >= params.ahv_earliest_age);
+        }
+        // Retiring at 55 means eight years with no AHV at all, not a pension reduced by
+        // fourteen years' worth of penalties.
+        assert_eq!(project(&household, &params, 55, 1.0).ahv_draw_age, 63);
+        assert_eq!(project(&household, &params, 62, 1.0).ahv_draw_age, 63);
+        assert_eq!(project(&household, &params, 63, 1.0).ahv_draw_age, 63);
+    }
+
+    /// The early-draw reduction is capped at two years' worth, which is 13.6% under AHVV
+    /// Art. 56bis. Every age at or below 63 therefore carries the *same* reduction.
+    ///
+    /// The **amount**, however, still falls with earlier retirement, and through a
+    /// different channel: the contribution record. The first version of this test asserted
+    /// that the amounts were equal too, and it failed — correctly. The two channels are
+    /// independent, and conflating them would have hidden the fact that retiring at 55
+    /// costs AHV twice: once through the (capped) reduction and once through nine fewer
+    /// contributing years.
+    #[test]
+    fn the_ahv_reduction_is_capped_but_the_contribution_record_is_not() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        let at_63 = project(&household, &params, 63, 1.0);
+        assert!(
+            (at_63.ahv_early_reduction - 0.136).abs() < 1e-12,
+            "the cap should be 2 x 6.8% = 13.6%, got {}",
+            at_63.ahv_early_reduction
+        );
+
+        // The reduction is flat across every age at or below 63 ...
+        for age in [55, 56, 57, 58, 59, 60, 61, 62, 63] {
+            let e = project(&household, &params, age, 1.0);
+            assert!(
+                (e.ahv_early_reduction - at_63.ahv_early_reduction).abs() < 1e-12,
+                "age {age}: reduction {} differs from age 63's {}",
+                e.ahv_early_reduction,
+                at_63.ahv_early_reduction
+            );
+        }
+
+        // ... and the amount is nevertheless strictly lower the earlier the retirement,
+        // because the record is shorter. Checked as a strict monotonicity rather than as an
+        // equality, which is what the model actually claims.
+        let mut previous: Option<(u32, f64)> = None;
+        for age in [55, 57, 58, 60, 62, 63] {
+            let e = project(&household, &params, age, 1.0);
+            if let Some((earlier_age, amount)) = previous {
+                assert!(
+                    e.ahv_annual > amount,
+                    "the AHV amount did not rise from age {earlier_age} ({amount}) to {age} \
+                     ({}), so the contribution record is not being applied",
+                    e.ahv_annual
+                );
+            }
+            previous = Some((age, e.ahv_annual));
+        }
+        // The record is the whole of the difference at the cap: 35 of 44 years at 55
+        // against 43 of 44 at 63.
+        let single = Household::default();
+        let at_55 = project(&single, &params, 55, 1.0);
+        assert!((at_55.ahv_annual / at_63.ahv_annual - 35.0 / 43.0).abs() < 1e-9);
+
+        // And the reduction falls to zero at the reference age.
+        assert_eq!(project(&household, &params, 65, 1.0).ahv_early_reduction, 0.0);
+        assert_eq!(project(&household, &params, 70, 1.0).ahv_early_reduction, 0.0);
+    }
+
+    /// Everything an earlier retirement costs, in one monotonicity test: less BVG capital, a
+    /// lower conversion rate, and more years of non-employed AHV contributions. If any of
+    /// these moved the other way the model would be subsidising earlier retirement.
+    #[test]
+    fn retiring_earlier_costs_more_on_every_channel() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        let mut previous: Option<(u32, Entitlements)> = None;
+        for age in [55, 57, 58, 60, 62, 63, 64, 65] {
+            let e = project(&household, &params, age, 1.0);
+            if let Some((earlier_age, earlier)) = previous {
+                assert!(
+                    e.bvg_capital > earlier.bvg_capital,
+                    "BVG capital fell from age {earlier_age} ({}) to {age} ({})",
+                    earlier.bvg_capital,
+                    e.bvg_capital
+                );
+                assert!(
+                    e.effective_conversion_rate >= earlier.effective_conversion_rate,
+                    "conversion rate fell from {earlier_age} to {age}"
+                );
+                assert!(
+                    e.non_employed_years <= earlier.non_employed_years,
+                    "non-employed years rose from {earlier_age} ({}) to {age} ({})",
+                    earlier.non_employed_years,
+                    e.non_employed_years
+                );
+                assert!(
+                    e.bridge_ahv_contributions_min <= earlier.bridge_ahv_contributions_min,
+                    "bridge AHV contributions rose from {earlier_age} to {age}"
+                );
+            }
+            previous = Some((age, e));
+        }
+        // Retiring at 55 rather than 65 means ten years of contributions.
+        assert_eq!(project(&household, &params, 55, 1.0).non_employed_years, 10);
+        assert_eq!(project(&household, &params, 65, 1.0).non_employed_years, 0);
+        assert_eq!(project(&household, &params, 70, 1.0).non_employed_years, 0);
+    }
+
+    /// The regression test for the double penalty. At 63 the AHV draw age *is* 63, so the
+    /// bridge in AHV terms is zero years — but the first version of this model applied the
+    /// 13.6% reduction **and** treated AHV as starting at 65, charging the same two years
+    /// twice. The observable is the first-year withdrawal: with AHV from 63 and an annuity
+    /// that covers most of the need, it must be far below a year's consumption.
+    #[test]
+    fn retiring_at_63_receives_ahv_from_63_and_not_from_65() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        let e = project(&household, &params, 63, 1.0);
+        assert_eq!(e.ahv_draw_age, 63);
+        assert!(e.ahv_early_reduction > 0.0, "the reduction still applies");
+
+        let need = ConsumptionNeed {
+            mandatory_annual: 40_000.0,
+            lifestyle_annual: 55_000.0,
+        };
+        // Five years, so the path covers ages 63 to 67 and straddles the reference age.
+        let paths = vec![
+            PathDraw {
+                real_return: 0.0,
+                years_lived: 5,
+            };
+            1
+        ];
+        let profile = evaluate_strategy(
+            63,
+            1.0,
+            &e,
+            &need,
+            &TaxTreatment::new(schedule(), 0.0),
+            &paths,
+            5,
+        );
+        let first = profile
+            .plan
+            .capital_withdrawn
+            .first()
+            .copied()
+            .unwrap_or(0.0);
+        assert!(
+            first < need.lifestyle_annual,
+            "the first-year withdrawal was {first}, a whole year of consumption — the \
+             signature of AHV being withheld until 65"
+        );
+    }
+
+    /// The allocation must be solvable and the risk profile measurable at every age in the
+    /// matrix, including the ages the law does not permit. A model that refused to price an
+    /// impossible plan would be worse than one that prices it: the impossibility is a
+    /// question about policy, and the cost is the answer to it.
+    #[test]
+    fn the_whole_age_matrix_solves_and_reports_a_risk_profile() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        let need = ConsumptionNeed {
+            mandatory_annual: 40_000.0,
+            lifestyle_annual: 55_000.0,
+        };
+        let s = schedule();
+        for age in AGE_MATRIX {
+            let e = project(&household, &params, age, 1.0);
+            let horizon = 95 - age;
+            let paths = draw_paths(200, horizon, 0.02, 0.10, 95, age, 4242);
+            assert_eq!(paths.len(), 200);
+            for path in &paths {
+                assert!(
+                    path.years_lived >= 1 && path.years_lived <= horizon,
+                    "age {age}: a path lives {} years of a {horizon}-year horizon",
+                    path.years_lived
+                );
+            }
+            let profile = evaluate_strategy(
+                age,
+                1.0,
+                &e,
+                &need,
+                &TaxTreatment::new(s.clone(), 0.0),
+                &paths,
+                horizon,
+            );
+            assert!(
+                (0.0..=1.0).contains(&profile.probability_of_shortfall),
+                "age {age}: shortfall probability {}",
+                profile.probability_of_shortfall
+            );
+            assert_eq!(profile.plan.capital_withdrawn.len() as u32, horizon.max(1));
+            assert!(profile.mean_lifetime_tax >= 0.0 && profile.mean_lifetime_tax.is_finite());
+            assert!(profile.p10_terminal_wealth <= profile.median_terminal_wealth);
+            assert!(profile.median_terminal_wealth <= profile.p90_terminal_wealth);
+        }
+    }
+
+    /// Retiring earlier must not reduce the shortfall probability. This is the model's
+    /// central claim in one line, and it is checked on the matrix rather than asserted from
+    /// the algebra: a plan that stops earning sooner, on a smaller capital and a longer
+    /// horizon, cannot be safer.
+    #[test]
+    fn the_shortfall_probability_does_not_rise_with_a_later_retirement() {
+        let household = Household::default();
+        let params = RetirementParameters::default();
+        let need = ConsumptionNeed {
+            mandatory_annual: 40_000.0,
+            lifestyle_annual: 55_000.0,
+        };
+        let s = schedule();
+        let mut previous: Option<(u32, f64)> = None;
+        for age in [58, 60, 62, 63, 64, 65, 67] {
+            let e = project(&household, &params, age, 1.0);
+            let horizon = 95 - age;
+            let paths = draw_paths(400, horizon, 0.02, 0.10, 95, age, 999);
+            let profile = evaluate_strategy(
+                age,
+                1.0,
+                &e,
+                &need,
+                &TaxTreatment::new(s.clone(), 0.0),
+                &paths,
+                horizon,
+            );
+            if let Some((earlier_age, earlier)) = previous {
+                assert!(
+                    profile.probability_of_shortfall <= earlier + 1e-9,
+                    "shortfall rose from age {earlier_age} ({earlier:.4}) to {age} ({:.4})",
+                    profile.probability_of_shortfall
+                );
+            }
+            previous = Some((age, profile.probability_of_shortfall));
+        }
+    }
+
+    /// Household composition and employment level have to move the projection in the
+    /// obvious directions at every age, not only at the default one. A parameter that works
+    /// at 65 and breaks at 57 is the kind of defect a single-age test cannot see.
+    #[test]
+    fn the_household_variations_hold_across_the_matrix() {
+        let params = RetirementParameters::default();
+        let single = Household::default();
+        let married = Household {
+            married: true,
+            ..Household::default()
+        };
+        for age in AGE_MATRIX {
+            let one = project(&single, &params, age, 1.0);
+            let two = project(&married, &params, age, 1.0);
+            assert!(
+                two.ahv_annual >= one.ahv_annual,
+                "age {age}: a couple's AHV ({}) is below a single person's ({})",
+                two.ahv_annual,
+                one.ahv_annual
+            );
+
+            let part = project(&single, &params, age, 0.6);
+            assert!(
+                part.bvg_capital <= one.bvg_capital,
+                "age {age}: part-time capital exceeds full-time"
+            );
+            assert!(
+                part.ahv_annual <= one.ahv_annual + 1e-9,
+                "age {age}: part-time AHV exceeds full-time"
+            );
+        }
+
+        // A salary below the BVG entry threshold buys no second-pillar *contributions* at
+        // every age — but existing capital still earns the minimum interest, which the first
+        // version of this test denied and which is correct behaviour rather than a bug. So
+        // the assertion is that the low-salary capital is strictly below the default's, and
+        // that it equals the closed form of interest on the opening balance with nothing
+        // added.
+        let low = Household {
+            full_time_salary: 20_000.0,
+            ..Household::default()
+        };
+        let full = Household::default();
+        for age in AGE_MATRIX {
+            let e = project(&low, &params, age, 1.0);
+            let full_time = project(&full, &params, age, 1.0);
+            assert!(
+                e.bvg_capital < full_time.bvg_capital,
+                "age {age}: a salary under the entry threshold accumulated as much BVG \
+                 capital as one above it"
+            );
+            let years = age.saturating_sub(low.current_age);
+            let closed_form = low.bvg_capital_now * (1.0 + params.bvg_min_interest).powi(years as i32);
+            assert!(
+                (e.bvg_capital - closed_form).abs() < 1e-6,
+                "age {age}: capital {} is not interest-only on the opening balance ({closed_form})",
+                e.bvg_capital
+            );
         }
     }
 

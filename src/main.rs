@@ -537,6 +537,37 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         entitlements.bvg_capital + entitlements.pillar3a_capital + entitlements.bridge_capital
     );
     let bridge_years = 65u32.saturating_sub(args.retirement_age);
+    // Whether the age is something the person may actually do. The projection will compute
+    // any age; saying which ones the law permits is a different job, and an impossible plan
+    // looks exactly like a possible one on the page.
+    let availability = early_retirement::retirement_availability(&params, args.retirement_age);
+    println!();
+    println!(
+        "    AVAILABILITY: {} — {}",
+        availability.label(),
+        match availability {
+            early_retirement::RetirementAvailability::StatutoryRight =>
+                "BVG Art. 13 Abs. 2 lets you draw from completed 63 as of right",
+            early_retirement::RetirementAvailability::FundMayPermit =>
+                "BVV 2 Art. 1i lets a fund permit retirement from 58, but only if its own \
+                 regulations provide for it. Check your Vorsorgereglement",
+            early_retirement::RetirementAvailability::NotAvailableUnderBvg =>
+                "below 58 is not available under the BVG at all. Earlier retirement exists \
+                 only for company restructurings or public-safety employment, neither of \
+                 which this model represents — so read what follows as a scenario, not a plan",
+        }
+    );
+    if args.retirement_age < params.ahv_earliest_age {
+        println!(
+            "    AHV cannot be drawn before completed {} (AHVG Art. 40), so the first {} years",
+            params.ahv_earliest_age,
+            params.ahv_earliest_age.saturating_sub(args.retirement_age)
+        );
+        println!(
+            "    of this plan have no AHV at all, and the pension then starts reduced by {:.1}%.",
+            entitlements.ahv_early_reduction * 100.0
+        );
+    }
     if bridge_years > 0 {
         println!();
         println!(
@@ -544,13 +575,23 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             bridge_years
         );
         println!(
-            "    AHV at all, and a non-employed person still owes AHV contributions of"
+            "    full AHV, and a non-employed person still owes AHV contributions of"
         );
         println!(
-            "    CHF {:.0} to {:.0} a year until the reference age (AHVG Art. 3 Abs. 1bis,",
-            params.ahv_non_employed_annual_min, params.ahv_non_employed_annual_max
+            "    CHF {:.0} to {:.0} a year for {} years — between CHF {:.0} and CHF {:.0} in",
+            params.ahv_non_employed_annual_min,
+            params.ahv_non_employed_annual_max,
+            entitlements.non_employed_years,
+            entitlements.bridge_ahv_contributions_min,
+            entitlements.bridge_ahv_contributions_max
         );
-        println!("    Art. 10). That gap is the largest single cost of retiring early.");
+        println!(
+            "    total (AHVG Art. 3 Abs. 1bis, Art. 10). The range is real: the amount is a"
+        );
+        println!(
+            "    table assessed on wealth and rental income, not a rate, so a single figure"
+        );
+        println!("    would be a claim about your balance sheet.");
     }
     if args.conversion_rate <= crate::early_retirement::RetirementParameters::default().bvg_conversion_rate + 1e-9
     {
