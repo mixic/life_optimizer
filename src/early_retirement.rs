@@ -202,57 +202,80 @@ pub struct RetirementParameters {
     pub bvg_min_interest: f64,
     /// Maximum annual Pillar 3a contribution for an employee with a pension fund.
     pub pillar3a_max_annual: f64,
+    /// Minimum annual AHV contribution for a non-employed person (AHV alone).
+    pub ahv_non_employed_annual_min: f64,
+    /// Maximum annual AHV/IV/EO contribution for a non-employed person.
+    pub ahv_non_employed_annual_max: f64,
     /// Tax on a lump-sum capital withdrawal, as a banded schedule.
     pub capital_withdrawal_tax: BandedTax,
 }
 
 impl Default for RetirementParameters {
-    /// Defaults reuse the citations already established in `monte_carlo.rs` where the
-    /// figure is statutory, and mark everything fund- or canton-specific as **declared**.
+    /// Defaults are the **2026** statutory figures where the law fixes them, and are
+    /// marked **declared** where it does not. The distinction is load-bearing here: the
+    /// conversion rate's *early-withdrawal reduction* has no statutory schedule at all —
+    /// each fund writes its own — so a single number for it would be an invention wearing
+    /// a citation.
     fn default() -> Self {
         RetirementParameters {
-            ahv_max_annual_single: 29_400.0,
-            ahv_max_annual_couple: 44_100.0,
+            // 13 monthly payments from 2026 under AHVG Art. 34ter: 13 x 2,520 single and
+            // 13 x 3,780 for a couple. The 13th pension is why these are not 12 x the
+            // monthly figure, and using the pre-2026 annual amounts would understate a
+            // funded plan by a full month of pension.
+            ahv_max_annual_single: 32_760.0,
+            ahv_max_annual_couple: 49_140.0,
             ahv_reference_age: 65,
             ahv_earliest_age: 63,
             ahv_reduction_per_early_year: 0.068,
             ahv_full_contribution_years: 44,
             bvg_conversion_rate: crate::monte_carlo::STATUTORY_CONVERSION_RATE,
             bvg_reference_age: 65,
-            // The mandatory rate is a legal floor, not what a fund applies. Funds reduce
-            // the conversion rate on early withdrawal by their own schedule, and the
-            // reduction is typically several percent per year. The value here is a
-            // declared stand-in: see `provenance_table`.
+            // Declared. No statutory or ordinance schedule exists for the reduction on
+            // early withdrawal: it is a reglementary benefit, and two published funds
+            // differ by roughly a factor of two per year of early draw (about 4.3% a year
+            // relative in the mandatory part against about 2.3%). The value here is a
+            // stand-in between them.
             bvg_early_reduction_per_year: 0.02,
-            bvg_earliest_age: 58,
+            // BVG Art. 13 Abs. 2: statutory early draw from completed age 63. Funds may
+            // permit earlier, from 58, under BVV 2 Art. 1i — which is a plan feature and
+            // not a right, so the statutory floor is what defaults here.
+            bvg_earliest_age: 63,
             bvg_coordination_deduction: 26_460.0,
             bvg_entry_threshold: 22_680.0,
             bvg_min_interest: 0.0125,
             pillar3a_max_annual: 7_258.0,
+            // Non-employed AHV contributions are a fixed table amount, not a rate:
+            // AHVG Art. 10 Abs. 1 gives a minimum of CHF 435 and a maximum of fifty times
+            // it. A retiree below the reference age who is not working owes these, and
+            // leaving them out would make the bridge years look cheaper than they are.
+            ahv_non_employed_annual_min: 530.0,
+            ahv_non_employed_annual_max: 26_500.0,
             capital_withdrawal_tax: BandedTax {
                 allowance: 0.0,
                 bands: vec![
                     TaxBand {
                         width: 50_000.0,
+                        marginal_rate: 0.0065,
+                    },
+                    TaxBand {
+                        width: 150_000.0,
+                        marginal_rate: 0.012,
+                    },
+                    TaxBand {
+                        width: 300_000.0,
                         marginal_rate: 0.02,
                     },
                     TaxBand {
-                        width: 100_000.0,
-                        marginal_rate: 0.04,
-                    },
-                    TaxBand {
-                        width: 200_000.0,
-                        marginal_rate: 0.06,
-                    },
-                    TaxBand {
                         width: 500_000.0,
-                        marginal_rate: 0.08,
+                        marginal_rate: 0.03,
                     },
                 ],
-                provenance: Provenance::Declared {
-                    rationale: "capital-withdrawal tax rates are set by each canton and are \
-                                published as stepped tables; this is a declared stand-in in \
-                                the shape of one, and the mode takes a canton's own bands",
+                provenance: Provenance::VariesByFundOrCanton {
+                    basis: "the capital-benefit rate is set by the canton of domicile: the \
+                            federal share is one fifth of the ordinary tariff (DBG Art. 38), \
+                            while cantonal tariffs run from a flat 2% (Zurich, Thurgau) to a \
+                            progressive scale reaching about 6% (Geneva). The bands here are \
+                            a declared stand-in in that shape",
                 },
             },
         }
@@ -267,70 +290,127 @@ impl RetirementParameters {
             (
                 "AHV maximum, single",
                 Provenance::Sourced {
-                    source: "AHV maximum old-age pension, as carried in monte_carlo.rs",
-                    vintage: "current",
+                    source: "BSV, Beträge gültig ab dem 1. Januar 2026: maximum single old-age \
+                             pension CHF 2,520 a month, and 13 monthly payments from 2026 under \
+                             AHVG Art. 34ter",
+                    vintage: "2026",
                 },
             ),
             (
                 "AHV maximum, couple",
                 Provenance::Sourced {
-                    source: "AHV maximum old-age pension for a married couple, as carried in \
-                             monte_carlo.rs",
-                    vintage: "current",
+                    source: "BSV, Beträge gültig ab dem 1. Januar 2026: couple maximum CHF 3,780 \
+                             a month, capped at 150% of the single maximum by AHVG Art. 35; \
+                             13 payments from 2026",
+                    vintage: "2026",
                 },
             ),
             (
                 "AHV reference age",
-                Provenance::VariesByFundOrCanton {
-                    basis: "statutory AHV reference age; take the current figure for the \
-                            person's cohort, including any legislated transition for women",
+                Provenance::Sourced {
+                    source: "AHVG Art. 21 Abs. 1, as amended by AHV 21 in force 1 January 2024: \
+                             65 for women and men, with a transition for the cohorts of 1961 to \
+                             1963",
+                    vintage: "2024",
                 },
             ),
             (
-                "AHV early-draw reduction",
+                "AHV earliest draw, and reduction",
                 Provenance::Sourced {
-                    source: "AHV actuarial reduction for early draw, per year",
-                    vintage: "current",
+                    source: "AHVG Art. 40 Abs. 1 (earliest draw at completed age 63) and AHVV \
+                             Art. 56bis (6.8% a year, maximum 13.6%). AHVG Art. 40a Abs. 3 cuts \
+                             the reduction by 40% for low incomes",
+                    vintage: "2025",
+                },
+            ),
+            (
+                "AHV full contribution years",
+                Provenance::Sourced {
+                    source: "AHVG Art. 29: contribution years equal to the cohort's; 44 for men \
+                             and for women from the 1964 cohort",
+                    vintage: "2026",
                 },
             ),
             (
                 "BVG conversion rate (Umwandlungssatz)",
                 Provenance::Sourced {
-                    source: "BVG Art. 14 legal minimum, via monte_carlo::STATUTORY_CONVERSION_RATE",
-                    vintage: "in force since 2014",
+                    source: "BVG Art. 14 Abs. 2: a minimum conversion rate of 6.8% at reference \
+                             age 65. Introduced by the 1st BVG revision (AS 2004 1677) and \
+                             phased in, reaching 6.8% for both sexes in 2014. The attempt to \
+                             lower it to 6.0% was REJECTED in the referendum of 22 September \
+                             2024 by 1,655,513 to 810,569 (BBl 2025 1534), so the rate stands",
+                    vintage: "6.8% since the phase-in completed in 2014; reform rejected 2024",
                 },
             ),
             (
                 "BVG early-withdrawal reduction",
                 Provenance::VariesByFundOrCanton {
-                    basis: "each pension fund sets its own reduction schedule for early \
-                            withdrawal; there is no single statutory number",
+                    basis: "there is NO statutory or ordinance schedule. The reduction is a \
+                            reglementary benefit each fund writes into its own Vorsorgereglement. \
+                            Two published funds differ by about a factor of two per year of early \
+                            draw, so this must come from the fund's own statement",
                 },
             ),
             (
-                "BVG coordination deduction",
-                Provenance::VariesByFundOrCanton {
-                    basis: "statutory coordination deduction, revised periodically; funds may \
-                            use a different one above the mandatory minimum",
+                "BVG reference age and earliest draw",
+                Provenance::Sourced {
+                    source: "BVG Art. 13 Abs. 1 (reference age 65, via AHVG Art. 21), BVG Art. 13 \
+                             Abs. 2 (statutory early draw from completed age 63, deferral to 70), \
+                             BVV 2 Art. 1i (funds may permit retirement from 58)",
+                    vintage: "2024",
+                },
+            ),
+            (
+                "BVG coordination deduction and entry threshold",
+                Provenance::Sourced {
+                    source: "BVG Art. 8 Abs. 1 and BVV 2 Art. 5: coordination deduction CHF 26,460 \
+                             and entry threshold CHF 22,680, upper limit CHF 90,720, unchanged \
+                             for 2026",
+                    vintage: "2026",
                 },
             ),
             (
                 "BVG minimum interest",
-                Provenance::VariesByFundOrCanton {
-                    basis: "the minimum rate is re-set by the Federal Council, usually annually",
+                Provenance::Sourced {
+                    source: "BVV 2 Art. 12 lit. k: 1.25% from 1 January 2024, confirmed unchanged \
+                             for 2026 by the Federal Council on 5 November 2025",
+                    vintage: "2026",
+                },
+            ),
+            (
+                "BVG savings credit rates",
+                Provenance::Sourced {
+                    source: "BVG Art. 16: 7% at 25-34, 10% at 35-44, 15% at 45-54, 18% from 55; \
+                             the employee share may not exceed half (BVG Art. 16 Abs. 1)",
+                    vintage: "2026",
                 },
             ),
             (
                 "Pillar 3a maximum",
-                Provenance::VariesByFundOrCanton {
-                    basis: "the 3a ceiling is re-set annually and differs for the self-employed",
+                Provenance::Sourced {
+                    source: "BVV 3 Art. 7 Abs. 1 lit. a: 8% of the BVG upper limit, giving \
+                             CHF 7,258 for an employee with a pension fund; 20% of earned income \
+                             capped at CHF 36,288 for someone without one",
+                    vintage: "2026",
+                },
+            ),
+            (
+                "AHV contributions of a non-employed early retiree",
+                Provenance::Sourced {
+                    source: "AHVG Art. 3 Abs. 1bis (liability continues to the reference age) and \
+                             AHVG Art. 10 Abs. 1 (a table amount, minimum CHF 435 and maximum \
+                             fifty times it, assessed on wealth and rental income under AHVV \
+                             Art. 28). Note this is a fixed amount, not a percentage",
+                    vintage: "2026",
                 },
             ),
             (
                 "Capital-withdrawal tax bands",
-                Provenance::Declared {
-                    rationale: "cantonal stepped tables; the default is a stand-in shape and \
-                                the mode is designed to take a canton's own",
+                Provenance::VariesByFundOrCanton {
+                    basis: "the federal share is one fifth of the ordinary tariff (DBG Art. 38); \
+                            the cantonal tariff is set by the canton of domicile and runs from a \
+                            flat 2% (Zurich, Thurgau) to a progressive scale reaching about 6% \
+                            (Geneva). The bands are a declared stand-in in that shape",
                 },
             ),
         ]

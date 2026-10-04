@@ -470,7 +470,7 @@ fn pivot(
     tableau: &mut [Vec<f64>],
     pivot_row: usize,
     pivot_column: usize,
-    rows: usize,
+    _rows: usize,
     rhs: usize,
 ) {
     let pivot_value = tableau[pivot_row][pivot_column];
