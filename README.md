@@ -388,12 +388,18 @@ life-optimizer/
 ├── EARLY_RETIREMENT.md           Early retirement as an optimisation: the withdrawal
 │                                 allocation as a linear program and its dual, a
 │                                 10,000-path risk sweep, and the education-contribution
-│                                 question priced but deliberately not ranked├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
+│                                 question priced but deliberately not ranked
+├── THE_RECIPROCITY_OF_THE_EDUCATED.md
+│                                 A position, argued in the first person, on what a publicly
+│                                 funded qualification obliges its holder to return, and on
+│                                 how much of that obligation an early-retirement plan can
+│                                 avoid while every ledger column still reads correctly
+├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
 │                                 budget and one clock: the crossing horizon, the critical
 │                                 discount rate, and a paired Monte Carlo of both
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
-│                                 tools/plot_information_warfare.py, tools/plot_spoiler.py
-│                                 and tools/plot_strategies.py
+│                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,
+│                                 tools/plot_strategies.py and tools/plot_early_retirement.py
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
