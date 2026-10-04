@@ -89,10 +89,16 @@
 //!
 //! A region's peace margin `sigma` is a property of a counterfactual payoff matrix. No
 //! one has measured it, in the Near East or anywhere else, and no published figure could
-//! stand in for it -- so [`Region::margin_provenance`] is illustrative by construction
-//! and stays that way. A region's capturable rent is a different matter: resource rents
-//! are reported, so [`Region::rent_provenance`] could in principle be anchored, and the
-//! framework is built so that anchoring it needs a number and not a re-derivation.
+//! stand in for it -- so the field `margin_provenance` on `Region` is illustrative by
+//! construction and stays that way. A region's capturable rent is a different matter:
+//! resource rents are reported, so `rent_provenance` could in principle be anchored, and
+//! the framework is built so that anchoring it needs a number and not a re-derivation.
+//!
+//! (Those two are named rather than linked because rustdoc does not resolve a link to
+//! `Region` from this module's own doc comment -- "no item named `Region` in scope" -- even
+//! though the identical link resolves in an item doc lower down the file and `StrategyParams`
+//! resolves from here. Naming them plainly costs a reader nothing and keeps
+//! `RUSTDOCFLAGS=-D warnings` green, which is the check CI actually runs.)
 //!
 //! What this means for reading anything below: **no level is a finding**. The
 //! comparison *between* the two strategies is the finding, and it is worth exactly as
