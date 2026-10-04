@@ -458,11 +458,10 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
     println!("  longevity. Every risk is printed as a number; none is summarised away.");
 
     // ---- 1. the parameters, before any result ---------------------------------
-    let mut params = RetirementParameters::default();
-    params.bvg_conversion_rate = args.conversion_rate;
-    params.bvg_early_reduction_per_year = args.early_reduction;
-    if let Some(flat) = args.capital_tax_rate {
-        params.capital_withdrawal_tax = BandedTax {
+    // Built by struct update rather than by mutating a default, so that every override is
+    // visible in one place and the compiler checks the field names.
+    let capital_tax = match args.capital_tax_rate {
+        Some(flat) => BandedTax {
             allowance: 0.0,
             bands: vec![TaxBand {
                 width: 10_000_000.0,
@@ -471,8 +470,15 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             provenance: early_retirement::Provenance::Declared {
                 rationale: "a flat rate passed on the command line",
             },
-        };
-    }
+        },
+        None => RetirementParameters::default().capital_withdrawal_tax,
+    };
+    let params = RetirementParameters {
+        bvg_conversion_rate: args.conversion_rate,
+        bvg_early_reduction_per_year: args.early_reduction,
+        capital_withdrawal_tax: capital_tax,
+        ..RetirementParameters::default()
+    };
 
     println!();
     println!("  1. The parameters, and which of them are law");
