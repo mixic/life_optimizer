@@ -318,8 +318,9 @@ choice is left where it belongs.
 ## 8. Reproduction
 
 ```sh
-cargo test --lib simplex            # the solver, including Beale's cycling example
-cargo test --lib early_retirement   # the model, the three routes, and the trade-offs
+cargo test --test early_retirement     # the age matrix and the contract, 24 integration tests
+cargo test --lib simplex               # the solver, including Beale's cycling example
+cargo test --lib early_retirement      # the internals: the allocation, the ledger, the shadow tests
 
 # The plan, the allocation, the risk sweep and the four ledgers. Pass your own fund's
 # figures: --conversion-rate is the one that matters most.
