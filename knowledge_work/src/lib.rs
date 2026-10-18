@@ -55,6 +55,8 @@
 //! It also does not claim the queue is the whole of knowledge work: a queue says nothing about
 //! whether the work was worth doing, and that question lives in the document.
 
+pub mod direction;
+pub mod envelope;
 pub mod queue;
 pub mod sim;
 pub mod workflow;
