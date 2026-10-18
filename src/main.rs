@@ -16,7 +16,7 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs};
 use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
 use clap::{Parser, Subcommand, ArgAction};
@@ -1755,6 +1755,20 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     mc_display::print_regime_switching_result(&regime_result, monthly_needs);
 
+    // What retirement is assumed to cost, made contestable: the range around the figure in use
+    // and the level at which the plan stops working. The projection is the one just computed, so
+    // the break-even and the adequacy probability cannot disagree about what the plan pays.
+    let projected = retirement_needs::projected_monthly(
+        regime_result.median_real_pension,
+        regime_result.ahv_monthly,
+    );
+    let needs_report = retirement_needs::NeedsReport::new(
+        projected,
+        optimal.after_tax_income / 12.0,
+        retirement_needs::Basis::Modelled(monthly_needs),
+    );
+    display::print_needs_report(&needs_report);
+
     let stress_result = regime_sim.run_retirement_shock_stress_test();
     mc_display::print_stress_test_result(&stress_result, regime_result.median_real_pension, monthly_needs);
 
@@ -2233,14 +2247,21 @@ fn run_pension_simulation(
 
     let working_income = salary * work_pct;
     let after_tax = tax_schedule.after_tax_income(working_income);
-    let monthly_needs = after_tax / 12.0 * 0.75; // 75% of current net
+    // The conventional rule of thumb, named rather than repeated. The main optimization path
+    // uses a modelled budget instead; this standalone pension command has no household budget
+    // to draw on, so it states the assumption and labels it.
+    let monthly_needs = after_tax / 12.0 * retirement_needs::DEFAULT_PERCENT;
 
     println!("\n  Work:         {:.0}%  |  Gross: CHF {:.0}/year  |  Net: CHF {:.0}/month",
         work_pct * 100.0, working_income, after_tax / 12.0);
     println!("  Retirement:   age {}  →  age {}  ({} years in retirement)",
         retirement_age, life_expectancy, life_expectancy - retirement_age);
     println!("  Pillar 3a:    CHF {:.0}/year", pillar3a);
-    println!("  Target needs: CHF {:.0}/month (75% of current net)", monthly_needs);
+    println!(
+        "  Target needs: CHF {:.0}/month ({:.0}% of current net -- a rule of thumb, not a budget)",
+        monthly_needs,
+        retirement_needs::DEFAULT_PERCENT * 100.0
+    );
 
     let mut sim = monte_carlo::PensionSimulator::new(
         age, retirement_age, life_expectancy,

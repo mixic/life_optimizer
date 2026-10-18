@@ -583,3 +583,66 @@ pub fn print_lifetime_strategy(strategy: &[(u32, f64)]) {
 
     println!("\n{}", "=".repeat(60));
 }
+/// Print what retirement is assumed to cost, the range around it, and the break-even.
+///
+/// The point of this block is to stop the adequacy verdict resting on a number the user never
+/// chose. Coverage is pension over needs, so the useful question is not "am I at 117%" but "my
+/// plan supports CHF 5,120 a month -- do I expect to spend more than that?" The range answers the
+/// second question, and the sensitivity line says whether the verdict survives it.
+pub fn print_needs_report(report: &crate::retirement_needs::NeedsReport) {
+    println!("\n{}", "Retirement needs, as an input rather than an assumption:".bold());
+    println!(
+        "  You are evaluated at {}",
+        report.chosen.basis.describe(report.net_monthly_income)
+    );
+    println!(
+        "  Projected income:  CHF {:.0}/month (BVG + AHV, real)",
+        report.projected_monthly
+    );
+    println!(
+        "  {} BREAK-EVEN: this plan supports up to CHF {:.0}/month.{}",
+        "->".cyan().bold(),
+        report.break_even_monthly,
+        if report.chosen.monthly > report.break_even_monthly {
+            " You assume more than that.".red().to_string()
+        } else {
+            String::new()
+        }
+    );
+    println!();
+    println!(
+        "  {:>8} {:>14} {:>10} {:>11}",
+        "of that", "needs/month", "coverage", "verdict"
+    );
+    for point in &report.range {
+        let marker = if point.monthly == report.chosen.monthly {
+            " <=="
+        } else {
+            ""
+        };
+        println!(
+            "  {:>8} {:>14.0} {:>9.0}% {:>11}{marker}",
+            format!("{:.0}%", point.share * 100.0),
+            point.monthly,
+            point.coverage.min(9.99) * 100.0,
+            point.verdict.label()
+        );
+    }
+    if report.is_sensitive_to_the_range() {
+        println!();
+        println!(
+            "  {}",
+            "The verdict depends on what you spend: it does not hold across the range."
+                .yellow()
+                .bold()
+        );
+    }
+    println!();
+    println!("  {}", report.headline());
+    println!(
+        "  {}",
+        "Spending is not modelled as changing with age, health, or a partner's death. See \
+         CRITIQUE_RESPONSE.md."
+            .dimmed()
+    );
+}
