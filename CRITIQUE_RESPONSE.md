@@ -45,13 +45,13 @@ same treatment this repository gives everything else: the claim, the evidence, a
 | C5 | Maintenance: large volume, single author, aging tax data | **Verified** | `git log` has one author; last commit 2026-10-18; Bern 2024 tables; no `VALIDATION.md` |
 | C6 | The GPL relicense is a notable, under-explained signal | **Verified** | `README.md:468-476` states the benefit and never says what it is meant to prevent |
 | 1.1 | Model the team externality or warn on every reduction | **Verified** | See C4 |
-| 1.2 | Make retirement needs a first-class input, report a range and break-even | **Verified** | `README.md:450-451`; needs are derived, not asked for |
+| 1.2 | Make retirement needs a first-class input, report a range and break-even | **Verified, now fixed** | Needs were derived, never asked for. `--retirement-needs`, `--retirement-needs-percent` and an interactive prompt now set it; a 60/75/90 range and the break-even are printed. |
 | 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Partly — components already printed; weights and sensitivity are now added** | `display.rs:191-200` printed the five components and the total. The weights were never shown and nothing was perturbed; both are now done, by `src/robustness.rs`. |
 | 1.4 | Single-canton calibration is a structural limit | **Partly — the finding is right, the architecture claim is not** | All 26 cantons are modelled and provenance-enforced; verified tables exist only for Bern. Data problem, as the review says. |
 | 1.5 | Pension parameters asserted without figures in the README | **Verified** | `README.md:96` mentions "the higher conversion rate you earn by working longer" and never gives the number |
 | 2.1 | The scope has swallowed the product | **Verified** | Same evidence as C1 |
 | 2.2 | No validation or test evidence in the README | **Partly** | CI exists and passes; there is no badge and no validation against external references. The absence of validation is real and is the highest-leverage gap. |
-| 2.3 | The output is dense but not decision-oriented | **Verified** | The report prints an optimum and a "closest option" fallback, never a ranked comparison with margins |
+| 2.3 | The output is dense but not decision-oriented | **Verified, now fixed** | It printed an optimum and a "closest option" fallback with no margins. `display::print_decision_margin` now prints the top three with margins and calls a margin inside a declared 2% band a tie rather than a win. |
 | 2.4 | The AI-productivity CLI surface is overbuilt for its epistemic status | **Verified** | Eight AI-family flags across `src/` -- `--ai-productivity-gain`, `--ai-productivity-gain-high`, `--ai-quality-retention`, `--compression-quality-sensitivity`, `--replacement-risk`, `--evaluation-period-years`, `--enforcement`, `--required-output-index` -- for coefficients the README calls illustrative |
 | 2.5 | The interactive mode is mentioned but undocumented | **Partly** | Three mentions in `README.md`, no transcript |
 | 3.1 | The repository reads as a personal manifesto | **Verified** | Same evidence as C1 |

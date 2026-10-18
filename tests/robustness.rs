@@ -167,3 +167,24 @@ fn the_searched_range_follows_the_candidates() {
     assert!(close(report.searched.0, 0.6));
     assert!(close(report.searched.1, 0.8));
 }
+/// The near-tie band must be relative to the leading score, and must bracket the declared edge
+/// without sitting on it. A band that only existed inside a formatting call could not be checked;
+/// this is why the predicate was extracted.
+#[test]
+fn the_near_tie_band_brackets_its_declared_edge() {
+    use life_optimizer::display::{is_near_tie, NEAR_TIE_BAND};
+
+    // Two per cent of 10 is 0.2, so 0.19 is a tie and 0.21 is not.
+    assert!(is_near_tie(10.0, 10.0 - 0.19));
+    assert!(!is_near_tie(10.0, 10.0 - 0.21));
+    // The band is relative, so the same absolute margin is a tie against a large score and not
+    // against a small one.
+    assert!(is_near_tie(100.0, 99.0));
+    assert!(!is_near_tie(10.0, 9.0));
+    // Identical scores are a tie; the leading score is a tie with itself.
+    assert!(is_near_tie(7.5, 7.5));
+    // A zero leader is degenerate and must not divide by zero.
+    assert!(is_near_tie(0.0, 0.0));
+    assert!(!is_near_tie(0.0, 1.0));
+    assert_eq!(NEAR_TIE_BAND, 0.02);
+}

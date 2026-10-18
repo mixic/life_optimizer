@@ -702,3 +702,104 @@ pub fn print_robustness_report(report: &crate::robustness::RobustnessReport) {
     }
     println!("  {}", crate::robustness::provenance_note().dimmed());
 }
+/// The margin between the recommendation and the alternatives.
+///
+/// The tool has always printed an optimum and left the reader to infer whether it was
+/// distinguishable from the runner-up. That inference is exactly what a utility score cannot
+/// support: 31.75 against 31.70 and 31.75 against 25.00 are the same headline and completely
+/// different decisions. So the top options are printed with their margins, and a margin inside the
+/// declared band is called a tie rather than a win.
+pub fn print_decision_margin(scenarios: &[WorkScenario], chosen: &WorkScenario) {
+    // Only the options the tool would actually offer: a scenario that fails the household's
+    // requirements, or that the employer constraint blocks, is not a runner-up.
+    let mut offered: Vec<&WorkScenario> = scenarios
+        .iter()
+        .filter(|scenario| scenario.meets_requirements && !scenario.blocks_recommendation())
+        .collect();
+    if offered.len() < 2 {
+        println!(
+            "\n{}",
+            "Only one work percentage is feasible, so there is no margin to report.".yellow()
+        );
+        return;
+    }
+    offered.sort_by(|a, b| {
+        b.utility_score
+            .partial_cmp(&a.utility_score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let best = offered[0].utility_score;
+    println!("\n{}", "Is the leader distinguishable from the runner-up?".bold());
+    println!(
+        "  {:>8} {:>10} {:>10} {:>10}",
+        "work", "utility", "margin", "verdict"
+    );
+    for scenario in offered.iter().take(3) {
+        let margin = best - scenario.utility_score;
+        // A margin is judged relative to the leading score, because the utility scale is
+        // arbitrary: 0.3 points means nothing in the abstract and 1% is a declared reading.
+        let verdict = if margin == 0.0 {
+            "leader".to_string()
+        } else if is_near_tie(best, scenario.utility_score) {
+            format!("tie (<{:.0}%)", NEAR_TIE_BAND * 100.0)
+        } else {
+            "behind".to_string()
+        };
+        println!(
+            "  {:>7.0}% {:>10.2} {:>10.2} {:>10}",
+            scenario.work_percentage * 100.0,
+            scenario.utility_score,
+            margin,
+            verdict
+        );
+    }
+
+    let runner_up = offered[1];
+    let margin = best - runner_up.utility_score;
+    let relative = if best.abs() > 0.0 { margin / best.abs() } else { 0.0 };
+    println!();
+    if relative < NEAR_TIE_BAND {
+        println!(
+            "  {} {:.0}% and {:.0}% score within {:.1}% of each other. On this model they are a \
+             tie, and the choice should be made on something the model does not measure.",
+            "NEAR TIE:".yellow().bold(),
+            chosen.work_percentage * 100.0,
+            runner_up.work_percentage * 100.0,
+            relative * 100.0
+        );
+    } else {
+        println!(
+            "  {} {:.0}% leads {:.0}% by {:.2} utility points ({:.0}% of the leading score).",
+            "SEPARATED:".green().bold(),
+            chosen.work_percentage * 100.0,
+            runner_up.work_percentage * 100.0,
+            margin,
+            relative * 100.0
+        );
+    }
+    println!(
+        "  {}",
+        "The band is declared at 2% of the leading score: the utility scale is arbitrary, so a \
+         margin in points carries no meaning on its own."
+            .dimmed()
+    );
+}
+
+/// Whether two utility scores are within the declared near-tie band.
+///
+/// Extracted from the printer so the band can be tested without capturing stdout: a threshold that
+/// only exists inside a formatting call is a threshold nobody can check.
+pub fn is_near_tie(best: f64, other: f64) -> bool {
+    if best.abs() <= f64::EPSILON {
+        return (best - other).abs() <= f64::EPSILON;
+    }
+    ((best - other) / best.abs()) < NEAR_TIE_BAND
+}
+
+/// How close two utility scores must be to be called a tie, as a share of the leading score.
+///
+/// Declared. Two per cent is wide enough that rounding, the candidate grid, and small parameter
+/// differences cannot manufacture a winner, and narrow enough that a real preference difference
+/// survives it.
+pub const NEAR_TIE_BAND: f64 = 0.02;

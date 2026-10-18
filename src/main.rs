@@ -458,6 +458,22 @@ struct OptimizeArgs {
     /// printed beside the figure so it can be argued with.
     #[arg(long, default_value = "0.0")]
     externality_weight: f64,
+
+    /// What you expect to spend per month in retirement, in CHF.
+    ///
+    /// Left unset, the tool uses this household's modelled budget, which is its own construction.
+    /// Supplying a figure replaces that with the only number that is a measurement of your life.
+    /// The adequacy verdict is reported across a 60/75/90 range either way, and the level at which
+    /// the plan stops working is printed, because "coverage 117%" is not a decision.
+    #[arg(long)]
+    retirement_needs: Option<f64>,
+
+    /// Retirement needs as a share of net income, when you would rather use a rule of thumb.
+    ///
+    /// Off by default so that the modelled budget is used; setting this is an explicit choice to
+    /// use a percentage instead. 0.75 is the conventional figure and is *not* a measurement.
+    #[arg(long)]
+    retirement_needs_percent: Option<f64>,
 }
 
 /// Optimise an early-retirement plan.
@@ -1073,6 +1089,8 @@ fn main() {
                 team_size,
                 redistribution,
                 externality_weight,
+                retirement_needs,
+                retirement_needs_percent,
                 imputed_rental_value,
                 pensioner,
                 insurance_premiums,
@@ -1122,6 +1140,8 @@ fn main() {
                 team_size,
                 redistribution,
                 externality_weight,
+                retirement_needs,
+                retirement_needs_percent,
                 household_facts: HouseholdFacts {
                     imputed_rental_value,
                     receives_pension: pensioner,
@@ -1583,6 +1603,11 @@ struct OptimizeParams<'a> {
     redistribution: f64,
     /// `--externality-weight`: the user's own valuation of a moved hour per week.
     externality_weight: f64,
+    /// `--retirement-needs`: monthly retirement spending, when the user supplied a figure.
+    retirement_needs: Option<f64>,
+    /// `--retirement-needs-percent`: needs as a share of net income, when the user prefers a rule
+    /// of thumb to the modelled budget.
+    retirement_needs_percent: Option<f64>,
     /// Extra household facts the deduction model uses; see [`HouseholdFacts`].
     household_facts: HouseholdFacts,
 }
@@ -1610,6 +1635,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
         team_size,
         redistribution,
         externality_weight,
+        retirement_needs: needs_chf,
+        retirement_needs_percent: needs_percent,
         household_facts,
     } = p;
 
@@ -1768,7 +1795,23 @@ fn run_optimization(p: OptimizeParams<'_>) {
     let needs_report = retirement_needs::NeedsReport::new(
         projected,
         optimal.after_tax_income / 12.0,
-        retirement_needs::Basis::Modelled(monthly_needs),
+        {
+            // The figure that decides the adequacy verdict. A supplied number wins over a
+            // percentage, and a percentage wins over the modelled budget, because the more
+            // specific the user was the less the tool should substitute its own construction.
+            if needs_chf.is_some() && needs_percent.is_some() {
+                println!(
+                    "  {}",
+                    "--retirement-needs wins over --retirement-needs-percent; using your figure."
+                        .yellow()
+                );
+            }
+            match (needs_chf, needs_percent) {
+                (Some(monthly), _) => retirement_needs::Basis::ExplicitMonthly(monthly),
+                (None, Some(share)) => retirement_needs::Basis::PercentOfNet(share),
+                (None, None) => retirement_needs::Basis::Modelled(monthly_needs),
+            }
+        },
     );
     display::print_needs_report(&needs_report);
 
@@ -1784,6 +1827,10 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     display::print_comparison_table_for(&all_scenarios, Some(&tax_basis));
     display::print_recommendations(&optimal, age);
+
+    // Whether the leader is distinguishable from the runner-up. A utility score cannot answer
+    // that on its own, and a near-tie is a different decision from a clear win.
+    display::print_decision_margin(&all_scenarios, &optimal);
 
     // How much of the recommendation rests on the weights the user never chose.
     let robustness = robustness::analyse(&config_for_robustness, &candidates);
@@ -2197,6 +2244,24 @@ fn run_interactive() {
         _ => "balanced",
     };
 
+    // The figure that decides whether a retirement plan is adequate. Asked rather than assumed:
+    // a rule of thumb here is exactly the hidden assumption this tool exists to expose, and a
+    // blank answer keeps the household budget model instead of silently adopting a guess.
+    println!("\nWhat will you need per month in retirement, in CHF?");
+    println!("  Leave blank to use this household's modelled budget.");
+    println!("  The result reports a 60/75/90 range and the level at which the plan stops");
+    println!("  working either way, so this is a starting point rather than a commitment.");
+    let needs_answer = read_input("Monthly need (CHF, blank for the modelled budget): ");
+    let retirement_needs: Option<f64> = needs_answer
+        .parse::<f64>()
+        .ok()
+        .filter(|value| *value > 0.0);
+    if retirement_needs.is_some() {
+        println!("  Using your figure.");
+    } else if !needs_answer.is_empty() {
+        println!("  That did not parse as a positive number; using the modelled budget.");
+    }
+
     println!("\n{}", "Analyzing your situation...".yellow());
     
     run_optimization(OptimizeParams {
@@ -2225,6 +2290,8 @@ fn run_interactive() {
         team_size: 0,
         redistribution: 1.0,
         externality_weight: 0.0,
+        retirement_needs,
+        retirement_needs_percent: None,
         // The interactive prompt does not ask about these, and assuming them
         // would be exactly the guessing the deduction model refuses to do.
         household_facts: HouseholdFacts::default(),
