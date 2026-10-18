@@ -439,6 +439,38 @@ impl MarketAssumptions {
     }
 }
 
+
+// ─── BVG contribution base ────────────────────────────────────────────────────
+//
+// The savings rates are levied on the *coordinated* salary, not on gross salary: the part of
+// insured salary above the coordination deduction, with insured salary capped at the upper limit
+// and nothing at all below the entry threshold (BVG Art. 2 Abs. 1, Art. 8 Abs. 1; BVV 2 Art. 5).
+//
+// This was wrong until it was found while writing the --verbose block, and it was wrong in the
+// expensive direction: every contribution was computed on gross salary, so a CHF 120,000 earner
+// aged 40 contributed 120,000 x 10% = 12,000 where the law requires
+// (90,720 - 26,460) x 10% = 6,426. The projected pension was roughly double what the scheme
+// actually provides, and the adequacy verdict rests on that projection.
+
+/// BVG coordination deduction: the part of salary above which contributions begin.
+pub const BVG_COORDINATION_DEDUCTION: f64 = 26_460.0;
+
+/// BVG entry threshold: below this annual salary there is no BVG obligation at all.
+pub const BVG_ENTRY_THRESHOLD: f64 = 22_680.0;
+
+/// BVG upper limit: insured salary is capped here, so contributions stop rising with pay.
+pub const BVG_UPPER_LIMIT: f64 = 90_720.0;
+
+/// The salary BVG savings contributions are actually levied on.
+///
+/// Zero below the entry threshold, capped at the upper limit, and reduced by the coordination
+/// deduction. The three constants above are the sourced 2026 figures, unchanged since 2025.
+pub fn coordinated_salary(annual_salary: f64) -> f64 {
+    if annual_salary < BVG_ENTRY_THRESHOLD {
+        return 0.0;
+    }
+    (annual_salary.min(BVG_UPPER_LIMIT) - BVG_COORDINATION_DEDUCTION).max(0.0)
+}
 // ─── Single simulation path ───────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
@@ -612,7 +644,7 @@ impl PensionSimulator {
             for year in 0..years_working as usize {
                 let age_this_year = self.current_age + year as u32;
                 let bvg_rate = Self::bvg_contribution_rate_at_age(age_this_year);
-                let annual_bvg_contribution = working_income * bvg_rate;
+                let annual_bvg_contribution = coordinated_salary(working_income) * bvg_rate;
 
                 // Annual return drawn from log-normal
                 let r: f64 = normal.sample(&mut rng).exp();
@@ -702,7 +734,9 @@ impl PensionSimulator {
         MonteCarloResult {
             n_simulations: n,
             work_percentage: self.work_percentage,
-            annual_contribution: working_income * Self::bvg_contribution_rate_at_age(self.retirement_age.saturating_sub(1)) + annual_3a_contribution,
+            annual_contribution: coordinated_salary(working_income)
+            * Self::bvg_contribution_rate_at_age(self.retirement_age.saturating_sub(1))
+            + annual_3a_contribution,
             years_contributing: self.retirement_age - self.current_age,
 
             median_capital:  capitals[n / 2],
@@ -785,7 +819,7 @@ impl PensionSimulator {
             for year in 0..years_working {
                 let age_this_year = self.current_age + year as u32;
                 let bvg_rate = Self::bvg_contribution_rate_at_age(age_this_year);
-                let annual_contribution = working_income * bvg_rate + self.pillar3a_annual;
+                let annual_contribution = coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
 
                 capital = capital * (1.0 + returns[year]) + annual_contribution;
                 cumulative_inflation *= 1.0 + inflations[year];
@@ -922,7 +956,7 @@ impl PensionSimulator {
             for year in 0..years_working {
                 let age_this_year = self.current_age + year as u32;
                 let bvg_rate = Self::bvg_contribution_rate_at_age(age_this_year);
-                let annual_contribution = working_income * bvg_rate + self.pillar3a_annual;
+                let annual_contribution = coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
                 capital = capital * (1.0 + returns[year]) + annual_contribution;
                 cumulative_inflation *= 1.0 + inflations[year];
             }

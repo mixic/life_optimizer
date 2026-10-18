@@ -169,6 +169,38 @@ An audit that only defends is not an audit.
    optimum; it never reports whether the optimum is *distinguishable* from the runner-up, which is
    the question a person actually faces.
 
+## 5a. The defect the review's suspicion found
+
+The review said the tax engine is useful "if the tables are accurate" and asked for a pension
+projection checked against a real BVG case. Writing the `--verbose` block that would have made
+those assumptions visible exposed the defect it was looking for, and it was not in the tax engine.
+
+**Savings contributions were levied on gross salary instead of the coordinated salary.** The BVG
+applies its age-banded rates to `min(salary, upper limit) − coordination deduction`, and to nothing
+at all below the entry threshold (BVG Art. 2 Abs. 1 and Art. 8 Abs. 1; BVV 2 Art. 5). The
+projection used gross salary, so at CHF 120,000 and age 40 it contributed 12,000 where the law
+requires 6,426 — **46% too much** — and the projected retirement income was **20% too high** across
+the board (CHF 2,765/month against the corrected 2,207 for the same case).
+
+Two things about it are worse than the arithmetic.
+
+The same crate already had it right: `early_retirement.rs` subtracts the coordination deduction,
+with the sourced figures and their citations in a provenance table. `monte_carlo.rs` did not. So
+this was not an unknown law to the project; it was two models disagreeing about the same statute,
+and the one that drives the adequacy verdict was the one that was wrong.
+
+And *nothing in the suite caught it*. Four hundred and fifty-eight tests passed before and after,
+because none of them asserted what salary a contribution is levied on. The defect survived not
+because it was subtle but because it was unasked, which is precisely the failure mode the review
+identified from the outside: a tool making strong claims about auditability while leaving its most
+consequential input unexamined.
+
+`tests/bvg_contribution_base.rs` now pins the base, the entry threshold and the cap, and includes
+the test that would have caught it: two salaries far apart but both above the upper limit must
+accumulate the same BVG capital, because the scheme insures the same amount of both.
+
+The cap was also missing from `early_retirement.rs`, which documented the upper limit in its
+parameter table and never applied it. Both are fixed.
 ## 6. What the review gets wrong, stated plainly
 
 - **The canton architecture.** See §1. The review infers a Bern-only design from a Bern-only

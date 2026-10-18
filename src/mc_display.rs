@@ -420,3 +420,47 @@ pub fn print_stress_test_result(result: &RegimeSwitchingResult, base_median_pens
 
     println!("{}", "═══════════════════════════════════════════════════════════\n".red());
 }
+/// Print the pension assumptions the projection rests on.
+///
+/// The review's point was that a tool whose selling point is auditability should not assert its
+/// pension parameters -- they should be on screen, with the flags that move them named. This block
+/// is also where the contribution base is stated, and stating it is what found the defect: the
+/// rates were being applied to gross salary rather than to the coordinated salary, which
+/// overstated every projection by around a fifth and rather more at higher pay.
+pub fn print_pension_parameters(
+    scenario: &crate::monte_carlo::ConversionRateScenario,
+    applied_rate: f64,
+) {
+    use crate::monte_carlo::{
+        MarketAssumptions, BVG_COORDINATION_DEDUCTION, BVG_ENTRY_THRESHOLD, BVG_UPPER_LIMIT,
+    };
+
+    println!("\n{}", "Pension assumptions in use (--verbose):".bold());
+    println!(
+        "  Conversion rate:   {:.2}%  [{}]   override with --conversion-rate",
+        applied_rate * 100.0,
+        scenario.label()
+    );
+    println!();
+    println!("  Savings contributions are levied on the coordinated salary:");
+    println!("    coordinated = min(salary, upper limit) - coordination deduction");
+    println!("                = min(salary, {:>9.0}) - {:>9.0}", BVG_UPPER_LIMIT, BVG_COORDINATION_DEDUCTION);
+    println!("    nothing at all below the entry threshold of CHF {:.0}", BVG_ENTRY_THRESHOLD);
+    println!("    source: BVG Art. 2 Abs. 1 and Art. 8 Abs. 1; BVV 2 Art. 5");
+    println!();
+    println!("  Age-banded savings rates (BVG Art. 16), applied to that base:");
+    println!("    25-34:  7%      35-44: 10%      45-54: 15%      55+: 18%      18-24: none");
+    println!();
+    let base = MarketAssumptions::base_case();
+    println!("  Market assumptions (base case, used for the headline projection):");
+    println!("    expected real return  {:.1}%/year", base.expected_real_return * 100.0);
+    println!("    volatility            {:.1}%/year", base.volatility * 100.0);
+    println!("    inflation             {:.1}%/year", base.inflation * 100.0);
+    println!("    equity-bond correlation {:+.2}", base.equity_bond_corr);
+    println!(
+        "  {}",
+        "The conservative and optimistic presets are both run; their range is printed with the \
+         Monte Carlo results. None of these three is calibrated to a specific fund."
+            .dimmed()
+    );
+}

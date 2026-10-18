@@ -468,6 +468,11 @@ struct OptimizeArgs {
     #[arg(long)]
     retirement_needs: Option<f64>,
 
+    /// Print the pension assumptions the projection rests on: conversion rate, contribution
+    /// base and schedule, and market assumptions.
+    #[arg(long, default_value_t = false)]
+    verbose: bool,
+
     /// Retirement needs as a share of net income, when you would rather use a rule of thumb.
     ///
     /// Off by default so that the modelled budget is used; setting this is an explicit choice to
@@ -1091,6 +1096,7 @@ fn main() {
                 externality_weight,
                 retirement_needs,
                 retirement_needs_percent,
+                verbose,
                 imputed_rental_value,
                 pensioner,
                 insurance_premiums,
@@ -1142,6 +1148,7 @@ fn main() {
                 externality_weight,
                 retirement_needs,
                 retirement_needs_percent,
+                verbose,
                 household_facts: HouseholdFacts {
                     imputed_rental_value,
                     receives_pension: pensioner,
@@ -1608,6 +1615,8 @@ struct OptimizeParams<'a> {
     /// `--retirement-needs-percent`: needs as a share of net income, when the user prefers a rule
     /// of thumb to the modelled budget.
     retirement_needs_percent: Option<f64>,
+    /// `--verbose`: print the pension assumptions the projection rests on.
+    verbose: bool,
     /// Extra household facts the deduction model uses; see [`HouseholdFacts`].
     household_facts: HouseholdFacts,
 }
@@ -1637,6 +1646,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
         externality_weight,
         retirement_needs: needs_chf,
         retirement_needs_percent: needs_percent,
+        verbose,
         household_facts,
     } = p;
 
@@ -1775,6 +1785,13 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // ── Conversion-rate (Umwandlungssatz) transparency ──────────────────────
     let pension_range = regime_sim.pension_range_for_capital(regime_result.median_capital);
     mc_display::print_conversion_rate_scenarios(&pension_range, regime_result.ahv_monthly);
+
+    // The assumptions behind the projection, on demand. Stating the contribution base here is
+    // what exposed the defect that had been overstating every pension: the savings rates were
+    // being applied to gross salary instead of to the coordinated salary.
+    if verbose {
+        mc_display::print_pension_parameters(&conversion, pension_range.selected_rate);
+    }
 
     // Stochastic rate uncertainty, with explicit downside (CVaR).
     let rate_uncertainty = regime_sim.conversion_rate_uncertainty(
@@ -2292,6 +2309,7 @@ fn run_interactive() {
         externality_weight: 0.0,
         retirement_needs,
         retirement_needs_percent: None,
+        verbose: false,
         // The interactive prompt does not ask about these, and assuming them
         // would be exactly the guessing the deduction model refuses to do.
         household_facts: HouseholdFacts::default(),
