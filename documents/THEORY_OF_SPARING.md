@@ -1,7 +1,7 @@
 # The Theory of Sparing: Prioritized Consumption, the Niche Economy, and What It Means to Optimize a Life
 
 *A companion to [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
-and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §2, which already argued
+and [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) §2, which already argued
 that consumption — not just income and tax — has to be an explicit input to this
 model. This chapter proposes a specific alternative consumption theory ("sparing"),
 grounds it in existing economics and consumer-behavior research, and asks what it
@@ -647,5 +647,5 @@ the individual-vs-collective tension in Swiss pension contributions.
   2024–present global DRAM/NAND memory shortage — for the current component-cost
   context referenced in Section 6
 - Cross-reference: [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
-  §5 on technofeudal rent and platform subsidization; [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md)
+  §5 on technofeudal rent and platform subsidization; [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md)
   §2 on the missing consumption dimension

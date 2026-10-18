@@ -16,7 +16,7 @@
 
 //! AI in the multipolar game: a player, or a tool?
 //!
-//! `MULTIPOLAR_GAME.md` section 7 lists four live answers to "who captures the
+//! `documents/MULTIPOLAR_GAME.md` section 7 lists four live answers to "who captures the
 //! gains from AI" and then declines to pick one, on the grounds that "genuine
 //! uncertainty is the most defensible position". This module turns that refusal
 //! into something executable. Rather than assuming an answer, it builds the two
@@ -104,7 +104,7 @@ pub const MATERIAL_TOP_SHARE: f64 = 0.01;
 /// Illustrative starting share for the AI actor.
 ///
 /// An actor that holds compute, capital and intellectual property but no
-/// territory, no population and no reserve currency. `MULTIPOLAR_GAME.md` section
+/// territory, no population and no reserve currency. `documents/MULTIPOLAR_GAME.md` section
 /// 5's framing -- hyperscalers optimizing datacenter capex -- suggests a real but
 /// not initially dominant position, which is what a low single-digit share models.
 /// The exact figure is invented; the `--ai-share` flag exists to move it.
@@ -133,7 +133,7 @@ pub const AI_VOLATILITY: f64 = 0.055;
 /// Illustrative cooperation affinity for the AI actor.
 ///
 /// Above one, which implements a specific claim rather than a general hunch:
-/// `MULTIPOLAR_GAME.md` section 7's first live possibility is that "the
+/// `documents/MULTIPOLAR_GAME.md` section 7's first live possibility is that "the
 /// consumer/cloudalist class captures the gains" from AI-driven efficiency, being
 /// "positioned in circulation, not production". An actor in that position captures
 /// more of the cooperation surplus, which is what an affinity above one means.
@@ -152,7 +152,7 @@ pub const DEFAULT_LEAD_GROWTH_EFFECT: f64 = 0.050;
 
 /// Illustrative: how much AI leadership changes what cooperation is worth.
 ///
-/// **Zero, deliberately.** `MULTIPOLAR_GAME.md` section 4 sets out the dispute
+/// **Zero, deliberately.** `documents/MULTIPOLAR_GAME.md` section 4 sets out the dispute
 /// rather than resolving it: the pessimistic realist case has AI as one more axis
 /// of zero-sum rivalry, while the optimistic case (Diane Coyle's, as the chapter
 /// reports it) has AI competition not being zero-sum at all because the technology

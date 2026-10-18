@@ -29,7 +29,7 @@
 //!
 //! # Where the numbers come from
 //!
-//! `AI_AS_CATALYST.md` §1 and §4 record the published range for AI-assisted software work: a
+//! `documents/AI_AS_CATALYST.md` §1 and §4 record the published range for AI-assisted software work: a
 //! spread of **75 percentage points, from 19% slower to 56% faster**, with METR's developers
 //! forecasting 24% and Google's own study running from 3% slower to 40% faster. The three
 //! scenarios bracket that range rather than sitting inside it at a favourite point:
@@ -51,7 +51,7 @@ pub struct Scenario {
     pub name: &'static str,
     /// One line describing the position it represents.
     pub description: &'static str,
-    /// Expected productivity gain, as a decimal. The anchor from `AI_AS_CATALYST.md`.
+    /// Expected productivity gain, as a decimal. The anchor from `documents/AI_AS_CATALYST.md`.
     pub productivity_gain: f64,
     /// The optimistic end of the same gain's range.
     pub productivity_gain_high: f64,

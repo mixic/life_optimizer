@@ -150,7 +150,7 @@ cargo run -p multipolar_sim -- --help
 ```
 
 It also carries a second, independent model: a psychological layer of the sort
-[`THE_PSYCHOLOGICAL_LAYER.md`](THE_PSYCHOLOGICAL_LAYER.md) documents, in which
+[`THE_PSYCHOLOGICAL_LAYER.md`](documents/THE_PSYCHOLOGICAL_LAYER.md) documents, in which
 assistance is *solved for* rather than chosen, and what it costs is the practice that
 builds the capacity to judge. `--psyche` runs a 2,000-person cohort twice on the same
 seed — once tracking the machine's tempo, once holding assistance still — and prints
@@ -159,10 +159,10 @@ invented: no measurement exists for them.
 
 It exists because the optimizer above answers "what is best for *you*" and has no way
 to represent "what happens if everyone does this" — the question
-[`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
+[`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](documents/PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
 section 2c raises about AHV as a pay-as-you-go intergenerational contract. The theory
-it operationalises is in [`MULTIPOLAR_GAME.md`](MULTIPOLAR_GAME.md) section 4 and
-[`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) section 7d.
+it operationalises is in [`MULTIPOLAR_GAME.md`](documents/MULTIPOLAR_GAME.md) section 4 and
+[`THEORY_OF_SPARING.md`](documents/THEORY_OF_SPARING.md) section 7d.
 
 > **Its parameters are illustrative, not calibrated, and nothing it prints is a
 > forecast.** Run `--sweep`, which shows which conclusions hold across parameter
@@ -384,7 +384,7 @@ security (AHV/IV/EO 5.3%, ALV 1.1%, BVG ~6.5%).
 regime-switching model (Boom/Normal/Recession/Stagflation), converted to an annuity
 at retirement using an age-dependent conversion rate, then drawn down against
 inflation-adjusted needs through your planning horizon. See
-[`ECONOMIC_SCENARIOS.md`](ECONOMIC_SCENARIOS.md) and
+[`ECONOMIC_SCENARIOS.md`](documents/ECONOMIC_SCENARIOS.md) and
 [`PENSION_OPTIMIZATION.md`](PENSION_OPTIMIZATION.md) for details.
 
 ---
@@ -420,53 +420,18 @@ life-optimizer/
 │                                 ESTV "Tarife" exports, and the DBG / tariff PDFs,
 │                                 with a manifest recording what each one feeds
 ├── MATHEMATICS.md                Full mathematical formulation
-├── ECONOMIC_SCENARIOS.md         Regime-switching model & stress test details
 ├── PENSION_OPTIMIZATION.md       Pension sustainability methodology
 ├── SWISS_TAX_DATA.md             Tax data provenance, coverage and known defects
-├── MULTIPOLAR_GAME.md            Theory the companion simulator operationalises
-├── CRITICS_CURRENT_WORK.md       External criticism, and §7: what is implemented, what is not
+├── VALIDATION.md                 What has been checked against an outside source, what has
+│                                 not, and the BVG defect the check found
+├── CRITIQUE_RESPONSE.md          An external review of this repository, audited claim by claim
+├── CHANGELOG.md                  What changed, when, and why
 ├── TEAM_DEPENDENCIES.md          Why a reduced schedule is not a private transaction
-├── AI_AS_CATALYST.md             The evidence on AI-assisted software work, what it implies
-│                                 for Agile/Scrum and for validating delivered quality
-├── INFORMATION_WARFARE.md        Legitimation as a production function: six theorems on
-│                                 credibility, network amplification, and the public-good
-│                                 failure in verification, with the historical record that
-│                                 challenges them
-├── information_warfare_claims_reference.md
-│                                 The sourced case table behind INFORMATION_WARFARE.md §5,
-│                                 including the cases that could not be sourced
-├── THIRD_PARTY_SPOILER.md        Conflict as a failed equilibrium: the spoiler's leverage,
-│                                 divide-and-conquer, derived impunity and blowback, with the
-│                                 sourced historical record kept separate from the declared
-│                                 parameters
-├── EARLY_RETIREMENT.md           Early retirement as an optimisation: the withdrawal
-│                                 allocation as a linear program and its dual, a
-│                                 10,000-path risk sweep, and the education-contribution
-│                                 question priced but deliberately not ranked
-├── THE_RECIPROCITY_OF_THE_EDUCATED.md
-│                                 A position, argued in the first person, on what a publicly
-│                                 funded qualification obliges its holder to return, and on
-│                                 how much of that obligation an early-retirement plan can
-│                                 avoid while every ledger column still reads correctly
-├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
-│                                 budget and one clock: the crossing horizon, the critical
-│                                 discount rate, and a paired Monte Carlo of both
-├── THE_PSYCHOLOGICAL_LAYER.md    What assistance does to the capacity that judges it: the
-│                                 machine-to-human inversion, a deskilling threshold, a defect
-│                                 floor that review cannot remove, a paired Monte Carlo over
-│                                 2,000 people, and the bar as the argument's empirical joint
-├── OPTIMIZING_FOR_WHAT.md        Just-in-time logic transplanted into AI-assisted knowledge
-│                                 work: the load identity, two thresholds (commitment at 0.888,
-│                                 stability at 0.839), the year a stable workflow stops being
-│                                 stable, a nine-proposition certificate that can be regenerated
-│                                 with --prove, and a direction framework that reports its own
-│                                 indeterminacy instead of ranking
-├── VALIDATION.md                 What has been checked against something outside this
-│                                 repository, what has not, and the BVG defect the check found
-├── VERIFYING_THE_CLAIMS.md       Two passages checked claim by claim -- an industry passage and
-│                                 the author's own -- against what can be sourced and what the
-│                                 models can settle: the aviation record, the Jevons ceiling, and
-│                                 the four sentences that would not survive a review
+├── CRITICS_CURRENT_WORK.md       External criticism, and §7: what is implemented, what is not
+├── documents/                    The arguments this tool came out of; see documents/README.md
+│                                 for the index. They are the same question at different scales:
+│                                 what a working life is worth, what is owed for the
+│                                 qualification behind it, and what the work does to the person
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
 │                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,
 │                                 tools/plot_strategies.py, tools/plot_early_retirement.py,
@@ -550,5 +515,3 @@ Issues and PRs welcome, particularly:
 - Tax tables for other Swiss cantons
 - Refinements to the regime-switching calibration
 - Additional life-stage/preference profiles
-
-

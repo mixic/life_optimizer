@@ -9,7 +9,7 @@
 Every other document in this repository treats the model as a tool: inputs go in,
 a utility score comes out, and the math is transparent enough that you can check
 the reasoning yourself. That transparency is the project's main design commitment
-(see the [README](README.md)'s "Motivation and design philosophy").
+(see the [README](../README.md)'s "Motivation and design philosophy").
 
 But transparency about the *math* is not the same as transparency about the
 *assumptions underneath the math*. A utility function has to decide, in advance,
@@ -18,7 +18,7 @@ This document tries to make those assumptions visible instead of quietly encodin
 them in weights and formulas.
 
 Sections 3 and 8 below build directly on two outside critiques recorded in
-[`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) — one on whether "work
+[`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) — one on whether "work
 percentage" is really a free choice at all, one on the missing consumption side of
 the ledger. Both turn out to be philosophical questions as much as modeling gaps,
 which is why they belong here as well as there.
@@ -95,7 +95,7 @@ the actual risk.
 The point above, that work percentage is not simply a free individual choice, 
 is not just a theoretical concern. It was raised directly, and independently, by
 two outside readers of this project (documented in full in
-[`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md)). Both critiques deserve to
+[`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md)). Both critiques deserve to
 be taken seriously here, because they are really the same philosophical objection
 approached from two different directions: **the model treats "80%" as if it were
 a self-contained number, when in reality it is embedded in an employment contract
@@ -324,7 +324,7 @@ away the bad scenarios because they are uncomfortable to model.
 ## 8. If AI buys back work-time, who actually receives the gain?
 
 The critique summarized in Section 3a extends naturally into a larger question
-that the [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) document raises
+that the [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) document raises
 explicitly: if AI tools genuinely let a worker deliver the same output in 80% of
 the time, is that a *personal* gain in leisure, or does the employer simply raise
 the target and absorb the gain as extra output? This is not a new question —
@@ -412,7 +412,7 @@ assumption, and arrive at a decision you actually understand and can stand behin
 The most defensible use of this tool is the one implied by the rest of this
 repository's philosophy: as an instrument for *reasoning together with*, not
 *deferring to*. The critiques recorded in
-[`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) are themselves an example of
+[`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) are themselves an example of
 that posture working as intended — external readers stress-testing the model's
 hidden assumptions rather than accepting its output.
 
@@ -449,7 +449,7 @@ hidden assumptions rather than accepting its output.
 - Judge, T. A. et al., "The Job Satisfaction–Job Performance Relationship: A
   Qualitative and Quantitative Review" (*Psychological Bulletin*, 2001) — on the
   empirical link between worker satisfaction and performance
-- [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) — the two critiques this
+- [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) — the two critiques this
   document responds to directly, plus a curated reading list on AI, productivity,
   and the future of work (IMF, ILO, OECD, NBER, WEF)
 - Charles Goodhart, on the measure-target distinction (1975)

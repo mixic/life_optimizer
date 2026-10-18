@@ -1,7 +1,7 @@
 # Happiness, Fear and Work-Life Balance: Performance Under Pressure, and What Comes After It
 
 *An extension of [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
-and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md), asking a narrower and
+and [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md), asking a narrower and
 more uncomfortable question: when does a worker actually perform best — and is
 the answer the same thing an employer, or an economic system, has an incentive
 to want?*
@@ -341,4 +341,4 @@ rather than hide.
 - Evgeny Morozov, "Critique of Techno-Feudal Reason" (*New Left Review*, 2022) —
   a critical counter-view worth reading alongside Varoufakis
 - Cross-reference: [`PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`](PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD)
-  §3a–3c, and [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) §1 and §5
+  §3a–3c, and [`CRITICS_CURRENT_WORK.md`](../CRITICS_CURRENT_WORK.md) §1 and §5

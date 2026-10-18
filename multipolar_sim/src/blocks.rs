@@ -21,7 +21,7 @@
 //! Nothing in this module is calibrated to measured economic or military data.
 //! The growth rates, volatilities, cooperation gains and conflict costs are
 //! chosen to be *plausible in sign and rough magnitude* so that the mechanism can
-//! be explored -- not to forecast anything. `MULTIPOLAR_GAME.md` section 5 is
+//! be explored -- not to forecast anything. `documents/MULTIPOLAR_GAME.md` section 5 is
 //! explicit that there is "no general theorem guaranteeing a multipolar system
 //! converges to a stable equilibrium at all, let alone a date by which it will",
 //! and section 7 that "genuine uncertainty is the most defensible position".
@@ -45,7 +45,7 @@ pub struct PowerBloc {
     /// Annual growth bias: a persistent advantage (or disadvantage) beyond the
     /// shared growth rate. Positive means the bloc tends to gain share.
     pub growth_bias: f64,
-    /// Annual volatility of this bloc's growth. `MULTIPOLAR_GAME.md` section 4
+    /// Annual volatility of this bloc's growth. `documents/MULTIPOLAR_GAME.md` section 4
     /// notes that more independent powers means more opportunities for
     /// miscalculation, so dispersion here is a direct input to instability.
     pub volatility: f64,
@@ -67,7 +67,7 @@ pub struct PowerBloc {
     /// They are the two halves of "cooperation is worth more to this bloc", and
     /// conflating them would build in an assumption rather than report a finding: a
     /// bloc that *gains* more from cooperation need not be a bloc that *wants* it
-    /// more, and the whole point of `MULTIPOLAR_GAME.md` section 4's open dispute is
+    /// more, and the whole point of `documents/MULTIPOLAR_GAME.md` section 4's open dispute is
     /// that those can come apart.
     ///
     /// * `cooperation_affinity` -- what cooperation pays, once it has been chosen.
@@ -116,7 +116,7 @@ impl PowerBloc {
 
 /// The default eight-pole system.
 ///
-/// The names follow `MULTIPOLAR_GAME.md` section 4's description of the current
+/// The names follow `documents/MULTIPOLAR_GAME.md` section 4's description of the current
 /// transition: a US-led Atlantic order, a China-centred Sinic one, a Eurasian one,
 /// an Indo-Pacific one, and the non-aligned middle powers that section 4 notes are
 /// now "pursuing independent strategic optimization rather than aligning within a
@@ -216,7 +216,7 @@ pub struct GameParams {
     /// How strongly a *power gap* pushes the pair toward competition. A hegemonic
     /// pair is less of a security dilemma than a near-peer one, because the weaker
     /// side cannot credibly threaten the stronger -- this is the mechanism behind
-    /// the bipolar-stability argument in `MULTIPOLAR_GAME.md` section 4.
+    /// the bipolar-stability argument in `documents/MULTIPOLAR_GAME.md` section 4.
     pub parity_pressure: f64,
     /// How strongly accumulated global tension pushes the pair toward
     /// competition. This is what makes the system path-dependent: today's
@@ -226,7 +226,7 @@ pub struct GameParams {
     ///
     /// An arms race that runs long enough stops paying for itself: both sides
     /// exhaust the surplus they were competing over. This is the "imperial
-    /// overstretch" mechanism `MULTIPOLAR_GAME.md` section 8 describes, and it is
+    /// overstretch" mechanism `documents/MULTIPOLAR_GAME.md` section 8 describes, and it is
     /// what lets the system leave the pure dilemma at all. Without it,
     /// `cooperation_gain` and `defection_temptation` are both constant in tension,
     /// so whether `Compete` dominates is fixed at `tension = 0` for all time -- and
@@ -373,7 +373,7 @@ mod tests {
 
     /// The default parameters must produce a genuine security dilemma between
     /// near-peers -- otherwise the simulator would be modelling something other
-    /// than what `MULTIPOLAR_GAME.md` section 4 describes.
+    /// than what `documents/MULTIPOLAR_GAME.md` section 4 describes.
     #[test]
     fn default_parameters_produce_a_dilemma_between_near_peers() {
         let params = GameParams::default();
@@ -502,7 +502,7 @@ mod tests {
     }
 
     /// High enough cooperation gain must be able to *escape* the dilemma entirely
-    /// -- the optimistic case in `MULTIPOLAR_GAME.md` section 4, where AI
+    /// -- the optimistic case in `documents/MULTIPOLAR_GAME.md` section 4, where AI
     /// competition need not be zero-sum. If no parameter setting could escape it,
     /// the model would be rigged rather than exploratory.
     #[test]

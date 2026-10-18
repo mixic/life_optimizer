@@ -36,7 +36,7 @@
 //! unplanned*. Both of those are structural features of a queue rather than a metaphor borrowed
 //! from a factory: the review stage has servers, an arrival process, a service-time
 //! distribution and a queue, and the same three variables (variability, utilisation, effective
-//! process time) govern it. §1 of `OPTIMIZING_FOR_WHAT.md` draws the boundary between what is
+//! process time) govern it. §1 of `documents/OPTIMIZING_FOR_WHAT.md` draws the boundary between what is
 //! structural and what is only suggestive, and this crate implements only the structural part.
 //!
 //! # The loop that couples the two models

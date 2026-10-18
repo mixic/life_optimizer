@@ -795,7 +795,7 @@ pub fn run_cohort(
 ///
 /// # Why export at all
 ///
-/// The claim defended in `THE_PSYCHOLOGICAL_LAYER.md` is a *shape*, not a level: capacity falls
+/// The claim defended in `documents/THE_PSYCHOLOGICAL_LAYER.md` is a *shape*, not a level: capacity falls
 /// under tracked assistance and holds under a fixed one, effective output has an interior
 /// optimum for some parameters and not others, and the residual defect rate has a floor no
 /// assistance removes. Shapes are hard to see in a table of thirty numbers and easy to see in a

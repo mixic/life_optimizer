@@ -17,7 +17,7 @@
 //! The third-party spoiler: divide and conquer as a strategy, and why the profiteer is
 //! so rarely made to pay.
 //!
-//! This module is the executable form of `THIRD_PARTY_SPOILER.md`. That document proves
+//! This module is the executable form of `documents/THIRD_PARTY_SPOILER.md`. That document proves
 //! six results; this module implements the objects they are about and its test module
 //! asserts the results rather than restating them in prose.
 //!
@@ -46,7 +46,7 @@ use crate::game::{solve, Payoffs};
 ///
 /// `sigma >= 0` means the cooperative cell is a Nash equilibrium: given the other side
 /// cooperates, neither wants to defect. `sigma < 0` means the dyad is in conflict, and
-/// that is Definition 1 of `THIRD_PARTY_SPOILER.md` section 1.
+/// that is Definition 1 of `documents/THIRD_PARTY_SPOILER.md` section 1.
 pub fn peace_margin(payoffs: &Payoffs) -> f64 {
     payoffs.cc - payoffs.dc
 }
@@ -103,7 +103,7 @@ pub fn readings(payoffs: &Payoffs) -> Readings {
 
 /// The spoiler's leverage: harvest over the price of the margin.
 ///
-/// `THIRD_PARTY_SPOILER.md` section 3.1. The result that matters is that the ratio
+/// `documents/THIRD_PARTY_SPOILER.md` section 3.1. The result that matters is that the ratio
 /// diverges as the margin goes to zero, which is the formal content of "cultivating
 /// grievance".
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -158,7 +158,7 @@ impl Leverage {
 
 /// Manufacturing grievance, as opposed to subsidising defection.
 ///
-/// `THIRD_PARTY_SPOILER.md` Corollary 1.1: by assumption A3 the two instruments are
+/// `documents/THIRD_PARTY_SPOILER.md` Corollary 1.1: by assumption A3 the two instruments are
 /// perfect substitutes in their effect on the margin, so the choice between them is purely
 /// one of relative cost. This is the object that makes the choice computable.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -203,7 +203,7 @@ impl GrievanceCost {
 
 /// Where the spoiler stops, and whether it stopped voluntarily.
 ///
-/// `THIRD_PARTY_SPOILER.md` Theorem 1(iii) is a **bifurcation**, and the first draft of the
+/// `documents/THIRD_PARTY_SPOILER.md` Theorem 1(iii) is a **bifurcation**, and the first draft of the
 /// theorem got it wrong by asserting that the optimum is always interior. It is not. There
 /// is a critical operating cost above which the spoiler stops short of the edge, and below
 /// which it drives the margin to zero -- cheap operations are brazen.
@@ -230,7 +230,7 @@ pub fn critical_operating_cost(cost: &GrievanceCost, leverage: &Leverage) -> f64
 
 /// The margin the spoiler chooses.
 ///
-/// `THIRD_PARTY_SPOILER.md` Theorem 1(iii):
+/// `documents/THIRD_PARTY_SPOILER.md` Theorem 1(iii):
 ///
 /// * `epsilon <= epsilon_c` -- the objective is decreasing in the margin throughout, so the
 ///   optimum is the corner `sigma = 0`;
@@ -279,7 +279,7 @@ pub fn grievance_optimum(cost: &GrievanceCost, leverage: &Leverage) -> Option<Gr
 
 /// The victims' deterrent, charged on the links between them.
 ///
-/// `THIRD_PARTY_SPOILER.md` section 2.3 and Corollary 2.1: `D(n, P) = P - kappa*n(n-1)/2`.
+/// `documents/THIRD_PARTY_SPOILER.md` section 2.3 and Corollary 2.1: `D(n, P) = P - kappa*n(n-1)/2`.
 /// A split leaves `P` untouched and adds links, which is the coordination-cost channel.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Deterrent {
@@ -368,7 +368,7 @@ impl Coalition {
     ///
     /// This is fragmentation on its own: the member becomes several actors, each deciding
     /// for itself. Expected weight is preserved and the variance collapses -- which,
-    /// `THIRD_PARTY_SPOILER.md` Theorem 2(i), means the effect on collective action has
+    /// `documents/THIRD_PARTY_SPOILER.md` Theorem 2(i), means the effect on collective action has
     /// **no fixed sign**. Against a coalition whose expected weight sits *above* the quota,
     /// removing spread makes it *more* reliable, and the split arms the target.
     pub fn split_independent(&self, index: usize, parts: usize) -> Coalition {
@@ -394,7 +394,7 @@ impl Coalition {
 
     /// Split member `index` into `parts` that **can never both support**.
     ///
-    /// This is divide and conquer proper, and `THIRD_PARTY_SPOILER.md` Theorem 2(ii) says
+    /// This is divide and conquer proper, and `documents/THIRD_PARTY_SPOILER.md` Theorem 2(ii) says
     /// it is what the strategy actually consists of. In any state at most one part is in
     /// favour, so the most the member's weight can ever contribute is its largest part --
     /// `w/parts` for an equal split -- and the realised contribution is weakly lower in

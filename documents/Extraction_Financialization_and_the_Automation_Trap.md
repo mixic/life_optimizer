@@ -306,4 +306,4 @@ producing a number to believe uncritically.
 - Cross-reference: [`MULTIPOLAR_GAME.md`](MULTIPOLAR_GAME.md)
   §2–4, §7; [`NBA_Analogy_Multipolarity_and_Economic_Innovation.md`](NBA_Analogy_Multipolarity_and_Economic_Innovation.md)
   §5–6; [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md)
-  §5, §8; [`FutureWork.md`](FutureWork.md) §2.4
+  §5, §8; [`FutureWork.md`](../FutureWork.md) §2.4

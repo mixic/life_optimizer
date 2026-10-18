@@ -17,7 +17,7 @@
 //! Consumption realism: elasticity tiers and the sparing model.
 //!
 //! Implements the consumption-side theory already written down in
-//! `THEORY_OF_SPARING.md` §7c and §8, and `CRITICS_CURRENT_WORK.md` §2. The
+//! `documents/THEORY_OF_SPARING.md` §7c and §8, and `CRITICS_CURRENT_WORK.md` §2. The
 //! optimizer previously treated one flat "requirements" total as mandatory,
 //! which conflated costs a household genuinely cannot avoid with spending it
 //! chooses. That made the feasibility test far stricter than the theory it
@@ -34,7 +34,7 @@
 //! | Quasi-inelastic | Locked in by switching costs (ecosystem effects) | Partially |
 //! | Elastic | Frills and durables | Yes, via the sparing ratio |
 //!
-//! Total consumption follows `THEORY_OF_SPARING.md` §8:
+//! Total consumption follows `documents/THEORY_OF_SPARING.md` §8:
 //!
 //! ```text
 //! C_t = (R_t + E_t)  +  Q_t  +  L_t  +  D_t
@@ -82,7 +82,7 @@ pub const REFERENCE_UTILIZATION: f64 = 0.85;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ElasticityTier {
     /// Rent, food, transport, insurance, childcare, healthcare. No real
-    /// elastic margin — `THEORY_OF_SPARING.md` §7a.
+    /// elastic margin — `documents/THEORY_OF_SPARING.md` §7a.
     Inelastic,
     /// Nominally discretionary but locked in by switching costs — §7b.
     QuasiInelastic,
@@ -241,7 +241,7 @@ impl ConsumptionProfileConfig {
 /// Consumption split by elasticity tier, in CHF per month.
 ///
 /// The point of carrying this structure rather than a single total is the one
-/// `THEORY_OF_SPARING.md` §7c makes: a household with rising inelastic costs can
+/// `documents/THEORY_OF_SPARING.md` §7c makes: a household with rising inelastic costs can
 /// practice maximum sparing discipline on the elastic tier and still see little
 /// movement in total consumption. Reporting only the aggregate hides where the
 /// squeeze is landing.

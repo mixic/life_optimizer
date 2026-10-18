@@ -98,7 +98,7 @@ impl Enforcement {
 /// ```
 ///
 /// This operationalizes the reframed question from
-/// `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3a: not "what work percentage
+/// `documents/PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` §3a: not "what work percentage
 /// maximizes my utility", but "what is the lowest work percentage at which I can
 /// still reliably deliver what is expected of me".
 ///

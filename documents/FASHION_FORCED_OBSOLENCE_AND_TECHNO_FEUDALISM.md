@@ -601,4 +601,4 @@ proposed in `FutureWork.md` §5.1.
   (April 2025) — cited in Section 8b
 - Cross-reference: [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §2–3, §6a, §7–8;
   [`HAPPINESS_OR_FEAR_WORK_LIFE.md`](HAPPINESS_OR_FEAR_WORK_LIFE.md)
-  §5; [`FutureWork.md`](FutureWork.md) §5.1
+  §5; [`FutureWork.md`](../FutureWork.md) §5.1

@@ -19,7 +19,7 @@
 //!
 //! # The question this module exists to answer
 //!
-//! `THIRD_PARTY_SPOILER.md` establishes that a third party can profit from a conflict
+//! `documents/THIRD_PARTY_SPOILER.md` establishes that a third party can profit from a conflict
 //! between two others, and that it is rarely made to pay. That raises an obvious
 //! comparison which the spoiler document does not itself make: **what does the same
 //! influence buy if it is spent on cooperation instead?** The two strategies are not
@@ -82,7 +82,7 @@
 //! | A2 | Conflict requires a setup payment and then sustains itself, but depletes the prize at rate `gamma` | Reverses the horizon result if the prize is inexhaustible |
 //! | A3 | Both instruments move `sigma` with diminishing returns, `g * sqrt(spend)` | Changes the optimal budget but not the sign of the comparison |
 //! | A4 | The state is stochastic: `P(conflict) = Phi(-sigma / dispersion)` | None; it is what makes this a distribution rather than a point |
-//! | A5 | The victims' retaliation discounts the spoiler's take but does not remove it | The punishment channel is `THIRD_PARTY_SPOILER.md` Theorem 6, reused here |
+//! | A5 | The victims' retaliation discounts the spoiler's take but does not remove it | The punishment channel is `documents/THIRD_PARTY_SPOILER.md` Theorem 6, reused here |
 //! | A6 | Both strategies face the same `sigma`, the same dispersion and the same horizon | The comparison is only meaningful under a common budget and clock |
 //!
 //! # Every number here is declared, and most of them could not be otherwise
@@ -150,7 +150,7 @@ impl Strategy {
 ///
 /// A region is *not* a place in this model. It is a pair of blocs and a set of declared
 /// numbers about their relationship -- which is why the field is [`Region::bloc_a`] and
-/// [`Region::bloc_b`] rather than a list of countries. See `STRATEGY_COMPARISON.md`
+/// [`Region::bloc_b`] rather than a list of countries. See `documents/STRATEGY_COMPARISON.md`
 /// section 2 for what each region is standing in for.
 #[derive(Debug, Clone)]
 pub struct Region {
@@ -170,7 +170,7 @@ pub struct Region {
     /// anchorable: resource rents are reported figures.
     pub rent: f64,
     /// The victims' capacity to identify and punish a sponsor, `0..1`. Reused from
-    /// `THIRD_PARTY_SPOILER.md` Theorem 6, where impunity is `1 - exposure`.
+    /// `documents/THIRD_PARTY_SPOILER.md` Theorem 6, where impunity is `1 - exposure`.
     pub retaliation: f64,
     /// Annual gross benefit that accrues to the strategist while the region is at
     /// peace -- trade access, contracts, supply security. **Illustrative.**
@@ -302,12 +302,12 @@ pub struct StrategyParams {
     /// unit of `sqrt(spend)`. Assumption A3.
     pub coop_gain: f64,
     /// The same for the spoiling instrument. Larger than `coop_gain` by default, which
-    /// is `THIRD_PARTY_SPOILER.md` Corollary 1.1 -- narrative is cheaper than
+    /// is `documents/THIRD_PARTY_SPOILER.md` Corollary 1.1 -- narrative is cheaper than
     /// matériel per unit of margin moved. The default is an assumption, and the
     /// sensitivity mode is there because it is the assumption the verdict turns on.
     pub spoil_gain: f64,
     /// How much the victims' retaliation discounts the spoiler's take, from
-    /// `THIRD_PARTY_SPOILER.md` Theorem 6: the take is scaled by `1 - kappa * e`.
+    /// `documents/THIRD_PARTY_SPOILER.md` Theorem 6: the take is scaled by `1 - kappa * e`.
     pub punishment_scale: f64,
     /// Rate at which a conflict consumes the prize. Assumption A2.
     pub depletion: f64,

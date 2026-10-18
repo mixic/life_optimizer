@@ -312,4 +312,4 @@ starting analogy makes concretely visible rather than abstract.
 - Cross-reference: [`MULTIPOLAR_GAME.md`](MULTIPOLAR_GAME.md)
   §2, §4–5, §7; [`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) §7d;
   [`FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md`](FASHION_FORCED_OBSOLENCE_AND_TECHNO_FEUDALISM.md)
-  §7; [`FutureWork.md`](FutureWork.md) §4
+  §7; [`FutureWork.md`](../FutureWork.md) §4

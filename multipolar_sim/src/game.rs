@@ -21,8 +21,8 @@
 //! two are and how tense the system has become.
 //!
 //! This module is the intellectual core. The security dilemma that
-//! `MULTIPOLAR_GAME.md` section 4 describes is a claim about *this* structure, and
-//! the Pareto-inferior Nash equilibrium that `THEORY_OF_SPARING.md` section 7d
+//! `documents/MULTIPOLAR_GAME.md` section 4 describes is a claim about *this* structure, and
+//! the Pareto-inferior Nash equilibrium that `documents/THEORY_OF_SPARING.md` section 7d
 //! formalises for producers and consumers is the same shape. Everything downstream
 //! -- conflict frequency, efficiency loss, polarity -- is a consequence of solving
 //! this game rather than assuming its outcome, so the solver is the part worth
@@ -33,7 +33,7 @@
 //! The first version of this module solved a *symmetric* game: one matrix described
 //! both players, which made the whole model unable to express a claim as basic as
 //! "cooperation is worth more to this bloc than to that one". That is not a detail,
-//! because it is the claim `MULTIPOLAR_GAME.md` section 4 is organised around -- the
+//! because it is the claim `documents/MULTIPOLAR_GAME.md` section 4 is organised around -- the
 //! realist case has AI as one more axis of zero-sum rivalry, the optimistic case has
 //! AI competition that need not be zero-sum, and those are statements about *whose*
 //! cooperation payoff is higher. An `--ai` sweep row that could not move the
@@ -51,7 +51,7 @@
 //! The textbook security dilemma has `Compete` strictly dominant, and a solver that
 //! returned that every time would be both correct and useless: it would reproduce
 //! one narrative and never show the conditions under which cooperation survives --
-//! which is exactly the question the literature cited in `MULTIPOLAR_GAME.md`
+//! which is exactly the question the literature cited in `documents/MULTIPOLAR_GAME.md`
 //! section 4 is split on. The payoff structure is therefore built so that **mutual
 //! cooperation can be a Nash equilibrium** when the gains from cooperation are
 //! large relative to the cost of being exploited, and so that arms-race dynamics
@@ -121,7 +121,7 @@ pub enum Equilibrium {
     /// Pareto-superior `(C,C)`.
     Coordination,
     /// Compete strictly dominates: `(D,D)` is the unique outcome. The security
-    /// dilemma in its pure form, and the case `MULTIPOLAR_GAME.md` describes as
+    /// dilemma in its pure form, and the case `documents/MULTIPOLAR_GAME.md` describes as
     /// the arms-race dynamic.
     Dilemma,
     /// Cooperate is the best response whatever the other does: `(C,C)` is reached
@@ -502,7 +502,7 @@ mod tests {
 
     /// The textbook Prisoner's Dilemma: competing dominates, and the equilibrium
     /// is the outcome both players would rather avoid. This is the structure
-    /// `THEORY_OF_SPARING.md` section 7d describes for engineered obsolescence.
+    /// `documents/THEORY_OF_SPARING.md` section 7d describes for engineered obsolescence.
     #[test]
     fn prisoners_dilemma_is_solved_as_a_dilemma() {
         let pd = Payoffs {
@@ -524,7 +524,7 @@ mod tests {
         );
     }
 
-    /// A coordination game -- the structure `MULTIPOLAR_GAME.md` section 4 invokes
+    /// A coordination game -- the structure `documents/MULTIPOLAR_GAME.md` section 4 invokes
     /// via the Concert of Europe, where a good equilibrium exists but is not
     /// forced. Both mutual cooperation and mutual competition are equilibria; the
     /// solver selects the Pareto-superior one as a *documented rule*, not an

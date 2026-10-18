@@ -17,10 +17,10 @@
 //! Monte Carlo simulator for a multipolar world, and what its equilibria imply
 //! for pension security.
 //!
-//! Built to give the Life Optimizer something `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`
+//! Built to give the Life Optimizer something `documents/PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD`
 //! section 2c says it lacks: a voice for "what happens if everyone does this".
-//! The theory this operationalises is in `MULTIPOLAR_GAME.md` sections 4 and 7 and
-//! `THEORY_OF_SPARING.md` section 7d.
+//! The theory this operationalises is in `documents/MULTIPOLAR_GAME.md` sections 4 and 7 and
+//! `documents/THEORY_OF_SPARING.md` section 7d.
 //!
 //! # Read the sensitivity sweep, not the headline
 //!
@@ -35,7 +35,7 @@ mod blocks;
 mod economy;
 mod export;
 mod game;
-/// The information layer of `INFORMATION_WARFARE.md` -- legitimation, credibility as a
+/// The information layer of `documents/INFORMATION_WARFARE.md` -- legitimation, credibility as a
 /// depletable stock, and the public-good failure in verification.
 ///
 /// Allowed to be partly unused by the binary on purpose: the module *is* the deliverable
@@ -45,18 +45,18 @@ mod game;
 #[allow(dead_code)]
 mod information;
 mod pension;
-/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md` lives in the `human_capacity`
+/// The psychological layer of `documents/THE_PSYCHOLOGICAL_LAYER.md` lives in the `human_capacity`
 /// library crate, so that a second model can compose with these dynamics instead of
 /// restating them. The alias keeps every call site reading `psyche::...`, which is what both
 /// the code and the document call the layer.
 use human_capacity as psyche;
 mod report;
 mod simulation;
-/// The third-party spoiler of `THIRD_PARTY_SPOILER.md`: divide and conquer as a
+/// The third-party spoiler of `documents/THIRD_PARTY_SPOILER.md`: divide and conquer as a
 /// strategy, and why the profiteer is so rarely made to pay.
 #[allow(dead_code)]
 mod spoiler;
-/// The two strategies of `STRATEGY_COMPARISON.md`: buy the peace, or buy the war,
+/// The two strategies of `documents/STRATEGY_COMPARISON.md`: buy the peace, or buy the war,
 /// priced against each other on the same budget and the same clock.
 #[allow(dead_code)]
 mod strategies;
@@ -111,7 +111,7 @@ struct Args {
     /// `--information`: run the world with endogenous war onset beside the baseline.
     information: bool,
     /// `--information-verification <x>`: the audience's verification rate `lambda`.
-    /// This is the phase variable of `INFORMATION_WARFARE.md` Corollary 3.1.
+    /// This is the phase variable of `documents/INFORMATION_WARFARE.md` Corollary 3.1.
     information_verification: f64,
     /// `--information-effort <x>`: sustained assertion mass per bloc.
     information_effort: f64,
@@ -141,7 +141,7 @@ struct Args {
     strategy_punishment: f64,
     /// `--strategy-sensitivity`: sweep the assumptions the verdict turns on.
     strategy_sensitivity: bool,
-    /// `--psyche`: run the psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`.
+    /// `--psyche`: run the psychological layer of `documents/THE_PSYCHOLOGICAL_LAYER.md`.
     psyche: bool,
     /// `--psyche-persons <n>`: cohort size for the Monte Carlo.
     psyche_persons: usize,
@@ -1228,7 +1228,7 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
 /// assumes a war rate (`--war`, 3% a year); the layer derives one from the attack payoffs
 /// and the beliefs the blocs manufacture. Printing the two side by side, from the same
 /// seeds, is the comparison that carries information -- and the sweep over the
-/// verification rate `lambda` is where the phase transition of `INFORMATION_WARFARE.md`
+/// verification rate `lambda` is where the phase transition of `documents/INFORMATION_WARFARE.md`
 /// Corollary 3.1 becomes visible in the world rather than only in the algebra.
 fn run_information(base: &Args) {
     println!();
@@ -2210,7 +2210,7 @@ struct StrategySweep {
 ///
 /// # What this mode is for
 ///
-/// `THIRD_PARTY_SPOILER.md` establishes that a third party can profit from a conflict
+/// `documents/THIRD_PARTY_SPOILER.md` establishes that a third party can profit from a conflict
 /// between two others. This mode asks the question that document leaves open -- what the
 /// same influence would have bought if it had been spent on cooperation instead -- and it
 /// answers it twice:
@@ -2276,7 +2276,7 @@ fn run_strategies(base: &Args) {
     println!("  negative, so a negative row is a region already at war and a positive one is a");
     println!("  peace a strategist would be defending. `rent` is what a conflict there releases");
     println!("  annually; `retal.` is the victims' capacity to identify and punish a sponsor,");
-    println!("  which is `THIRD_PARTY_SPOILER.md` Theorem 6 reused rather than re-derived.");
+    println!("  which is `documents/THIRD_PARTY_SPOILER.md` Theorem 6 reused rather than re-derived.");
 
     // ---- 2. the verdict, region by region ---------------------------------
     println!();
@@ -2790,7 +2790,7 @@ fn psyche_boundary_substitution(
     Some(0.5 * (low + high))
 }
 
-/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`.
+/// The psychological layer of `documents/THE_PSYCHOLOGICAL_LAYER.md`.
 ///
 /// # Why this run reports paired differences rather than levels
 ///

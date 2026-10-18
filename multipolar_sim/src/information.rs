@@ -17,7 +17,7 @@
 //! The information layer: legitimation, credibility as a depletable stock, and the
 //! public-good failure in verification.
 //!
-//! This module is the executable form of `INFORMATION_WARFARE.md`. That document
+//! This module is the executable form of `documents/INFORMATION_WARFARE.md`. That document
 //! proves six results; this module implements the objects they are about, and its
 //! test module asserts the results rather than restating them in prose. A theorem
 //! that only exists in a markdown file drifts from the code the moment either
@@ -42,7 +42,7 @@
 //! boundary where dribbling forever becomes optimal. Those are structural; the
 //! numbers attached to them are not.
 
-/// Detection, damage and recovery of the credibility stock. `INFORMATION_WARFARE.md`
+/// Detection, damage and recovery of the credibility stock. `documents/INFORMATION_WARFARE.md`
 /// section 2.4.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CredibilityParams {
@@ -147,7 +147,7 @@ impl CredibilityParams {
 }
 
 /// The legitimation function `Lambda`: the fraction of the cost of force that
-/// believed culpability removes. `INFORMATION_WARFARE.md` section 2.5.
+/// believed culpability removes. `documents/INFORMATION_WARFARE.md` section 2.5.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LegitimationParams {
     /// `Lambda_max`: how much of the cost can *ever* be removed. Below 1 there is an
@@ -251,7 +251,7 @@ pub fn attack_threshold(
 }
 
 /// Influence structure: how suspicion about one bloc transfers to belief about another.
-/// `INFORMATION_WARFARE.md` section 2.3.
+/// `documents/INFORMATION_WARFARE.md` section 2.3.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Influence {
     /// `Sigma`, zero diagonal, nonnegative.
@@ -727,7 +727,7 @@ fn binomial(n: usize, k: usize, q: f64) -> f64 {
     coefficient * q.powi(k as i32) * (1.0 - q).powi((n - k) as i32)
 }
 
-/// World-economy loss from a war, `INFORMATION_WARFARE.md` section 2.6 and Theorem 5.
+/// World-economy loss from a war, `documents/INFORMATION_WARFARE.md` section 2.6 and Theorem 5.
 ///
 /// Split into the three channels the theorem treats separately, so that the
 /// comparative statics can be asserted per channel rather than on a sum in which an

@@ -17,7 +17,7 @@
 //! Terminal reporting.
 //!
 //! Every section that reports a number also reports the uncertainty around it, or
-//! says that the number is a convention. `MULTIPOLAR_GAME.md` section 7 concludes
+//! says that the number is a convention. `documents/MULTIPOLAR_GAME.md` section 7 concludes
 //! that "genuine uncertainty is the most defensible position", and a report that
 //! printed a single 50-year trajectory without its dispersion would contradict
 //! that.

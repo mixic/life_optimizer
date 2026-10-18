@@ -206,7 +206,7 @@ pub fn print_optimal_result_for(
 
 /// Show where the budget squeeze actually lands, by elasticity tier.
 ///
-/// `THEORY_OF_SPARING.md` §7c: a household with rising inelastic costs can
+/// `documents/THEORY_OF_SPARING.md` §7c: a household with rising inelastic costs can
 /// practice maximum sparing discipline on the elastic tier and still see little
 /// movement in total consumption. Reporting only an aggregate "requirements"
 /// number hides which tier is under pressure.

@@ -22,7 +22,7 @@
 //! realized outcome is sampled from the solved equilibrium, so a mixed equilibrium
 //! genuinely randomises rather than being rounded to one action.
 //!
-//! Many runs produce a distribution, because `MULTIPOLAR_GAME.md` section 7 is
+//! Many runs produce a distribution, because `documents/MULTIPOLAR_GAME.md` section 7 is
 //! explicit that "genuine uncertainty is the most defensible position": there is
 //! no single answer to where a multipolar system settles, and a point estimate
 //! would misrepresent that.
@@ -68,7 +68,7 @@ fn tension_feed_scale(blocs: usize) -> f64 {
     }
 }
 
-/// Kind of annual shock. The categories follow `MULTIPOLAR_GAME.md` section 4's
+/// Kind of annual shock. The categories follow `documents/MULTIPOLAR_GAME.md` section 4's
 /// discussion of what makes multipolar transitions dangerous.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShockKind {
@@ -162,13 +162,13 @@ pub struct Config {
     /// It pins only the *first* belligerent; the second is still drawn, so a targeted
     /// war is a war centred on that bloc rather than a scripted outcome.
     pub war_target: Option<usize>,
-    /// The information layer of `INFORMATION_WARFARE.md`.
+    /// The information layer of `documents/INFORMATION_WARFARE.md`.
     ///
     /// Disabled by default, and that is load-bearing rather than tidy: the only thing the
     /// layer does is replace the exogenous war draw with an endogenous one, so with it off
     /// every published figure must be reproduced exactly. A test pins that.
     pub information: InformationParams,
-    /// The strategy layer of `STRATEGY_COMPARISON.md`: buy the peace in a fragile
+    /// The strategy layer of `documents/STRATEGY_COMPARISON.md`: buy the peace in a fragile
     /// region, or buy the war.
     ///
     /// Disabled by default, and like the information layer that is load-bearing rather
@@ -253,7 +253,7 @@ pub struct YearRecord {
 /// Reported separately from [`RunOutcome`]'s own fields because the layer's whole claim
 /// is that it *derives* something the baseline assumes: with the layer on, the war rate
 /// is an output. Printing it beside the assumed rate is what makes that comparison
-/// possible. `INFORMATION_WARFARE.md` sections 3.2-3.7.
+/// possible. `documents/INFORMATION_WARFARE.md` sections 3.2-3.7.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct InformationOutcome {
     /// Wars triggered by an attack payoff that crossed zero -- the endogenous onset.
@@ -441,7 +441,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         // --- the information layer: belief and credibility -------------------
         //
         // Updated *before* the attack decision, because the decision is taken on the
-        // belief the audience currently holds. Equation (3) of `INFORMATION_WARFARE.md`,
+        // belief the audience currently holds. Equation (3) of `documents/INFORMATION_WARFARE.md`,
         // reduced to the simulation's granularity: each bloc's assertions raise belief
         // about its target, weighted by its own credibility, while verification pulls
         // belief back toward the truth.
@@ -495,7 +495,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         // With the layer off this is the original exogenous draw, unchanged and
         // consuming exactly the same random numbers, so the published figures reproduce.
         // With it on, onset is *derived*: the war rate becomes an output of the model
-        // rather than an assumption in it. `INFORMATION_WARFARE.md` section 3.2.
+        // rather than an assumption in it. `documents/INFORMATION_WARFARE.md` section 3.2.
         let war_probability_draw = rng.gen::<f64>();
         let war_triggered = if information_on {
             let mut trigger: Option<(usize, usize, bool)> = None;
@@ -1371,7 +1371,7 @@ mod tests {
     /// The parameters are invented, so no single trajectory is informative. What
     /// *is* informative is how strongly the qualitative outcome depends on the
     /// cooperation/competition payoff balance -- the balance that decides whether
-    /// the security dilemma binds at all, and the question `MULTIPOLAR_GAME.md`
+    /// the security dilemma binds at all, and the question `documents/MULTIPOLAR_GAME.md`
     /// section 4 says the literature is split on. This asserts that dependence end
     /// to end, on the same quantities the report prints.
     ///
@@ -1581,7 +1581,7 @@ mod tests {
     }
 
     /// The information layer must be inert when it is off, and "inert" has to mean
-    /// *byte-identical*, not merely similar -- `INFORMATION_WARFARE.md` section 8 promises
+    /// *byte-identical*, not merely similar -- `documents/INFORMATION_WARFARE.md` section 8 promises
     /// the published figures reproduce, and every figure in this crate is a snapshot that
     /// would silently drift if the draw sequence moved by one.
     ///

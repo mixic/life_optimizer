@@ -5,12 +5,12 @@ regime-switching, jump risk, dependence modeling, and calibration as entirely
 missing. Since then, [`economic_regimes.rs`](src/economic_regimes.rs) shipped a
 4-state Markov regime-switching model (Boom/Normal/Recession/Stagflation) with
 a calibrated transition matrix, plus a dedicated sequence-of-returns stress
-test at retirement (see [`ECONOMIC_SCENARIOS.md`](ECONOMIC_SCENARIOS.md)). This
+test at retirement (see [`ECONOMIC_SCENARIOS.md`](documents/ECONOMIC_SCENARIOS.md)). This
 revision starts from an honest accounting of what actually exists today, rather
 than repeating a critique the codebase has partly already addressed, and adds
 a second track of work — consumption-side and labor-side realism — that grew
 out of [`CRITICS_CURRENT_WORK.md`](CRITICS_CURRENT_WORK.md) and
-[`THEORY_OF_SPARING.md`](THEORY_OF_SPARING.md) but has not yet been implemented
+[`THEORY_OF_SPARING.md`](documents/THEORY_OF_SPARING.md) but has not yet been implemented
 in code.*
 
 ---

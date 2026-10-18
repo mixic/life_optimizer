@@ -94,7 +94,7 @@ impl PersonalRequirements {
     /// Split monthly consumption by elasticity tier, applying the household's
     /// sparing and lifestyle parameters.
     ///
-    /// The tier assignment follows `THEORY_OF_SPARING.md` §7a–§7c: housing,
+    /// The tier assignment follows `documents/THEORY_OF_SPARING.md` §7a–§7c: housing,
     /// food, transport, insurance, childcare and healthcare are treated as
     /// genuinely inelastic (no real elastic margin); savings goal and vacation
     /// are committed outflows the household has already promised; and

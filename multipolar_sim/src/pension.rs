@@ -18,7 +18,7 @@
 //!
 //! # Why this module exists
 //!
-//! `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` section 2c makes a point the Life
+//! `documents/PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` section 2c makes a point the Life
 //! Optimizer cannot answer on its own: the Swiss AHV is a **pay-as-you-go
 //! intergenerational contract** -- "today's contributions fund today's retirees,
 //! not your own future self" -- and "a population that collectively chooses lower
@@ -36,7 +36,7 @@
 //!
 //! # The two channels
 //!
-//! 1. **Fiscal.** `MULTIPOLAR_GAME.md` section 8 cites Paul Kennedy's "imperial
+//! 1. **Fiscal.** `documents/MULTIPOLAR_GAME.md` section 8 cites Paul Kennedy's "imperial
 //!    overstretch": guardian-class (defence) spending grows to outpace the
 //!    producer-class base sustaining it. Competitiveness is what generates that
 //!    spending, so it crowds out the transfers a PAYG system needs.
@@ -44,7 +44,7 @@
 //!    disintermediation can compress employment. A SYSTEM in which individuals
 //!    rationally choose lower work percentages reduces the contributor-to-retiree
 //!    ratio that PAYG solvency depends on -- the collective-action problem of
-//!    `THEORY_OF_SPARING.md` section 7d, applied to pensions.
+//!    `documents/THEORY_OF_SPARING.md` section 7d, applied to pensions.
 //!
 //! Both channels are worsened by competition and eased by cooperation. That is
 //! the entire mechanism, stated plainly so it can be argued with.
@@ -107,7 +107,7 @@ pub struct PensionOutcome {
 impl PensionOutcome {
     /// Expected pension income from the PAYG pillar alone.
     ///
-    /// This is the quantity `PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` section 2c
+    /// This is the quantity `documents/PHILOSOPHICAL_SOCIOLOGICAL_ASPECTS.MD` section 2c
     /// says the Life Optimizer cannot supply: not "what should *you* do", but
     /// "what will this promise be worth if the system around you evolves this
     /// way".
