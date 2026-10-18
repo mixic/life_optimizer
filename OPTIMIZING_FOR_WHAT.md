@@ -227,6 +227,10 @@ no room for the coupling to occur. The margin is not a parameter; it is a conseq
 | 0.90 | 0.433 | 1.32 | 0.987 | 1.000 | yes | yes |
 | 1.00 | 0.378 | 1.29 | 0.967 | 1.000 | yes | yes |
 
+**Figure:** `figures/workflow-1-envelope.png` draws this table. Panel (a) is utilisation against
+capacity with both thresholds marked; panel (b) is the absorbable share, which is the operational
+reading of the same curve.
+
 Read the last four rows together: between capacity 0.90 and 0.85 the workflow keeps a steady state
 but stops being able to take everything it generates. The failure is not a queue blowing up. It is
 an organisation quietly admitting less than it produces while every utilisation chart reads
@@ -243,6 +247,9 @@ normally.
 | 2 | 0.962 |
 | 1 | **unmeetable** |
 | 0.5 | **unmeetable** |
+
+**Figure:** `figures/workflow-2-deadline.png`. The shaded region is where no capacity is enough,
+which the model refuses to report as a threshold.
 
 At one day the workflow cannot meet its commitment **at any capacity**, and the function returns
 `None` rather than a capacity outside its own range. That is a design failure rather than a tight
@@ -262,6 +269,9 @@ falls from 0.908 to 0.742 because assistance is solved for rather than chosen.
 | 6 | 0.826 | 0.474 | 1.34 | 1.003 | **no steady state** |
 | 15 | 0.758 | 0.511 | 1.36 | 1.017 | **no steady state** |
 | 29 | 0.742 | 0.520 | 1.36 | 1.020 | **no steady state** |
+
+**Figure:** `figures/workflow-3-trajectory.png` draws both panels: the person above, the workflow
+below, with the two breach years marked.
 
 **Year 1 breaches the commitment. Year 5 has no steady state.** Nothing about the workflow changed:
 no new tool, no reorganisation, no increase in demand. The workflow's stability is a property of
@@ -314,6 +324,9 @@ Over 495 weightings of throughput, cycle time, escaped defects, autonomy years a
 | learning buffer | **51%** |
 | lean | 31% |
 | buffered | 18% |
+
+**Figure:** `figures/workflow-4-direction.png`. Panel (a) is the acceptance surface; panel (b) is
+what each configuration trades away, with every criterion normalised so that higher is better.
 
 **No rank order exists.** All three configurations win under some defensible weighting, and the
 report says so instead of promoting the declared weighting's winner to the answer. The declared
