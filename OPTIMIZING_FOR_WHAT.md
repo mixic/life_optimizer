@@ -1,6 +1,6 @@
 # Optimizing for What? Just-in-Time Production Logic, AI Adoption, and the Sustainability of Knowledge Work
 
-*Code in `knowledge_work/` (29 tests) and `human_capacity/` (15 tests), which it composes with.
+*Code in `knowledge_work/` (30 tests) and `human_capacity/` (15 tests), which it composes with.
 CLI `cargo run -p knowledge_work`. Figures in `figures/workflow-*.png`, drawn by
 `tools/plot_workflow.py` from the model's own CSV export. Every parameter is declared; §9 states
 the scope conditions and §10 states what the framework cannot establish.*
@@ -148,6 +148,41 @@ The `absorbable_share` is the operational form: the fraction of generated work t
 while still meeting the commitment, obtained by inverting the queue at the deadline. At 1.00 the
 workflow can take everything it generates.
 
+### 4.4 The parameters, and their provenance
+
+Every one of the twelve is `Declared`, and `WorkflowParameters::provenance_table()` says so beside
+each in the code and in the exported `provenance.txt`. The table is reproduced here because a
+reader should not have to open the source to find out that nothing is calibrated.
+
+| Parameter | Value | Provenance | Why the value is defensible in sign |
+|---|---:|---|---|
+| demand per day | 12 | declared | An arbitrary team's intake; sets the scale, not the shape |
+| generation multiplier | 2.0 | declared | "The machine makes it cheap to make more work"; the first thing to sweep |
+| reviewers | 4 | declared | Small enough to be a coherent team |
+| review rate | 8/day | declared | About an hour per item, which is long for a review and short for a proper one |
+| defect share | 0.20 | declared | One generated item in five carries a defect before review |
+| caught rework cost | 0.50 | declared | Half a first-pass review to fix something caught in time |
+| escape rework cost | 3.0 | declared | Six times the caught cost; this is the parameter the thesis turns on |
+| arrival coefficient of variation | 1.0 | declared | Poisson-like intake; raised by bursty generation |
+| service coefficient of variation | 1.5 | declared | A review is fast or it is a week (§S4 explains why it is not derived) |
+| utilisation target | 0.90 | declared | The lean norm, chosen because it is the norm rather than because it is right |
+| WIP cap | 40 items | declared | About two days of generated work at the declared rates |
+| cycle-time deadline | 5 days | declared | A plausible commitment; §6.3 shows what other commitments cost |
+
+The two that carry the argument are `escape rework cost` and `generation multiplier`. The first
+determines whether deskilling destabilises the queue at all — at a multiplier of one, escapes cost
+the same as caught defects and the coupling has no direction. The second determines whether there is
+any margin for the coupling to eat: at a generation multiplier of 1.5 rather than 2.0 the defaults
+would run at about 73% of capacity, and nothing in §6.4 would happen within the horizon.
+
+Both are swept rather than fixed in the figures, and neither is a measurement. Anyone who wants to
+attack the framework's conclusions should move those two numbers first, because they are where the
+conclusions come from.
+
+Both are swept rather than fixed in the figures, and neither is a measurement. Anyone who wants to
+attack the framework's conclusions should move those two numbers first, because they are where the
+conclusions come from.
+
 ## 5. The coupling
 
 `e` is not a constant. It is the residual defect rate of the person doing the reviewing, and
@@ -285,6 +320,16 @@ report says so instead of promoting the declared weighting's winner to the answe
 weighting — throughput 0.30, escaped defects 0.25, autonomy 0.20, cycle time 0.15, backlog 0.10 —
 is printed as *one point on that surface*, named as the ordinary managerial view, with its
 provenance marked `declared`.
+
+The five criteria and why each is in the framework at all:
+
+| Criterion | Declared weight | Why it is included |
+|---|---:|---|
+| throughput | 0.30 | The quantity every productivity metric already reports — which is precisely why the framework has to show what ignoring the others would choose |
+| cycle time | 0.15 | The commitment made to whoever receives the work |
+| escaped defects | 0.25 | The cost that lands on someone outside the team, which is why no team-level metric counts it |
+| autonomy years | 0.20 | Years spent above the autonomy floor; weighting it at all is the normative claim the framework exists to examine |
+| backlog | 0.10 | Work generated and never admitted, which is what a utilisation target buys itself |
 
 ### 7.3 What the framework cannot decide, and why that is not a failure
 
@@ -428,8 +473,8 @@ python tools/plot_workflow.py out/workflow figures
 cargo test -p knowledge_work
 ```
 
-The full workspace suite is 419 tests. `knowledge_work` contributes 29 — eight on the queueing
-building blocks, ten on the workflow, four on the envelope, seven on the direction framework — and
+The full workspace suite is 420 tests. `knowledge_work` contributes 30 — eight on the queueing
+building blocks, ten on the workflow, five on the envelope, seven on the direction framework — and
 each is named for the failure it would catch.
 
 ## 14. Corrections recorded

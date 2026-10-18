@@ -168,3 +168,46 @@ fn a_tighter_commitment_costs_capacity_and_eventually_becomes_impossible() {
     assert!(point.absorbable_share.is_none());
     assert!(!point.meets_deadline);
 }
+/// The margin that §6.4's breach consumes comes from the *generated volume*, not from the
+/// utilisation target. This is the claim §4.4 makes when it points a sceptic at the generation
+/// multiplier, and it is worth a test because it is the sentence that tells a reader where to
+/// attack the argument.
+#[test]
+fn the_margin_comes_from_generated_volume_not_the_utilisation_target() {
+    let params = params();
+    let mut person = params.clone();
+    person.expectation_ceiling = 1.7;
+    let states = capacity::simulate(0.95, 0.40, &person, capacity::Strategy::Tracking, 0.55);
+
+    let declared = WorkflowParameters::default();
+    let path = knowledge_work::workflow::trajectory(
+        &states,
+        &declared,
+        knowledge_work::workflow::Policy::Push,
+        &params,
+    );
+    assert!(
+        path.iter().any(|point| !point.stable),
+        "the declared multiplier should drive the workflow out of its envelope"
+    );
+
+    let mut restrained = declared.clone();
+    restrained.generation_multiplier = 1.5;
+    let calm = knowledge_work::workflow::trajectory(
+        &states,
+        &restrained,
+        knowledge_work::workflow::Policy::Push,
+        &params,
+    );
+    assert!(
+        calm.iter().all(|point| point.stable),
+        "at a multiplier of 1.5 the workflow should stay inside its envelope throughout"
+    );
+    // And the utilisation target is not what did it: the target policy never appears here.
+    let opening = calm.first().expect("a non-empty trajectory").rho;
+    assert!(
+        (0.60..0.80).contains(&opening),
+        "the restrained workflow opens at {opening}, not the comfortable margin the document \
+         claims"
+    );
+}
