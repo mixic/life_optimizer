@@ -175,8 +175,8 @@ impl RobustnessReport {
                 let widest = self.widest_shift().unwrap_or(0.0);
                 format!(
                     "The answer is {:.0}%, but it moves between {:.0}% and {:.0}% when a single \
-                     declared preference is moved (widest shift {:.0} points). Treat the margin, \
-                     not the leader, as the finding.",
+                     declared input is moved (widest shift {:.0} points). The table says which \
+                     one. Treat the margin, not the leader, as the finding.",
                     base * 100.0,
                     low * 100.0,
                     high * 100.0,

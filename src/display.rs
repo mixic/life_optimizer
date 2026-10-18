@@ -195,6 +195,18 @@ pub fn print_optimal_result_for(
     println!("  Family:          {:.2}", breakdown.family_utility);
     println!("  Health:          {:.2}", breakdown.health_utility);
     println!("  Security:        {:.2}", breakdown.security_utility);
+    // The weights beside the components, because a total without them cannot be argued with.
+    // Printing the components was not enough on its own: the flagship output was still a scalar.
+    let w = &scenario.preferences;
+    println!(
+        "  {}  consumption {:.2}  leisure {:.2}  family {:.2}  health {:.2}  security {:.2}",
+        "Weights:".bold(),
+        w.consumption,
+        w.leisure,
+        w.family,
+        w.health,
+        w.security
+    );
     // Note: precision specifiers have no effect on String, so the value must be
     // formatted before being coloured.
     println!("  {} {}", "TOTAL UTILITY:".bold(), format!("{:.2}", breakdown.total).cyan().bold());

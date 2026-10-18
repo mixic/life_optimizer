@@ -498,6 +498,12 @@ pub struct WorkScenario {
     /// What this scenario moves onto colleagues, and whether it was modelled at all.
     /// A reduction with [`crate::team::Severity::NotModelled`] must be presented with a warning.
     pub team_externality: crate::team::TeamExternality,
+    /// The utility weights the score was computed under.
+    ///
+    /// Carried on the scenario so the report can print them beside the components: a total
+    /// without its weights is a number nobody can argue with, which is the opposite of what this
+    /// tool claims to be.
+    pub preferences: crate::requirements::PreferenceWeights,
 }
 
 impl WorkScenario {
@@ -799,6 +805,7 @@ impl LifeOptimizer {
             utility_breakdown,
             retirement_adequacy: None,
             team_externality,
+            preferences: self.config.preferences.clone(),
         }
     }
 

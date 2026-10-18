@@ -183,38 +183,94 @@ its module map.
 
 ## Example output
 
+Abridged from a real run of `./life-optimizer optimize --salary 150000 --age 40`. Every block below
+appears in an ordinary `optimize` invocation; sections that are not about the decision are elided
+with `[...]` so the output can be read rather than scrolled. Nothing here is hand-written.
+
 ```
-OPTIMAL SOLUTION FOUND!
-Work Percentage: 80%
-Gross Income:    85,155 CHF/year
-After-Tax:       73,386 CHF/year
-Monthly Net:     6,115 CHF/month
-Total Deduction: 13.8%
-Status:          MEETS ALL REQUIREMENTS ✓
-TOTAL UTILITY:   31.75
+🎯 OPTIMAL SOLUTION FOUND!
 
-PENSION SUSTAINABILITY ANALYSIS
-────────────────────────────────────────
-Projected Pension (at age 65):
-  AHV (Pillar 1):      CHF 2,129/month
-  BVG (Pillar 2):      CHF 3,245/month
-  Total Pension:       CHF 5,374/month
-Status:              PENSION ADEQUATE ✓
-Coverage:            117% of needs
+Work Configuration:
+  Work Percentage: 40%
+  Gross Income:    60000 CHF/year
+  After-Tax:       46148 CHF/year
+  Monthly Net:     3846 CHF/month
+  Tax Rate:        12.1% (official Bern table)
 
-MONTE CARLO PENSION SIMULATION (10,000 paths)
-────────────────────────────────────────
-  Scenario        P10 (bad)    Median     P90 (good)
-  Conservative    CHF 3,200    CHF 4,100   CHF 5,100
-  Base Case       CHF 3,800    CHF 5,200   CHF 7,400
-  Optimistic      CHF 4,200    CHF 6,800   CHF 11,200
+Financial Health:
+  Status:          MEETS ALL REQUIREMENTS ✓
+  Monthly Surplus: +86 CHF
+    (tested against the mandatory floor of CHF 3760/month, not the full lifestyle basket)
 
-STRESS TEST: RECESSION HITS RIGHT AT RETIREMENT
-────────────────────────────────────────
-  Normal median pension:    CHF 5,200/month
-  Stress-test pension:      CHF 4,100/month  (21% lower)
-  Still adequate:           68% of stress scenarios
+Utility Score Breakdown:
+  Consumption:     -0.06
+  Leisure:         2.26
+  Family:          2.59
+  Health:          1.39
+  Security:        1.20
+  Weights:  consumption 0.25  leisure 0.20  family 0.25  health 0.15
+            security 0.15
+  TOTAL UTILITY:   7.34
+
+  Colleagues:
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    WARNING: THE EFFECT ON COLLEAGUES IS NOT MODELLED
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    A reduced schedule usually moves work onto colleagues. This result does
+    not account for that, so it cannot tell you whether the reduction is fair
+    to your team, and it will favour such a schedule over one that
+    genuinely produces less.
+
+    This reduction is 25.2 hours a week if a team absorbs it, and those
+    hours are currently attributed to nobody.
+
+    Re-run with --team-size <n> (and --redistribution <0..1>) to see how many
+    hours a week would land on each colleague.
+
+[... pension projection, Monte Carlo and stress test ...]
+
+Retirement needs, as an input rather than an assumption:
+  You are evaluated at CHF 5590/month, from this household's modelled budget
+  Projected income:  CHF 2207/month (BVG + AHV, real)
+  -> BREAK-EVEN: this plan supports up to CHF 2207/month. You assume more than that.
+
+   of that    needs/month   coverage     verdict
+       60%           4472        49%       short
+       75%           5590        39%       short <==
+       90%           6708        33%       short
+
+  The plan supports CHF 2207/month against a need of CHF 5590/month.
+  Spending is not modelled as changing with age, health, or a partner's death.
+
+Is the leader distinguishable from the runner-up?
+      work    utility     margin    verdict
+       40%       7.34       0.00     leader
+       50%       7.17       0.17     behind
+       60%       6.97       0.37     behind
+
+  SEPARATED: 40% leads 50% by 0.17 utility points (2% of the leading score).
+  The band is declared at 2% of the leading score: the utility scale is
+  arbitrary, so a margin in points carries no meaning on its own.
+
+Robustness: does the answer survive its own assumptions?
+  Weights in use (declared, not measured):  consumption 0.25  leisure 0.20
+  family 0.25  health 0.15  security 0.15
+
+   input moved        by    optimal     shift
+   consumption     x0.50        40%      none
+   [... the other four weights, all "none" ...]
+  consumption basket     x0.50        30%   -10 pts
+  consumption basket     x2.00        90%   +50 pts
+
+  SENSITIVE: The answer is 40%, but it moves between 30% and 90% when a single
+  declared input is moved (widest shift 50 points). The table says which one.
+  Treat the margin, not the leader, as the finding.
 ```
+
+Read that output as an argument rather than a verdict. The weights do not move the answer at all;
+the consumption basket moves it by fifty points. So the number rests on the budget model and not on
+the preferences — the opposite of what most people would guess, and the kind of thing only a printed
+sensitivity table can tell you.```
 
 ---
 

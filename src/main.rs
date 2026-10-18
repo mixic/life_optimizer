@@ -1754,7 +1754,12 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // configuration has to survive being cloned rather than being consumed here.
     let config_for_robustness = config.clone();
     let optimizer = LifeOptimizer::new(config);
-    let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+    // The search spans 30% to full time in ten-point steps. It used to start at 50%, which made
+    // 50% the answer for any household that preferred less work — and the robustness block then
+    // correctly reported it as an optimum on the edge of the search, which is not a recommendation
+    // at all. A grid whose boundary is a plausible answer cannot distinguish "the best percentage"
+    // from "the smallest one we tried".
+    let candidates = vec![0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let outcome = optimizer
         .search_outcome(&candidates)
         .expect("candidate list is non-empty");
