@@ -12,7 +12,7 @@
 # The member sits at the repository root rather than under `crates/`; a workspace
 # member may live anywhere, and a single member does not need a directory level of
 # its own.
-members = ["multipolar_sim", "human_capacity"]
+members = ["multipolar_sim", "human_capacity", "knowledge_work"]
 resolver = "2"
 
 [package]

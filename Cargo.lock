@@ -349,6 +349,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "knowledge_work"
+version = "0.1.0"
+dependencies = [
+ "human_capacity",
+ "rand",
+ "rand_distr",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

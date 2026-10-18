@@ -1,0 +1,15 @@
+[package]
+name = "knowledge_work"
+version = "0.1.0"
+edition = "2021"
+description = "Just-in-time logic transplanted into AI-assisted knowledge work: queueing thresholds, rework loops, and the operating envelope beyond which productivity gains become fragility"
+
+# The operations-research spine of the framework. It depends on `human_capacity`
+# rather than restating the capacity dynamics, which is the whole reason that
+# crate was extracted: a copied defect function would let the workflow model and
+# the psychological model disagree about the same person.
+
+[dependencies]
+human_capacity = { path = "../human_capacity" }
+rand = "0.8"
+rand_distr = "0.4"

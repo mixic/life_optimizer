@@ -77,3 +77,7 @@ jobs:
         run: cargo doc -p human_capacity --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+      - name: cargo doc (knowledge_work)
+        run: cargo doc -p knowledge_work --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
