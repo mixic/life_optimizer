@@ -326,6 +326,42 @@ A ten-fold faster tempo costs **8.6 years of autonomous practice** and about 0.0
 the throughput column is flat across the whole range because the bar reaches its ceiling either way.
 The speed decides how quickly the person is cornered, not how much they end up producing.
 
+### 6.6 The nearest documented instance, and why it is not a measurement
+
+This model has one historical analogue worth citing, and it should be cited carefully because it is
+the closest thing to evidence in this document.
+
+In September 2013 the FAA's Flight Deck Automation Working Group published *Operational Use of
+Flight Path Management Systems*, an evidence-based review whose underlying themes include
+"concerns about degradation of pilot knowledge and skills" ([report summary and full text](https://skybrary.aero/articles/operational-use-flight-path-management-systems)).
+Its 28 findings produced 18 recommendations, two of which are the model's mechanism stated by a
+regulator:
+
+- **Recommendation 1, Manual Flight Operations** — pilots "must be provided with opportunities to
+  refine this knowledge and practice the skills";
+- **Recommendation 9, Operational Policy** — the policy should stress "that the responsibility for
+  flight path management remains with the pilots at all times", and should "recognize the importance
+  of automated systems as a tool (among other tools)".
+
+Three things about it matter here, and two of them are corrections to how it is usually told.
+
+First, **automation was not rolled back.** What was redesigned was training, procedures, policy and
+design philosophy, with accountability re-anchored on the pilot. The lesson is not "use less
+automation"; it is "the same automation with a protected practice is safer than the same automation
+without one" — which is exactly what this model's training share is for.
+
+Second, **it took seventeen years.** The 2013 review was the first comprehensive one since a 1996 FAA
+report on flightcrew interfaces, and the working group noted further accidents after its own data
+collection with vulnerabilities similar to those it had identified. Institutional learning on this
+question is measured in decades, which is the opposite of reassurance for a technology moving in
+years.
+
+Third, **it is not a measurement of this model.** Aviation is a safety-critical, heavily regulated,
+tightly instrumented domain with a professional licensing regime; knowledge work is none of those
+things. What the report documents is that a regulator with good data and enforcement power needed
+seventeen years to act on skill degradation. Reading it as evidence that the same will happen here is
+a projection, and §11 lists the absence of a knowledge-work equivalent as the model's central gap.
+
 ## 7. Who is actually deskilled
 
 The question the previous sections keep deferring is the one a reader will ask: *is anyone actually

@@ -422,6 +422,10 @@ life-optimizer/
 │                                 stable, a nine-proposition certificate that can be regenerated
 │                                 with --prove, and a direction framework that reports its own
 │                                 indeterminacy instead of ranking
+├── VERIFYING_THE_CLAIMS.md       Two passages checked claim by claim -- an industry passage and
+│                                 the author's own -- against what can be sourced and what the
+│                                 models can settle: the aviation record, the Jevons ceiling, and
+│                                 the four sentences that would not survive a review
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
 │                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,
 │                                 tools/plot_strategies.py, tools/plot_early_retirement.py,
