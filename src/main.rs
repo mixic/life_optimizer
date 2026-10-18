@@ -16,7 +16,7 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team};
 use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
 use clap::{Parser, Subcommand, ArgAction};
@@ -434,6 +434,30 @@ struct OptimizeArgs {
     /// Added to the mandatory floor: an instalment does not shrink when hours do.
     #[arg(long, default_value = "0.0")]
     monthly_debt: f64,
+
+    /// Colleagues who would absorb work you stop doing, excluding yourself.
+    ///
+    /// Without this, a reduced schedule is reported with a warning that the effect on
+    /// colleagues is not modelled -- because it usually is an effect on colleagues, and
+    /// treating it as "no effect" made the tool favour schedules that push work onto
+    /// other people. Zero means "not modelled", which is reported rather than assumed
+    /// to be nothing.
+    #[arg(long, default_value = "0")]
+    team_size: u32,
+
+    /// Share of the reduction that lands on the team rather than simply not being done.
+    ///
+    /// Declared, not observed. The default is the pessimistic 1.0: when a team exists, a
+    /// tool that silently assumed 0.0 would be assuming the problem away.
+    #[arg(long, default_value = "1.0")]
+    redistribution: f64,
+
+    /// What a redistributed hour per week is worth to you, in utility points.
+    ///
+    /// Zero by default. Any positive value is a value judgement you are making, and it is
+    /// printed beside the figure so it can be argued with.
+    #[arg(long, default_value = "0.0")]
+    externality_weight: f64,
 }
 
 /// Optimise an early-retirement plan.
@@ -1046,6 +1070,9 @@ fn main() {
                 evaluation_period_years,
                 enforcement,
                 monthly_debt,
+                team_size,
+                redistribution,
+                externality_weight,
                 imputed_rental_value,
                 pensioner,
                 insurance_premiums,
@@ -1092,6 +1119,9 @@ fn main() {
                     }
                 },
                 monthly_debt,
+                team_size,
+                redistribution,
+                externality_weight,
                 household_facts: HouseholdFacts {
                     imputed_rental_value,
                     receives_pension: pensioner,
@@ -1546,6 +1576,13 @@ struct OptimizeParams<'a> {
     /// `--monthly-debt`: unavoidable contractual outflows, added to the
     /// mandatory floor (`CRITICS_CURRENT_WORK.md` §2.1).
     monthly_debt: f64,
+    /// `--team-size`: colleagues who would absorb work the user stops doing. Zero means the
+    /// effect is not modelled, which is reported rather than assumed to be nothing.
+    team_size: u32,
+    /// `--redistribution`: share of the reduction that lands on the team.
+    redistribution: f64,
+    /// `--externality-weight`: the user's own valuation of a moved hour per week.
+    externality_weight: f64,
     /// Extra household facts the deduction model uses; see [`HouseholdFacts`].
     household_facts: HouseholdFacts,
 }
@@ -1570,6 +1607,9 @@ fn run_optimization(p: OptimizeParams<'_>) {
         consumption_profile,
         employer,
         monthly_debt,
+        team_size,
+        redistribution,
+        externality_weight,
         household_facts,
     } = p;
 
@@ -1616,6 +1656,14 @@ fn run_optimization(p: OptimizeParams<'_>) {
     config.consumption = consumption_profile;
     config.enforcement = employer.enforcement();
     config.achievement = achievement;
+    // The externality a reduction moves onto colleagues. Set from the flags so that a user
+    // who names a team gets the hours, and a user who does not gets a warning instead of the
+    // silence that used to make pushing work onto teammates look free.
+    config.team = if team_size > 0 {
+        team::TeamParameters::with_team(team_size, redistribution).weighed(externality_weight)
+    } else {
+        team::TeamParameters::not_modelled().weighed(externality_weight)
+    };
 
     let optimizer = LifeOptimizer::new(config);
     let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
@@ -2150,6 +2198,12 @@ fn run_interactive() {
         consumption_profile: consumption::ConsumptionProfileConfig::default(),
         employer: EmployerInputs::default(),
         monthly_debt: 0.0,
+        // The interactive prompt does not ask about the team either, so the externality is
+        // reported as not modelled rather than assumed away. Adding the questions would be
+        // better; until then the warning does the work.
+        team_size: 0,
+        redistribution: 1.0,
+        externality_weight: 0.0,
         // The interactive prompt does not ask about these, and assuming them
         // would be exactly the guessing the deduction model refuses to do.
         household_facts: HouseholdFacts::default(),

@@ -39,14 +39,14 @@ same treatment this repository gives everything else: the claim, the evidence, a
 | # | Claim | Verdict | Evidence |
 |---|---|---|---|
 | C1 | The repository has overreached its scope; dozens of top-level documents for a calculator | **Verified** | 38 top-level markdown files, of which roughly 23 are essays or analysis and 13 are tool-facing -- from `PLATOS_TRIPARITITE_ORDER_AND_HAPPINES.MD` to `VERIFYING_THE_CLAIMS.md` |
-| C2 | The 0–10 quality-of-life score is unexplained and treated as solved | **Partly** | `README.md:97` advertises it, `README.md:327` has a "How the math works" section, `MATHEMATICS.md` documents it (37 weight/utility references). But the **output never shows the components or the weights**, so it cannot be audited at the point of decision. Remedy is right. |
+| C2 | The 0–10 quality-of-life score is unexplained and treated as solved | **Partly — and my first verdict here was too harsh** | `README.md:97` advertises it, `README.md:327` has a "How the math works" section, `MATHEMATICS.md` documents it, and `display.rs:191-200` **does print all five components** beside the total. What is missing is the **weights** and any sensitivity analysis, so the decomposition is visible but unarguable. The remedy stands, with a smaller target than the review assumes. |
 | C3 | 75% of net income is a rule of thumb dressed as a parameter, inconsistent with the tool's own critique | **Verified** | `README.md:450-451` says exactly that; the inconsistency argument is sound |
 | C4 | The team externality is not modelled and is underplayed | **Verified as a gap; partly on "underplayed"** | No code: every `team`/`colleague` match in `src/*.rs` is a licence header. But `TEAM_DEPENDENCIES.md` exists as a design document and `README.md:457` states the limitation. What is missing is any warning at the point of *result*. |
 | C5 | Maintenance: large volume, single author, aging tax data | **Verified** | `git log` has one author; last commit 2026-10-18; Bern 2024 tables; no `VALIDATION.md` |
 | C6 | The GPL relicense is a notable, under-explained signal | **Verified** | `README.md:468-476` states the benefit and never says what it is meant to prevent |
 | 1.1 | Model the team externality or warn on every reduction | **Verified** | See C4 |
 | 1.2 | Make retirement needs a first-class input, report a range and break-even | **Verified** | `README.md:450-451`; needs are derived, not asked for |
-| 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Verified for the output, partly for the docs** | `MATHEMATICS.md` has the maths; the report prints a total (`TOTAL UTILITY`) and no decomposition |
+| 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Partly — components already printed; weights and sensitivity are not** | `display.rs:191-200` prints Consumption, Leisure, Family, Health, Security and the total. The weights live in `PreferenceWeights` and are never shown, and nothing is perturbed. |
 | 1.4 | Single-canton calibration is a structural limit | **Partly — the finding is right, the architecture claim is not** | All 26 cantons are modelled and provenance-enforced; verified tables exist only for Bern. Data problem, as the review says. |
 | 1.5 | Pension parameters asserted without figures in the README | **Verified** | `README.md:96` mentions "the higher conversion rate you earn by working longer" and never gives the number |
 | 2.1 | The scope has swallowed the product | **Verified** | Same evidence as C1 |
@@ -59,7 +59,9 @@ same treatment this repository gives everything else: the claim, the evidence, a
 | 3.3 | The GPL rationale is under-explained | **Verified** | See C6 |
 | 3.4 | Single-author velocity and undefined bus factor | **Verified** | `git log` |
 
-**Score: 12 verified, 5 partly true, 0 wholly false.** The review is a good review. The two places it
+**Score: 10 verified, 7 partly true, 0 wholly false.** Two rows moved from verified to partly true
+after checking `display.rs` and `cantons.rs` more closely than my first pass did; the review is a
+good review. The two places it
 is wrong are both about *what the architecture already does*, and both matter because they change
 which work is worth doing.
 

@@ -58,5 +58,6 @@ pub mod monte_carlo;
 pub mod mc_display;
 pub mod economic_regimes;
 pub mod simplex;
+pub mod team;
 pub mod early_retirement;
 

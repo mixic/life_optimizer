@@ -199,6 +199,8 @@ pub fn print_optimal_result_for(
     // formatted before being coloured.
     println!("  {} {}", "TOTAL UTILITY:".bold(), format!("{:.2}", breakdown.total).cyan().bold());
 
+    print_team_externality(scenario);
+
     println!("\n{}", "=".repeat(60));
 }
 
@@ -286,6 +288,104 @@ pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f
          sourced rules are compared below."
             .yellow()
     );
+}
+
+/// Print what a reduced schedule moves onto colleagues.
+///
+/// # Why this is not a footnote
+///
+/// Until this existed, reduced availability was treated as producing proportionally less
+/// output with no effect on colleagues. That is not a neutral simplification: in the
+/// ordinary case a colleague absorbs the work, so the tool was making the schedule that
+/// externalises cost look cheaper than the one that genuinely produces less — a bias
+/// *toward* pushing work onto other people. An incomplete model with no bias is a
+/// limitation; an incomplete model with this bias recommends the wrong thing.
+///
+/// So every result says something here. Either the hours moved, or an explicit admission
+/// that they are unmodelled. Silence was the defect.
+pub fn print_team_externality(scenario: &WorkScenario) {
+    use crate::team::Severity;
+
+    let team = &scenario.team_externality;
+    println!();
+    println!("  {}", "Colleagues:".bold());
+    match team.severity {
+        Severity::NoReduction => {
+            println!(
+                "    {}",
+                "no work moved onto colleagues (full-time schedule)".dimmed()
+            );
+        }
+        Severity::NotModelled => {
+            let bar = "!".repeat(72).red().bold();
+            println!("    {bar}");
+            println!(
+                "    {} {}",
+                "WARNING:".red().bold(),
+                "THE EFFECT ON COLLEAGUES IS NOT MODELLED".red().bold()
+            );
+            println!("    {bar}");
+            println!(
+                "    A reduced schedule usually moves work onto colleagues. This result does"
+            );
+            println!(
+                "    not account for that, so it cannot tell you whether the reduction is fair"
+            );
+            println!("    to your team, and it will favour such a schedule over one that");
+            println!("    genuinely produces less.");
+            if team.potential_hours_per_week > 0.0 {
+                println!();
+                println!(
+                    "    This reduction is {:.1} hours a week if a team absorbs it, and those",
+                    team.potential_hours_per_week
+                );
+                println!("    hours are currently attributed to nobody.");
+            }
+            println!();
+            println!(
+                "    Re-run with {} (and {} if you want the read shown)",
+                "--team-size <n>".bold(),
+                "--redistribution <0..1>".bold()
+            );
+            println!(
+                "    to see how many hours a week would land on each colleague. See"
+            );
+            println!("    TEAM_DEPENDENCIES.md for why this is not a private transaction.");
+        }
+        severity => {
+            println!("    {}", team.summary());
+            if team.requires_warning() {
+                println!(
+                    "    {} {:.2} h/week each is {}: this reduction is not borne by you alone.",
+                    "WARNING:".red().bold(),
+                    team.hours_per_colleague_per_week,
+                    severity.label()
+                );
+                if team.redistribution >= 1.0 {
+                    println!(
+                        "    {}",
+                        "The model assumes the team absorbs all of the reduction, which is the \
+                         pessimistic case."
+                            .dimmed()
+                    );
+                }
+            }
+            if team.externality_weight > 0.0 {
+                println!(
+                    "    Your own valuation prices that at {:.3} utility points (weight {:.3} per \
+                     hour/week).",
+                    team.weighed_penalty, team.externality_weight
+                );
+            } else {
+                println!(
+                    "    {}",
+                    "Not priced in your utility: what a colleague-hour is worth is a value \
+                     judgement, so supply --externality-weight to make it one."
+                        .dimmed()
+                );
+            }
+        }
+    }
 }
 
 pub fn print_comparison_table(scenarios: &[WorkScenario]) {

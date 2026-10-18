@@ -495,6 +495,9 @@ pub struct WorkScenario {
     pub utility_score: f64,
     pub utility_breakdown: UtilityBreakdown,
     pub retirement_adequacy: Option<RetirementAdequacy>,  // NEW: family support analysis
+    /// What this scenario moves onto colleagues, and whether it was modelled at all.
+    /// A reduction with [`crate::team::Severity::NotModelled`] must be presented with a warning.
+    pub team_externality: crate::team::TeamExternality,
 }
 
 impl WorkScenario {
@@ -626,6 +629,9 @@ pub struct OptimizerConfig {
     /// optimizer's pension estimate and the Monte Carlo projection do not
     /// disagree about which Umwandlungssatz is being assumed.
     pub conversion_scenario: crate::monte_carlo::ConversionRateScenario,
+    /// What a reduced schedule moves onto colleagues. Defaults to not modelled,
+    /// which is now reported as such rather than treated as "no effect".
+    pub team: crate::team::TeamParameters,
 }
 
 impl OptimizerConfig {
@@ -651,6 +657,7 @@ impl OptimizerConfig {
             achievement: None,
             enforcement: Enforcement::Strict,
             conversion_scenario: crate::monte_carlo::ConversionRateScenario::Statutory,
+            team: crate::team::TeamParameters::not_modelled(),
         }
     }
 }
@@ -759,6 +766,16 @@ impl LifeOptimizer {
             replacement_risk,
         );
 
+        // The externality a reduced schedule imposes on colleagues. Computed here
+        // rather than in the presentation layer so that every caller — including the
+        // comparison table and the Monte Carlo — carries it, and so that "not modelled"
+        // cannot be mistaken for "no effect".
+        let team_externality = crate::team::for_scenario(
+            &self.config.team,
+            work_percentage,
+            self.config.full_time_hours,
+        );
+
         WorkScenario {
             work_percentage,
             gross_income,
@@ -781,6 +798,7 @@ impl LifeOptimizer {
             utility_score: utility_breakdown.total,
             utility_breakdown,
             retirement_adequacy: None,
+            team_externality,
         }
     }
 
@@ -1194,6 +1212,7 @@ mod tests {
             achievement: None,
             enforcement: Enforcement::Strict,
             conversion_scenario: crate::monte_carlo::ConversionRateScenario::Statutory,
+            team: crate::team::TeamParameters::not_modelled(),
         });
 
         let scenario = optimizer.evaluate_scenario(1.0);
