@@ -358,6 +358,9 @@ life-optimizer/
 ├── human_capacity/               The psychological layer, as a library: practice,
 │                                 capacity, the tempo that forces assistance. Used by
 │                                 multipolar_sim and by knowledge_work
+├── knowledge_work/               Just-in-time logic in AI-assisted knowledge work, as a
+│                                 library plus CLI: the operating envelope, the rework loop,
+│                                 and the direction framework
 ├── multipolar_sim/               Companion Monte Carlo world simulator (see above)
 ├── src/
 │   ├── main.rs                   CLI, command dispatch, orchestration
@@ -413,10 +416,15 @@ life-optimizer/
 │                                 machine-to-human inversion, a deskilling threshold, a defect
 │                                 floor that review cannot remove, a paired Monte Carlo over
 │                                 2,000 people, and the bar as the argument's empirical joint
+├── OPTIMIZING_FOR_WHAT.md        Just-in-time logic transplanted into AI-assisted knowledge
+│                                 work: the load identity, two thresholds (commitment at 0.888,
+│                                 stability at 0.839), the year a stable workflow stops being
+│                                 stable, and a direction framework that reports its own
+│                                 indeterminacy instead of ranking
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
 │                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,
-│                                 tools/plot_strategies.py, tools/plot_early_retirement.py
-│                                 and tools/plot_psyche.py
+│                                 tools/plot_strategies.py, tools/plot_early_retirement.py,
+│                                 tools/plot_psyche.py and tools/plot_workflow.py
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
