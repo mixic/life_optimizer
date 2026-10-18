@@ -459,6 +459,8 @@ life-optimizer/
 │                                 stable, a nine-proposition certificate that can be regenerated
 │                                 with --prove, and a direction framework that reports its own
 │                                 indeterminacy instead of ranking
+├── VALIDATION.md                 What has been checked against something outside this
+│                                 repository, what has not, and the BVG defect the check found
 ├── VERIFYING_THE_CLAIMS.md       Two passages checked claim by claim -- an industry passage and
 │                                 the author's own -- against what can be sourced and what the
 │                                 models can settle: the aviation record, the Jevons ceiling, and
