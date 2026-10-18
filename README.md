@@ -5,6 +5,7 @@
 **A Rust-based decision tool for the work-percentage question every Swiss employee eventually faces:
 "Should I work 100%, 80%, or something else — and can I actually afford it, now and in retirement?"**
 
+[![CI](https://github.com/mixic/life_optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/mixic/life_optimizer/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/rust-2021-orange.svg)](https://www.rust-lang.org)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](#license)
 
@@ -31,33 +32,34 @@ that actually determines whether reducing your work percentage is a good idea:
 utility, and Monte Carlo pension projections — and searches for the work percentage
 that maximizes your overall quality of life, not just your paycheck.
 
-### Motivation and design philosophy
+### Design philosophy
 
-In 2025, there are faster and more powerful ways to model retirement decisions using
-AI, gradient-based optimization, black-box simulators, and large-scale data-driven
-approaches. Those methods can be extremely useful for prediction, scenario generation,
-and policy search.
+A decision this consequential deserves a model you can argue with. So every formula is written
+out, every input is either sourced or labelled as declared, and each assumption is placed where
+you can see it move the answer:
 
-But for a life decision as important as retirement and work percentage, the real challenge
-is not just finding a numerically attractive answer quickly. It is understanding whether the
-answer is structurally sound, explainable, and robust to wrong assumptions.
+- nothing important hides inside a black box;
+- the trade-offs are stated as formulas rather than as weights chosen behind a slider;
+- each variable — taxes, inflation, pension contributions, utility, health stress, and regime
+  dependence — is visible, and the ones that cannot be measured are marked as such;
+- the model supports reasoning rather than only prediction, which means it should tell you what it
+  cannot establish.
 
-This project was created with that principle in mind:
+Two things follow from that and are worth stating plainly, because they are the model's honesty
+rather than its limitations:
 
-- we do not want to hide important assumptions inside a black box
-- we want the trade-offs to be mathematically transparent
-- we want each variable — taxes, inflation, pension contributions, utility, health stress,
-  and regime dependence — to be visible and auditable
-- we want the model to support reasoning, not just prediction
+**It reports a range where it cannot report a point.** Retirement needs are reported across 60/75/90
+with the level at which the plan stops working; the recommendation comes with the margin to the
+runner-up and with a robustness block showing how far it moves when a declared preference is moved;
+and when the optimum sits at the edge of the percentages tested, the tool says so instead of calling
+it stable.
 
-In other words, modern AI can be extremely helpful for acceleration, pattern discovery,
-and scenario exploration. But for long-term financial planning, transparent mathematics
-remains essential. A model that is easy to explain and challenge is usually more useful
-than one that produces a clever-looking answer without revealing how it was formed.
+**It names what it does not know.** `VALIDATION.md` records what has been checked against an outside
+source and what has not. `CRITIQUE_RESPONSE.md` records an external review of this repository claim
+by claim, including the places the review was wrong and the places it found a real defect.
 
-This project therefore prioritizes explicit formulas, interpretable utility functions,
-calibrated assumptions, and scenario analysis over opaque optimization. The goal is not
-only to pick a number, but to make the reasoning behind that number understandable.
+The goal is not only to pick a number. It is to leave you able to say why the number is what it is,
+and where it would stop being right.
 
 ---
 
@@ -221,7 +223,7 @@ STRESS TEST: RECESSION HITS RIGHT AT RETIREMENT
 Requires [Rust](https://www.rust-lang.org/tools/install) (2021 edition).
 
 ```bash
-git clone https://github.com/yourusername/life-optimizer.git
+git clone https://github.com/mixic/life_optimizer.git
 cd life-optimizer
 cargo build --release
 ```
@@ -492,12 +494,11 @@ life-optimizer/
   compression sensitivity, replacement risk) are **illustrative sensitivities, not
   estimates**. Nothing in the tool predicts your AI productivity; it exposes the
   coefficients so you can test what your answer depends on. All default to neutral.
-- Team dependencies are **not modelled**: the constraint treats your reduced
-  availability as having no effect on colleagues, so a schedule that really pushes
-  work onto your team will look better here than it is. The design for that channel
-  — including why the externality belongs to *retaining the full portfolio* rather
-  than to the reduced hours — is in [`TEAM_DEPENDENCIES.md`](TEAM_DEPENDENCIES.md),
-  and it is not implemented.
+- Team effects are **reported rather than silently ignored**. The model cannot tell whether a
+  reduced schedule's work is redistributed or dropped, so it asks: `--team-size` and
+  `--redistribution` compute the hours that land on each colleague, every reduction result carries
+  a warning, and a reduction with no team parameters is reported as **not modelled** rather than as
+  having no effect. The reasoning is in [`TEAM_DEPENDENCIES.md`](TEAM_DEPENDENCIES.md).
 
 This tool is meant to inform a conversation with a financial advisor or pension
 fund — not replace one.
@@ -506,13 +507,42 @@ fund — not replace one.
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. 
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 
-* **Why the change?** I've transitioned from the MIT License to GPL v3.0 to ensure that this standalone application remains free and open-source for everyone, and that all future derivative works and improvements are contributed back to the community.
-* **Previous Versions:** Legacy versions remain available under the terms of the MIT License.
+**What the licence is meant to prevent.** The tool exists so a person can see how their own
+retirement and work-percentage numbers are produced. A closed-source service that took this code,
+wrapped it, and sold the answers back to the same people — without their being able to check the
+assumptions, or to fork a version that told the truth about them — would defeat that purpose while
+being perfectly legal under MIT. GPL v3 is what stops it: anyone who distributes a derivative must
+distribute its source under the same terms.
+
+It is not meant to stop anyone from *using* the tool, from forking it to model their own canton, or
+from quoting and criticising the code. Running it, reading it, and publishing about it are all
+unaffected.
+
+* **Previous versions** remain available under the terms of the MIT License.
 
 For more details, see the [LICENSE](LICENSE) file.
 
+## Maintenance
+
+This is a personal project, maintained by one person, and it is better to say so than to imply
+otherwise.
+
+**What that means in practice.** Issues and pull requests are welcome and are read, but there is no
+response-time commitment and no release cadence. The bus factor is one. If you need a guaranteed
+support relationship, this is not it, and you should fork it — the licence permits that, and the
+code is organised for it.
+
+**What is maintained carefully.** The verification work is not decorative: the test suite, the CI
+configuration, and the documents that record what has and has not been checked (`VALIDATION.md`,
+`CRITIQUE_RESPONSE.md`) are kept honest, because a financial-adjacent tool that lets its validation
+drift is worse than one that never claimed any.
+
+**What ages.** The tax tables are Stadt Bern 2024 with all 26 cantons' Steuerfuss values; Swiss tax
+law changes annually, so the tables drift out of date and `--custom-tax-rate` is the mitigation.
+`SWISS_TAX_DATA.md` records the provenance and the known defects. `CHANGELOG.md` records what
+changed and when.
 
 ## Contributing
 
