@@ -237,6 +237,43 @@ or just run it with `cargo run -p multipolar_sim`.
 
 ## Usage
 
+### The interactive mode, as a transcript
+
+Twelve flags are not an entry point. `interactive` asks the questions instead, and this is a real
+session — the answers were piped in, so they do not echo inline in the captured output:
+
+```
+$ ./life-optimizer interactive
+
+What is your full-time annual salary (CHF)? 120000
+What is your age? 40
+Are you married? (y/n) n
+How many children do you have? 0
+
+What are your priorities?
+1. Balanced (equal weight to all factors)
+2. Family-focused (prioritize time with family)
+3. Career-focused (prioritize income and security)
+Choose (1/2/3): 1
+
+What will you need per month in retirement, in CHF?
+  Leave blank to use this household's modelled budget.
+  The result reports a 60/75/90 range and the level at which the plan stops
+  working either way, so this is a starting point rather than a commitment.
+Monthly need (CHF, blank for the modelled budget): 4500
+  Using your figure.
+
+Analyzing your situation...
+```
+
+Blank answers are taken as "use the model": a blank salary falls back to CHF 80,000, a blank age to
+35, and a blank retirement need to this household's modelled budget rather than to a rule of thumb.
+
+The interactive mode does **not** ask about your canton, your team, or the AI-productivity
+coefficients. Canton defaults to Bern; the team externality is reported as not modelled, with the
+warning that implies; the AI model is off. Each is available as a flag on the non-interactive
+command.
+
 ### Find your optimal work percentage
 
 ```bash
