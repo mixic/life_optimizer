@@ -646,3 +646,59 @@ pub fn print_needs_report(report: &crate::retirement_needs::NeedsReport) {
             .dimmed()
     );
 }
+/// Print how far the recommendation moves when the declared inputs are moved.
+///
+/// This block exists because a single optimum is not a decision. The review's point was that a
+/// leader with no margin is indistinguishable from a tie, and the margin is only meaningful if it
+/// survives the assumptions it was computed under -- so the weights are printed, each is moved,
+/// and the report says whether the answer held.
+pub fn print_robustness_report(report: &crate::robustness::RobustnessReport) {
+    println!(
+        "\n{}",
+        "Robustness: does the answer survive its own assumptions?".bold()
+    );
+    println!(
+        "  Weights in use (declared, not measured):  consumption {:.2}  leisure {:.2}  family \
+         {:.2}  health {:.2}  security {:.2}",
+        report.weights.consumption,
+        report.weights.leisure,
+        report.weights.family,
+        report.weights.health,
+        report.weights.security
+    );
+    println!();
+    println!(
+        "  {:>12} {:>9} {:>10} {:>9}",
+        "input moved", "by", "optimal", "shift"
+    );
+    for perturbation in &report.perturbations {
+        let optimal = match perturbation.optimal {
+            Some(value) => format!("{:.0}%", value * 100.0),
+            None => "infeasible".to_string(),
+        };
+        let shift = match perturbation.shift(report.base) {
+            Some(points) if points.abs() >= 0.5 => format!("{points:+.0} pts"),
+            Some(_) => "none".to_string(),
+            None => "-".to_string(),
+        };
+        println!(
+            "  {:>12} {:>9} {:>10} {:>9}",
+            perturbation.name,
+            format!("x{:.2}", perturbation.factor),
+            optimal,
+            shift
+        );
+    }
+    println!();
+    let verdict = report.verdict();
+    if report.at_search_edge() {
+        println!("  {} {}", "EDGE OF SEARCH:".yellow().bold(), verdict);
+    } else if report.stable {
+        println!("  {} {}", "STABLE:".green().bold(), verdict);
+    } else if report.any_infeasible() {
+        println!("  {} {}", "FRAGILE:".red().bold(), verdict);
+    } else {
+        println!("  {} {}", "SENSITIVE:".yellow().bold(), verdict);
+    }
+    println!("  {}", crate::robustness::provenance_note().dimmed());
+}

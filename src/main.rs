@@ -16,7 +16,7 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs, robustness};
 use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
 use clap::{Parser, Subcommand, ArgAction};
@@ -1665,6 +1665,9 @@ fn run_optimization(p: OptimizeParams<'_>) {
         team::TeamParameters::not_modelled().weighed(externality_weight)
     };
 
+    // Kept for the robustness block: the search is re-run under moved assumptions, so the
+    // configuration has to survive being cloned rather than being consumed here.
+    let config_for_robustness = config.clone();
     let optimizer = LifeOptimizer::new(config);
     let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let outcome = optimizer
@@ -1781,6 +1784,10 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     display::print_comparison_table_for(&all_scenarios, Some(&tax_basis));
     display::print_recommendations(&optimal, age);
+
+    // How much of the recommendation rests on the weights the user never chose.
+    let robustness = robustness::analyse(&config_for_robustness, &candidates);
+    display::print_robustness_report(&robustness);
 
     // ── Family Support & Education Planning ─────────────────────────────────
     if let Some(ages_str) = children_ages {

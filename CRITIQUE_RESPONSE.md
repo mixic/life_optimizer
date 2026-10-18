@@ -46,7 +46,7 @@ same treatment this repository gives everything else: the claim, the evidence, a
 | C6 | The GPL relicense is a notable, under-explained signal | **Verified** | `README.md:468-476` states the benefit and never says what it is meant to prevent |
 | 1.1 | Model the team externality or warn on every reduction | **Verified** | See C4 |
 | 1.2 | Make retirement needs a first-class input, report a range and break-even | **Verified** | `README.md:450-451`; needs are derived, not asked for |
-| 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Partly — components already printed; weights and sensitivity are not** | `display.rs:191-200` prints Consumption, Leisure, Family, Health, Security and the total. The weights live in `PreferenceWeights` and are never shown, and nothing is perturbed. |
+| 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Partly — components already printed; weights and sensitivity are now added** | `display.rs:191-200` printed the five components and the total. The weights were never shown and nothing was perturbed; both are now done, by `src/robustness.rs`. |
 | 1.4 | Single-canton calibration is a structural limit | **Partly — the finding is right, the architecture claim is not** | All 26 cantons are modelled and provenance-enforced; verified tables exist only for Bern. Data problem, as the review says. |
 | 1.5 | Pension parameters asserted without figures in the README | **Verified** | `README.md:96` mentions "the higher conversion rate you earn by working longer" and never gives the number |
 | 2.1 | The scope has swallowed the product | **Verified** | Same evidence as C1 |
