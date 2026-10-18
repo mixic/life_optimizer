@@ -61,5 +61,6 @@ pub mod simplex;
 pub mod team;
 pub mod retirement_needs;
 pub mod robustness;
+pub mod ai_scenario;
 pub mod early_retirement;
 

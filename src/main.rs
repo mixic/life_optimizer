@@ -16,7 +16,7 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs, robustness};
+use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs, robustness, ai_scenario};
 use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
 use clap::{Parser, Subcommand, ArgAction};
@@ -472,6 +472,14 @@ struct OptimizeArgs {
     /// base and schedule, and market assumptions.
     #[arg(long, default_value_t = false)]
     verbose: bool,
+
+    /// Named AI-adoption scenario, so the common case does not need eight coefficients:
+    /// `sceptical`, `neutral` or `optimistic`. Each sets the productivity gain, the quality
+    /// retention and the employer required output together, and the numbers it sets are
+    /// printed. It overrides the individual `--ai-*` flags, which remain for moving one
+    /// coefficient on its own.
+    #[arg(long)]
+    ai_scenario: Option<String>,
 
     /// Retirement needs as a share of net income, when you would rather use a rule of thumb.
     ///
@@ -1097,6 +1105,7 @@ fn main() {
                 retirement_needs,
                 retirement_needs_percent,
                 verbose,
+                ai_scenario,
                 imputed_rental_value,
                 pensioner,
                 insurance_premiums,
@@ -1109,6 +1118,32 @@ fn main() {
                     std::process::exit(2);
                 }
             };
+            // A named scenario sets the AI coefficients together, so the common case does not
+            // need eight flags. An unknown name is refused rather than defaulted: a typo must not
+            // silently change the model under the user.
+            let scenario = match ai_scenario.as_deref() {
+                Some(name) => match ai_scenario::by_name(name) {
+                    Some(scenario) => Some(scenario),
+                    None => {
+                        eprintln!(
+                            "{} unknown --ai-scenario {:?}; expected one of {}",
+                            "error:".red().bold(),
+                            name,
+                            ai_scenario::names().join(", ")
+                        );
+                        std::process::exit(2);
+                    }
+                },
+                None => None,
+            };
+            if let Some(scenario) = scenario {
+                println!("\n  AI scenario: {}", ai_scenario::describe(&scenario));
+                println!(
+                    "  {}",
+                    "The individual --ai-* flags are ignored when a scenario is named."
+                        .dimmed()
+                );
+            }
             run_optimization(OptimizeParams {
                 salary,
                 age,
@@ -1127,11 +1162,24 @@ fn main() {
                 conversion: resolve_conversion(conversion_rate, pension_fund),
                 consumption_profile: consumption,
                 employer: match EmployerInputs::new(EmployerInputs {
-                    required_output_index,
-                    ai_productivity_gain,
-                    ai_productivity_gain_high,
-                    ai_quality_retention,
-                    compression_quality_sensitivity,
+                    // A named scenario supplies the five AI coefficients together and wins over
+                    // the individual flags. Replacement risk, evaluation period and enforcement
+                    // stay as the user set them: those describe the employer's behaviour, not the
+                    // tool's productivity.
+                    required_output_index: scenario
+                        .map(|s| s.required_output_index)
+                        .or(required_output_index),
+                    ai_productivity_gain: scenario
+                        .map_or(ai_productivity_gain, |s| s.productivity_gain),
+                    ai_productivity_gain_high: scenario
+                        .map(|s| s.productivity_gain_high)
+                        .or(ai_productivity_gain_high),
+                    ai_quality_retention: scenario
+                        .map_or(ai_quality_retention, |s| s.quality_retention),
+                    compression_quality_sensitivity: scenario
+                        .map_or(compression_quality_sensitivity, |s| {
+                            s.compression_quality_sensitivity
+                        }),
                     replacement_risk,
                     evaluation_period_years,
                     enforcement,
