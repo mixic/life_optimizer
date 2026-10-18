@@ -1,0 +1,14 @@
+[package]
+name = "human_capacity"
+version = "0.1.0"
+edition = "2021"
+description = "The psychological layer: how assistance removes the practice that builds the capacity to judge, and how the tempo that forces assistance then closes the loop"
+
+# A library rather than a module inside `multipolar_sim`, because more than one
+# model now needs it. The world simulator uses it for the psychological chapter;
+# `knowledge_work` uses it for the capacity side of a workflow. Before this crate
+# existed, the only way for a second model to reach these dynamics was to copy
+# them, and a copied cost function tells two different stories with the same name.
+
+[dependencies]
+rand = "0.8"

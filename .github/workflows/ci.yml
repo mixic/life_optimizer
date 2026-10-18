@@ -70,3 +70,10 @@ jobs:
         run: cargo doc -p multipolar_sim --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+      # The psychological layer is now a library of its own rather than a module inside
+      # the simulator, so it needs its own doc check for the same reason the simulator
+      # got one: `--lib` at the workspace root only reaches the root package.
+      - name: cargo doc (human_capacity)
+        run: cargo doc -p human_capacity --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings

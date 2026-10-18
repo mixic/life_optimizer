@@ -284,6 +284,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
+name = "human_capacity"
+version = "0.1.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -399,6 +406,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 name = "multipolar_sim"
 version = "0.1.0"
 dependencies = [
+ "human_capacity",
  "rand",
  "rand_distr",
 ]

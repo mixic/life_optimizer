@@ -11,3 +11,6 @@ description = "Monte Carlo simulator for a multipolar world: repeated 2x2 games 
 [dependencies]
 rand = "0.8"
 rand_distr = "0.4"
+# The psychological layer, as a library. This crate uses it for `--psyche`; the
+# `knowledge_work` crate uses the same capacity dynamics for the workflow model.
+human_capacity = { path = "../human_capacity" }

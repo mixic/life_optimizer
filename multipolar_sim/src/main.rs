@@ -45,11 +45,11 @@ mod game;
 #[allow(dead_code)]
 mod information;
 mod pension;
-/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`: how assistance removes the
-/// practice that builds the capacity to judge, and how the tempo that forces assistance
-/// then closes the loop.
-#[allow(dead_code)]
-mod psyche;
+/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md` lives in the `human_capacity`
+/// library crate, so that a second model can compose with these dynamics instead of
+/// restating them. The alias keeps every call site reading `psyche::...`, which is what both
+/// the code and the document call the layer.
+use human_capacity as psyche;
 mod report;
 mod simulation;
 /// The third-party spoiler of `THIRD_PARTY_SPOILER.md`: divide and conquer as a

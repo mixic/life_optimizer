@@ -355,6 +355,9 @@ inflation-adjusted needs through your planning horizon. See
 ```
 life-optimizer/
 ├── Cargo.toml                    Workspace manifest (root package: life-optimizer)
+├── human_capacity/               The psychological layer, as a library: practice,
+│                                 capacity, the tempo that forces assistance. Used by
+│                                 multipolar_sim and by knowledge_work
 ├── multipolar_sim/               Companion Monte Carlo world simulator (see above)
 ├── src/
 │   ├── main.rs                   CLI, command dispatch, orchestration

@@ -384,7 +384,7 @@ repository root:
 | `INFORMATION_WARFARE.md` §2–3               | Legitimation is a production function whose capital is credibility, and the verification that would prevent a war is a public good | `information.rs` — the six theorems as test invariants, and `--information`, which derives the war rate instead of assuming it |
 | `THIRD_PARTY_SPOILER.md` §3                 | Conflict is a failed equilibrium, not crossed interests; a third party can install the failure and harvest it, and impunity is derived rather than assumed | `spoiler.rs` — the six theorems and the bifurcation as test invariants |
 | `STRATEGY_COMPARISON.md` §3–6               | The same influence buys peace or buys war; the spoiler's prize is bounded by depletion while the cooperator's return is a flow, so the verdict turns on the horizon, the discount rate and the victims' capacity to answer | `strategies.rs` — both optima, the crossing horizon, the critical discount rate, and `--strategies`, which runs the same seeded world three ways and differences every statistic run by run |
-| `THE_PSYCHOLOGICAL_LAYER.md` §4–8           | Assistance is solved for rather than chosen, and what it costs is the practice that builds the capacity to judge; whether anyone is deskilled turns on the bar their role settles at, which is unmeasured | `psyche.rs` — the two channels, the deskilling threshold, the defect floor, the emotional inversion, and `--psyche`, which runs a 2,000-person cohort twice on one seed |
+| `THE_PSYCHOLOGICAL_LAYER.md` §4–8           | Assistance is solved for rather than chosen, and what it costs is the practice that builds the capacity to judge; whether anyone is deskilled turns on the bar their role settles at, which is unmeasured | `human_capacity` (a library crate) — the two channels, the deskilling threshold, the defect floor, the emotional inversion; `--psyche` here runs a 2,000-person cohort twice on one seed |
 
 ## Layout
 
@@ -396,7 +396,7 @@ repository root:
 | `ai.rs`         | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts     |
 | `information.rs`| The information layer of `INFORMATION_WARFARE.md`: legitimation, credibility as a depletable stock, endogenous war onset |
 | `strategies.rs` | The two strategies of `STRATEGY_COMPARISON.md`: buying the peace against buying the war, on one budget and one clock |
-| `psyche.rs`     | The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`: practice, capacity, the tempo that forces assistance, and the deskilling threshold |
+| (no longer here) | The psychological layer moved to the `human_capacity` library crate, so the workflow model can compose with it instead of copying it |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
 | `pension.rs`    | The AHV/pension channels the simulated world implies                            |
 | `report.rs`     | Terminal presentation                                                           |
@@ -448,7 +448,7 @@ What the mode prints, and what it refuses to claim:
 
 ## The psychological layer: a second model in the same crate
 
-`psyche.rs` is not about the world's power structure at all; it is about one person inside it.
+The `human_capacity` crate is not about the world's power structure at all; it is about one person inside it.
 The claim it formalises is that assistance is not chosen: a period has to clear a bar, the bar is
 set by the machine's tempo, and output is throughput × quality, so for a person of given capacity
 there is a *minimum assistance that clears the bar* — which is `required_assistance` in the module.
@@ -480,7 +480,7 @@ What the mode prints, and what it refuses to claim:
   share of defects is caught by neither, and that share is the floor. More tooling does not move it,
   because the correlation sets it and not the effort.
 
-The fifteen tests in the module are named for what they would catch — the threshold inversion, the
+The fifteen tests in `human_capacity/tests/psyche.rs` are named for what they would catch — the threshold inversion, the
 cohort collapsing to a single point, the runway's effect vanishing — because those are the failures
 this model actually had.
 

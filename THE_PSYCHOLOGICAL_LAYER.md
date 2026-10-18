@@ -1,6 +1,7 @@
 # The Psychological Layer: What Assistance Does to the Capacity That Judges It
 
-*Code in `multipolar_sim/src/psyche.rs` (15 tests). CLI mode `--psyche`. Figures in
+*Code in the `human_capacity` crate (`src/lib.rs`, 15 tests in `tests/psyche.rs`). CLI mode
+`--psyche` in `multipolar_sim`. Figures in
 `figures/psychology-*.png`, drawn by `tools/plot_psyche.py` from the simulator's own CSV export.
 A paper, not a result: every parameter in the model is declared, none is calibrated, and §11 says
 what the model cannot establish.*
@@ -521,7 +522,10 @@ here.
 - **`STRATEGY_COMPARISON.md` and `THIRD_PARTY_SPOILER.md`** — the same structure of argument one level
   up: an actor optimising a measured quantity while the unmeasured one degrades. The deskilling
   threshold here is a cousin of the spoiler's crossing horizon.
-- **`multipolar_sim/src/psyche.rs`** — the model; `--psyche`; the fifteen tests.
+- **`human_capacity`** — the model, as a library crate rather than a module, because the
+  workflow model in `knowledge_work` composes with these dynamics instead of restating them;
+  `multipolar_sim --psyche` is its command-line face; the fifteen tests live in
+  `human_capacity/tests/psyche.rs`.
 
 ## 13. Reproduction
 
@@ -536,7 +540,7 @@ cargo run -p multipolar_sim --release -- --psyche --export out/psyche
 python tools/plot_psyche.py out/psyche figures
 
 # the tests behind every number quoted above
-cargo test -p multipolar_sim psyche
+cargo test -p human_capacity
 ```
 
 Parameters can be moved from the command line: `--psyche-tempo`, `--psyche-runway`,
