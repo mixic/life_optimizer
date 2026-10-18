@@ -28,6 +28,8 @@ use std::path::{Path, PathBuf};
 use human_capacity as capacity;
 use knowledge_work::direction::{self, Outcome, CRITERIA};
 use knowledge_work::envelope;
+use knowledge_work::queue;
+use knowledge_work::sim;
 use knowledge_work::workflow::{self, Policy, WorkflowParameters};
 
 /// The declared autonomy floor, shared with the psychological model's own report.
@@ -129,6 +131,7 @@ fn evaluate_option(spec: OptionSpec, wf: &WorkflowParameters) -> OptionResult {
 
 fn main() {
     let mut export: Option<PathBuf> = None;
+    let mut prove = false;
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut index = 0;
     while index < raw.len() {
@@ -136,6 +139,10 @@ fn main() {
             "--help" | "-h" => {
                 print_usage();
                 return;
+            }
+            "--prove" => {
+                prove = true;
+                index += 1;
             }
             "--export" => match raw.get(index + 1) {
                 Some(path) => {
@@ -154,7 +161,81 @@ fn main() {
         }
     }
 
+    if prove {
+        print_certificate();
+        return;
+    }
+
     report(export.as_deref());
+}
+
+/// Print the thesis as a certificate: every proposition, its method, its numeric evidence, and
+/// whether it holds.
+///
+/// The caveat is printed with the verdict rather than near it, because a certificate without it
+/// would read as a statement about organisations instead of about a model.
+fn print_certificate() {
+    let certificate = knowledge_work::thesis::certificate();
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("THE THESIS, AS A CERTIFICATE");
+    println!("{}", "=".repeat(78));
+    println!(
+        "  {} propositions, {} of which hold. Each names the method that established it.",
+        certificate.propositions.len(),
+        certificate.held()
+    );
+    println!();
+    for proposition in &certificate.propositions {
+        println!(
+            "  {}  {}  [{}]",
+            proposition.id,
+            if proposition.holds { "HOLDS " } else { "FAILS " },
+            proposition.method.label()
+        );
+        for line in wrap(proposition.claim, 70) {
+            println!("       {line}");
+        }
+        for line in wrap(&proposition.evidence, 70) {
+            println!("       > {line}");
+        }
+        println!();
+    }
+    println!("  {}", "-".repeat(74));
+    if certificate.all_hold() {
+        println!("  Every proposition holds.");
+    } else {
+        println!(
+            "  {} proposition(s) do not hold. The framework's logic is not sound as stated, and",
+            certificate.propositions.len() - certificate.held()
+        );
+        println!("  the failing ones are the places to look.");
+    }
+    println!();
+    for line in wrap(certificate.caveat(), 74) {
+        println!("  {line}");
+    }
+    println!("{}", "=".repeat(78));
+}
+
+/// Wrap a sentence to a width, so the certificate stays readable in a terminal.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        if !current.is_empty() && current.len() + 1 + word.len() > width {
+            lines.push(current.clone());
+            current.clear();
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
 }
 
 fn print_usage() {
@@ -617,6 +698,56 @@ fn write_bundle(
     }
     write("options.csv", options_csv)?;
 
+    // The phase diagram: the thesis's operating point against the boundary, across the one
+    // parameter an organisation actually chooses -- how much of the machine's output to generate.
+    let mut phase_csv =
+        String::from("multiplier,capacity,rho,absorbable,stable,on_time\n");
+    for multiplier in [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 3.0, 4.0] {
+        let mut probe = wf.clone();
+        probe.generation_multiplier = multiplier;
+        for step in 0..=20 {
+            let review_capacity = step as f64 / 20.0;
+            let point = envelope::envelope_at(&probe, review_capacity, params);
+            let _ = writeln!(
+                phase_csv,
+                "{multiplier:.3},{review_capacity:.4},{:.6},{},{},{},{}",
+                point.rho_at_generated,
+                point
+                    .absorbable_share
+                    .map(|value| format!("{value:.6}"))
+                    .unwrap_or_else(|| "NaN".to_string()),
+                u8::from(point.stable),
+                u8::from(point.meets_deadline),
+                u8::from(point.absorbable_share.map(|s| s >= 1.0).unwrap_or(false)),
+            );
+        }
+    }
+    write("phase.csv", phase_csv)?;
+
+    // The simulation check: the analytic waiting time against an event-by-event queue, over
+    // several seeds so the figure can show the noise rather than hide it.
+    let escape = workflow::escape_share(1.0, params);
+    let mut simulation_csv =
+        String::from("target_rho,seed,realised_rho,mean_cycle_time,analytic_cycle_time\n");
+    for target in [0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.93, 0.95, 0.97, 0.98] {
+        let rate = sim::arrival_rate_for_utilisation(wf, escape, target);
+        let analytic = queue::cycle_time(
+            target,
+            wf.servers,
+            wf.arrival_cv,
+            wf.service_cv,
+            wf.base_service(),
+        );
+        for seed in 0..8_u64 {
+            let outcome = sim::simulate(wf, escape, rate, 2500.0, 11 + seed);
+            let _ = writeln!(
+                simulation_csv,
+                "{target:.4},{seed},{:.6},{:.6},{analytic:.6}",
+                outcome.rho, outcome.mean_cycle_time
+            );
+        }
+    }
+    write("simulation.csv", simulation_csv)?;
     let mut meta = String::from("key,value\n");
     let stability = workflow::critical_review_capacity(wf, Policy::Push, params);
     let absorption = envelope::critical_absorption_capacity(wf, params);
@@ -638,6 +769,7 @@ fn write_bundle(
             .unwrap_or_else(|| "NaN".to_string())
     );
     let _ = writeln!(meta, "deadline_days,{:.4}", wf.deadline_days);
+    let _ = writeln!(meta, "generation_multiplier,{:.4}", wf.generation_multiplier);
     let _ = writeln!(meta, "servers,{}", wf.servers);
     let _ = writeln!(meta, "review_rate,{:.4}", wf.review_rate);
     write("meta.csv", meta)?;

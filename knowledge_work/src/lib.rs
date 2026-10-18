@@ -59,4 +59,5 @@ pub mod direction;
 pub mod envelope;
 pub mod queue;
 pub mod sim;
+pub mod thesis;
 pub mod workflow;

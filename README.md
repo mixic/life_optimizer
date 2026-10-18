@@ -419,7 +419,8 @@ life-optimizer/
 ├── OPTIMIZING_FOR_WHAT.md        Just-in-time logic transplanted into AI-assisted knowledge
 │                                 work: the load identity, two thresholds (commitment at 0.888,
 │                                 stability at 0.839), the year a stable workflow stops being
-│                                 stable, and a direction framework that reports its own
+│                                 stable, a nine-proposition certificate that can be regenerated
+│                                 with --prove, and a direction framework that reports its own
 │                                 indeterminacy instead of ranking
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
 │                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,

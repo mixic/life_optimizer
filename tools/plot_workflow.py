@@ -157,11 +157,65 @@ def verify(directory: str, meta: dict[str, float]) -> dict[str, list]:
     if len(options) < 3:
         raise CheckError("the direction panel needs at least three configurations")
 
+    # The phase diagram: within each generation multiplier the absorbable share must fall as
+    # capacity falls, and the stability flag must agree with the utilisation on every cell.
+    phase = read_csv(os.path.join(directory, "phase.csv"))
+    multipliers = sorted({number(row, "multiplier") for row in phase})
+    if len(multipliers) < 3:
+        raise CheckError("the phase panel needs at least three multipliers")
+    for multiplier in multipliers:
+        rows = sorted(
+            (row for row in phase if number(row, "multiplier") == multiplier),
+            key=lambda row: number(row, "capacity"),
+        )
+        previous = -1.0
+        for row in rows:
+            if row["stable"] == "1" and number(row, "rho") >= 1.0:
+                raise CheckError(
+                    f"phase cell at multiplier {multiplier}, capacity {row['capacity']} is "
+                    f"marked stable at rho {number(row, 'rho')}"
+                )
+            share = number(row, "absorbable")
+            if math.isfinite(share):
+                if not 0.0 <= share <= 1.0:
+                    raise CheckError(f"phase absorbable share {share} is not a share")
+                if share < previous - 1e-9:
+                    raise CheckError(
+                        f"the absorbable share fell as capacity rose, at multiplier "
+                        f"{multiplier}, capacity {row['capacity']}"
+                    )
+                previous = share
+
+    # The simulation check: the realised utilisation must be the one that was asked for, or the
+    # figure would be comparing the analysis against a different experiment.
+    simulation = read_csv(os.path.join(directory, "simulation.csv"))
+    if not simulation:
+        raise CheckError("the simulation file is empty")
+    seeds_per_target: dict[float, int] = {}
+    for row in simulation:
+        target = number(row, "target_rho")
+        realised = number(row, "realised_rho")
+        if abs(realised - target) > 0.03:
+            raise CheckError(
+                f"a simulation asked for rho {target} realised {realised}, so it is not the "
+                "experiment the analysis describes"
+            )
+        cycle = number(row, "mean_cycle_time")
+        if not (cycle > 0.0) or not math.isfinite(cycle):
+            raise CheckError(f"a simulated cycle time of {cycle} is not a duration")
+        seeds_per_target[target] = seeds_per_target.get(target, 0) + 1
+    if min(seeds_per_target.values()) < 4:
+        raise CheckError("fewer than four seeds at some target, so the spread cannot be shown")
+    if max(seeds_per_target.values()) != min(seeds_per_target.values()):
+        raise CheckError("the seed count varies between targets")
+
     return {
         "envelope": envelope,
         "deadline": deadline,
         "trajectory": trajectory,
         "options": options,
+        "phase": phase,
+        "simulation": simulation,
     }
 
 
@@ -416,6 +470,149 @@ def draw_direction(export: dict, meta: dict, out_path: str) -> None:
     print(f"wrote {out_path}")
 
 
+def draw_phase(export: dict, meta: dict, out_path: str) -> None:
+    """Where the thesis's operating point sits relative to its own boundary."""
+    rows = export["phase"]
+    multipliers = sorted({number(row, "multiplier") for row in rows})
+    capacities = sorted({number(row, "capacity") for row in rows})
+    grid = [[float("nan") for _ in capacities] for _ in multipliers]
+    for row in rows:
+        i = multipliers.index(number(row, "multiplier"))
+        j = capacities.index(number(row, "capacity"))
+        grid[i][j] = number(row, "absorbable")
+
+    fig, axis = plt.subplots(figsize=(9.4, 5.4))
+    mesh = axis.pcolormesh(
+        capacities,
+        multipliers,
+        grid,
+        cmap="RdYlGn",
+        vmin=0.80,
+        vmax=1.0,
+        shading="nearest",
+    )
+    bar = fig.colorbar(mesh, ax=axis, pad=0.02)
+    bar.set_label("share of generated work absorbable")
+    try:
+        axis.contour(
+            capacities,
+            multipliers,
+            grid,
+            levels=[0.999],
+            colors="#111111",
+            linewidths=1.8,
+        )
+    except ValueError:
+        pass
+
+    # The declared operating point, and where it drifts as the capacity to judge falls.
+    declared = meta.get("generation_multiplier", float("nan"))
+    trajectory = export["trajectory"]
+    if math.isfinite(declared) and trajectory:
+        first = number(trajectory[0], "capacity")
+        last = number(trajectory[-1], "capacity")
+        axis.annotate(
+            "",
+            xy=(last, declared),
+            xytext=(first, declared),
+            arrowprops=dict(arrowstyle="->", color="#111111", linewidth=1.8),
+        )
+        axis.plot([first], [declared], marker="o", color="#111111", markersize=6)
+        axis.plot([last], [declared], marker="X", color="#b2182b", markersize=8)
+        axis.annotate(
+            f"adoption\n{first:.2f}",
+            xy=(first, declared),
+            xytext=(4, 10),
+            textcoords="offset points",
+            fontsize=7.6,
+            color="#111111",
+        )
+        axis.annotate(
+            f"after {len(trajectory) - 1} years\n{last:.2f}",
+            xy=(last, declared),
+            xytext=(-6, 10),
+            textcoords="offset points",
+            fontsize=7.6,
+            ha="right",
+            color="#b2182b",
+        )
+
+    axis.set_xlabel("capacity to judge")
+    axis.set_ylabel("generation multiplier (how much output the machine makes cheap)")
+    axis.set_xlim(-0.05, 1.05)
+    axis.set_ylim(0.9, 4.1)
+    axis.set_title(
+        "The envelope moves; the operating point moves with it", fontsize=11.5
+    )
+    fig.tight_layout(rect=(0, 0.085, 1, 1))
+    stamp(
+        fig,
+        "Green is inside the envelope, red is outside. The black line is where the workflow can "
+        "no longer absorb everything it generates. The arrow is the drift that happens when "
+        "nothing is changed except the capacity of the person reviewing. " + DECLARED,
+    )
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    fig.savefig(out_path, dpi=190)
+    plt.close(fig)
+    print(f"wrote {out_path}")
+
+
+def draw_simulation(export: dict, meta: dict, out_path: str) -> None:
+    """The independent check: an event-by-event queue against the approximation."""
+    rows = export["simulation"]
+    targets = sorted({number(row, "target_rho") for row in rows})
+
+    fig, axis = plt.subplots(figsize=(9.4, 5.0))
+    analytic_x, analytic_y = [], []
+    for target in targets:
+        cycles = [
+            number(row, "mean_cycle_time") for row in rows if number(row, "target_rho") == target
+        ]
+        analytic_x.append(target)
+        analytic_y.append(
+            number(
+                next(row for row in rows if number(row, "target_rho") == target),
+                "analytic_cycle_time",
+            )
+        )
+        mean = sum(cycles) / len(cycles)
+        axis.scatter(
+            [target] * len(cycles),
+            cycles,
+            s=12,
+            color="#2166ac",
+            alpha=0.35,
+            linewidths=0,
+        )
+        axis.plot([target], [mean], marker="o", color="#111111", markersize=5)
+        axis.plot([target - 0.004, target + 0.004], [mean, mean], color="#111111", linewidth=1.4)
+
+    axis.plot(analytic_x, analytic_y, color="#b2182b", linewidth=2.0, label="VUT approximation")
+    axis.scatter([], [], s=12, color="#2166ac", label="eight simulated runs")
+    axis.plot([], [], marker="o", color="#111111", linestyle="none", label="simulated mean")
+
+    axis.set_yscale("log")
+    axis.set_xlabel("utilisation")
+    axis.set_ylabel("mean cycle time (days, log scale)")
+    axis.set_title(
+        "The approximation and the simulation disagree by a known amount", fontsize=11.5
+    )
+    axis.legend(frameon=False, fontsize=8.5, loc="upper left")
+    axis.grid(alpha=0.25, linewidth=0.6, which="both")
+    fig.tight_layout(rect=(0, 0.10, 1, 1))
+    stamp(
+        fig,
+        "The simulated queue draws its rework per item and uses no approximation, so agreement "
+        "is evidence rather than tautology. The spread at high utilisation is the queue's own "
+        "variance, not model error. Near saturation the approximation sits above the simulation, "
+        "which is the direction the accuracy test measures. " + DECLARED,
+    )
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    fig.savefig(out_path, dpi=190)
+    plt.close(fig)
+    print(f"wrote {out_path}")
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__, file=sys.stderr)
@@ -435,6 +632,8 @@ def main() -> int:
         ("workflow-2-deadline.png", draw_deadline),
         ("workflow-3-trajectory.png", draw_trajectory),
         ("workflow-4-direction.png", draw_direction),
+        ("workflow-5-phase.png", draw_phase),
+        ("workflow-6-simulation.png", draw_simulation),
     ]
     for name, draw in figures:
         draw(export, meta, os.path.join(out_dir, name))

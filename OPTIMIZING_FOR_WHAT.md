@@ -1,6 +1,6 @@
 # Optimizing for What? Just-in-Time Production Logic, AI Adoption, and the Sustainability of Knowledge Work
 
-*Code in `knowledge_work/` (30 tests) and `human_capacity/` (15 tests), which it composes with.
+*Code in `knowledge_work/` (41 tests) and `human_capacity/` (15 tests), which it composes with.
 CLI `cargo run -p knowledge_work`. Figures in `figures/workflow-*.png`, drawn by
 `tools/plot_workflow.py` from the model's own CSV export. Every parameter is declared; §9 states
 the scope conditions and §10 states what the framework cannot establish.*
@@ -130,6 +130,12 @@ so neither is a queue. That corner is pinned by a test of its own. What matters 
 the **direction** of the error: it errs toward a worse queue, so the envelopes derived from it are
 not inflated.
 
+**Figure:** `figures/workflow-6-simulation.png` is the independent check. Eight event-by-event
+simulations at each utilisation, against the approximation on the same axes and a log scale. Up to
+about 0.85 the two are indistinguishable; above it the approximation climbs away, reaching 1.71 days
+where the simulation averages 1.13 at ρ = 0.97. That gap is the 28.5% measured above, made visible —
+and the spread of the eight runs is the queue's own variance rather than model error.
+
 ### 4.3 Two thresholds
 
 The framework keeps two failures separate because they are different findings:
@@ -236,6 +242,11 @@ but stops being able to take everything it generates. The failure is not a queue
 an organisation quietly admitting less than it produces while every utilisation chart reads
 normally.
 
+**Figure:** `figures/workflow-5-phase.png` is the same envelope across the one parameter an
+organisation actually chooses — how much of the machine's output to generate. The declared operating
+point sits at a multiplier of 2.0, and the arrow shows its drift as the capacity to judge falls from
+0.91 to 0.74: from green to red without a single decision being taken.
+
 ### 6.3 What the commitment costs
 
 | commitment (days) | capacity required |
@@ -300,6 +311,47 @@ training time is unchanged.
 Note also that the learning buffer deskills *less* (0.831 against 0.742) as well as carrying fewer
 escapes — because a quarter of the period spent learning is a quarter not spent producing under
 assistance. The autonomy gain is not a transfer from output to virtue; it partly pays for itself.
+
+### 6.6 The certificate: nine propositions
+
+Every claim in §4 and §6 is stated as a proposition in `knowledge_work/src/thesis.rs`, with the
+method that establishes it and the number that carries it. `cargo run -p knowledge_work -- --prove`
+prints the table and its verdict, so the claim can be regenerated rather than trusted:
+
+| | Proposition | Method | Evidence |
+|---|---|---|---|
+| **P1** | Review load is one service plus defect-weighted rework, and rises with the escape share when a late repair costs more | identity | L(0) = 1.100, L(1) = 1.600; c_escape 3.00 vs c_caught 0.50 |
+| **P2** | First-pass review understates the load by exactly the factor L | identity | naive 0.750 against effective 0.967 — 29% understated |
+| **P3** | Waiting is convex in utilisation and divergent at one | numeric | W(0.50) = 0.023 d, W(0.95) = 0.909 d; infinite at 1.0 |
+| **P4** | The commitment binds at a higher capacity than stability | numeric | commitment 0.888, stability 0.839, gap 0.049 |
+| **P5** | Absorbable work is non-increasing as the capacity to judge falls | numeric | 1.000 at full capacity, 0.843 at zero; monotone throughout |
+| **P6** | Tracking breaches the envelope, and a learning buffer delays without preventing it | existence | lean at year 5, learning buffer at year 8: delayed by 3 years, not prevented |
+| **P7** | The failure is invisible in throughput | numeric | 24.00 items/day throughout while the escape share rises 0.428 → 0.468 |
+| **P8** | No configuration wins under every weighting | indeterminacy | 3 of 3 win over 495 weightings; largest share 51% |
+| **P9** | An event-by-event simulation agrees with the envelope | numeric | utilisation error ≤ 0.001; horizon ratio 0.99 stable, 3.85 unstable |
+
+Three of these deserve a note.
+
+**P2 is the reason the framework is not merely descriptive.** The 29% is not an error bar on a
+measurement; it is the systematic gap between what a team reports and what its review stage
+experiences, and it grows with the escape share.
+
+**P6 was wrong when first written, and the correction is the more useful sentence.** It claimed the
+learning buffer does not breach. It does: the learning buffer ends at capacity 0.831 against a
+stability threshold of 0.839, so it breaches at year 8 rather than year 5. The proposition now says
+what the model supports — the training time delays the loss by three years and does not prevent it —
+which is also exactly what the psychological layer's runway result said: a runway buys time, not a
+different destination. That convergence between two models built for different purposes is the
+strongest evidence in the document, and it would not exist if the first version had been left
+standing.
+
+**P8 is falsifiable in the direction that matters.** If one configuration won under every weighting,
+the direction question would be settled by arithmetic and §7's refusal to rank would be theatre. The
+test asserts that at least two win and that none wins more than nine tenths of the simplex.
+
+The certificate closes with a caveat that is printed with the verdict rather than near it: these are
+propositions about a model whose every parameter is declared, so a certificate that all nine hold
+says the framework's logic is sound, not that any organisation behaves this way.
 
 ## 7. The direction question
 
@@ -476,19 +528,25 @@ document has no more business inventing one than it has inventing a coefficient.
 # the envelope, the thresholds, the trajectory and the direction analysis
 cargo run -p knowledge_work --release
 
+# the thesis as a certificate: every proposition with its method and its number
+cargo run -p knowledge_work --release -- --prove
+
 # with the CSV the figures are drawn from
 cargo run -p knowledge_work --release -- --export out/workflow
 
-# the figures, into the directory committed with this document
+# the six figures, into the directory committed with this document
 python tools/plot_workflow.py out/workflow figures
 
 # the tests behind every number quoted above
 cargo test -p knowledge_work
 ```
 
-The full workspace suite is 420 tests. `knowledge_work` contributes 30 — eight on the queueing
-building blocks, ten on the workflow, five on the envelope, seven on the direction framework — and
-each is named for the failure it would catch.
+The full workspace suite is 431 tests. `knowledge_work` contributes 41 — eight on the queueing
+building blocks, ten on the workflow, five on the envelope, seven on the direction framework, and
+eleven on the proposition suite, where each of P1–P9 is re-derived from the primitives rather than
+read back from the certificate that reports it. Every test is named for the failure it would catch,
+and two of them are falsification tests: P1 is shown to lose its direction when a late repair costs
+no more than an early one, which is the finding that would refute the framework.
 
 ## 14. Corrections recorded
 
@@ -514,3 +572,8 @@ be the weaker constraint** and turned out, correctly, to be the earlier one — 
 the arithmetic does, which is the whole reason to keep them apart. Second, the **one-day commitment
 was expected to be reported as expensive** and is reported as impossible; the model refuses to
 return a threshold that does not exist, and the refusal is a result rather than an error path.
+
+A fifth correction came from the proof suite, which is what it is for. **P6 was written as "and the
+learning buffer does not breach"** and failed on its first run: the learning buffer also breaches,
+three years later. The proposition now states the delay, because that is what is true, and the
+document §6.6 keeps both the failure and the correction rather than quietly shipping the fix.
