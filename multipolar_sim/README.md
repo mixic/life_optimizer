@@ -384,6 +384,7 @@ repository root:
 | `INFORMATION_WARFARE.md` §2–3               | Legitimation is a production function whose capital is credibility, and the verification that would prevent a war is a public good | `information.rs` — the six theorems as test invariants, and `--information`, which derives the war rate instead of assuming it |
 | `THIRD_PARTY_SPOILER.md` §3                 | Conflict is a failed equilibrium, not crossed interests; a third party can install the failure and harvest it, and impunity is derived rather than assumed | `spoiler.rs` — the six theorems and the bifurcation as test invariants |
 | `STRATEGY_COMPARISON.md` §3–6               | The same influence buys peace or buys war; the spoiler's prize is bounded by depletion while the cooperator's return is a flow, so the verdict turns on the horizon, the discount rate and the victims' capacity to answer | `strategies.rs` — both optima, the crossing horizon, the critical discount rate, and `--strategies`, which runs the same seeded world three ways and differences every statistic run by run |
+| `THE_PSYCHOLOGICAL_LAYER.md` §4–8           | Assistance is solved for rather than chosen, and what it costs is the practice that builds the capacity to judge; whether anyone is deskilled turns on the bar their role settles at, which is unmeasured | `psyche.rs` — the two channels, the deskilling threshold, the defect floor, the emotional inversion, and `--psyche`, which runs a 2,000-person cohort twice on one seed |
 
 ## Layout
 
@@ -395,11 +396,12 @@ repository root:
 | `ai.rs`         | AI as a player and AI as a tool: the two rival hypotheses, and the verdicts     |
 | `information.rs`| The information layer of `INFORMATION_WARFARE.md`: legitimation, credibility as a depletable stock, endogenous war onset |
 | `strategies.rs` | The two strategies of `STRATEGY_COMPARISON.md`: buying the peace against buying the war, on one budget and one clock |
+| `psyche.rs`     | The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`: practice, capacity, the tempo that forces assistance, and the deskilling threshold |
 | `simulation.rs` | The Monte Carlo: one run, and the ensemble over many                            |
 | `pension.rs`    | The AHV/pension channels the simulated world implies                            |
 | `report.rs`     | Terminal presentation                                                           |
 | `export.rs`     | CSV for plotting: per-year quantiles, per-run end states, exposure and leverage |
-| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`, `--information`, `--strategies`    |
+| `main.rs`       | CLI, argument parsing,`--sweep`, `--compare`, `--ai`, `--information`, `--strategies`, `--psyche`    |
 
 ## Information warfare: making the war rate an output instead of an assumption
 
@@ -443,6 +445,44 @@ What the mode prints, and what it refuses to claim:
   no-war counterfactual — are the subject of §6.1 of the document, which reports that no
   estimate of any quality exists for them. That is a stronger statement than "illustrative",
   and the mode says so on its face before printing a number.
+
+## The psychological layer: a second model in the same crate
+
+`psyche.rs` is not about the world's power structure at all; it is about one person inside it.
+The claim it formalises is that assistance is not chosen: a period has to clear a bar, the bar is
+set by the machine's tempo, and output is throughput × quality, so for a person of given capacity
+there is a *minimum assistance that clears the bar* — which is `required_assistance` in the module.
+The person who would rather keep the practice cannot keep it without falling behind a standard
+they did not set. That is the machine-to-human inversion, and it is not a story about laziness.
+
+```bash
+cargo run -p multipolar_sim --release -- --psyche
+cargo run -p multipolar_sim --release -- --psyche --export out/psyche
+python tools/plot_psyche.py out/psyche figures
+```
+
+What the mode prints, and what it refuses to claim:
+
+* **Two arms over the same people.** The cohort is drawn once and run twice on one seed: tracking
+  the tempo, and holding assistance still. The second arm is a counterfactual nobody can choose,
+  and it exists so the cost of tracking is a gap rather than a level.
+* **The conclusion is conditional, and the condition is printed.** At the declared bar nobody is
+  deskilled below their starting capacity; the decline begins only once a role's bar is high enough
+  to force near-total delegation. Deskilling is a function of the bar, not of the tool, and the bar
+  is the one quantity in the model nobody has measured.
+* **The runway buys time, not outcome.** Six extra years before expectations follow the machine is
+  worth 3.2 years spent judging and +0.002 of capacity at the horizon. Both halves are tested, so a
+  change to the dynamics that makes the runway matter more will say so.
+* **Effective output rises.** The model does not say maximal assistance is self-defeating; it says
+  the objective that rises is the measurable one. A run that claimed otherwise would be misreading
+  its own simulation.
+* **A floor that assistance cannot remove.** When the same machine writes the code and its tests, a
+  share of defects is caught by neither, and that share is the floor. More tooling does not move it,
+  because the correlation sets it and not the effort.
+
+The fifteen tests in the module are named for what they would catch — the threshold inversion, the
+cohort collapsing to a single point, the runway's effect vanishing — because those are the failures
+this model actually had.
 
 ## The economic layer, and what is measured versus invented
 

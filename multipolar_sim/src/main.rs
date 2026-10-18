@@ -45,6 +45,11 @@ mod game;
 #[allow(dead_code)]
 mod information;
 mod pension;
+/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`: how assistance removes the
+/// practice that builds the capacity to judge, and how the tempo that forces assistance
+/// then closes the loop.
+#[allow(dead_code)]
+mod psyche;
 mod report;
 mod simulation;
 /// The third-party spoiler of `THIRD_PARTY_SPOILER.md`: divide and conquer as a
@@ -136,6 +141,20 @@ struct Args {
     strategy_punishment: f64,
     /// `--strategy-sensitivity`: sweep the assumptions the verdict turns on.
     strategy_sensitivity: bool,
+    /// `--psyche`: run the psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`.
+    psyche: bool,
+    /// `--psyche-persons <n>`: cohort size for the Monte Carlo.
+    psyche_persons: usize,
+    /// `--psyche-autonomy-floor <x>`: the **declared** point below which a person counts as
+    /// led rather than judging. Declared because no measurement fixes it -- see `psyche.rs`.
+    psyche_autonomy_floor: f64,
+    /// `--psyche-tempo <x>`: growth rate of the tempo the machine sets, and therefore of the
+    /// expectation the person has to clear.
+    psyche_tempo: f64,
+    /// `--psyche-runway <years>`: how long before expectations rise to the machine's tempo.
+    psyche_runway: u32,
+    /// `--psyche-training <x>`: share of the period spent learning rather than producing.
+    psyche_training: f64,
 }
 
 impl Default for Args {
@@ -183,6 +202,12 @@ impl Default for Args {
             strategy_spoil_gain: StrategyParams::default().spoil_gain,
             strategy_punishment: StrategyParams::default().punishment_scale,
             strategy_sensitivity: false,
+            psyche: false,
+            psyche_persons: 2_000,
+            psyche_autonomy_floor: 0.15,
+            psyche_tempo: psyche::ModelParameters::default().tempo_growth,
+            psyche_runway: psyche::ModelParameters::default().expectation_lag_years,
+            psyche_training: psyche::ModelParameters::default().training_share,
         }
     }
 }
@@ -214,6 +239,9 @@ impl Args {
             "--strategy-coop-gain" => &mut self.strategy_coop_gain,
             "--strategy-spoil-gain" => &mut self.strategy_spoil_gain,
             "--strategy-punishment" => &mut self.strategy_punishment,
+            "--psyche-autonomy-floor" => &mut self.psyche_autonomy_floor,
+            "--psyche-tempo" => &mut self.psyche_tempo,
+            "--psyche-training" => &mut self.psyche_training,
             "--crisis" => &mut self.crisis_probability,
             "--war" => &mut self.war_probability,
             "--breakthrough" => &mut self.breakthrough_probability,
@@ -232,6 +260,14 @@ impl Args {
             }
             "--runs" => {
                 self.runs = value.max(1.0) as usize;
+                return true;
+            }
+            "--psyche-persons" => {
+                self.psyche_persons = value.max(1.0) as usize;
+                return true;
+            }
+            "--psyche-runway" => {
+                self.psyche_runway = value.max(0.0) as u32;
                 return true;
             }
             _ => return false,
@@ -457,6 +493,10 @@ fn parse_args() -> Args {
                 args.strategies = true;
                 i += 1;
             }
+            "--psyche" => {
+                args.psyche = true;
+                i += 1;
+            }
             "--strategy-sensitivity" => {
                 args.strategy_sensitivity = true;
                 i += 1;
@@ -531,7 +571,8 @@ fn print_usage() {
 Multipolar World Simulator
 
 USAGE:
-  multipolar_sim [--sweep | --compare | --ai | --information | --scenarios] [options]
+  multipolar_sim [--sweep | --compare | --ai | --information | --strategies | --psyche
+                  | --scenarios] [options]
 
 OPTIONS:
   --horizon <years>          simulation length                (default {horizon})
@@ -620,6 +661,22 @@ OPTIONS:
                              stops holding; without it the table describes one
                              parameterisation rather than a finding
 
+  --psyche                   run the psychological layer: 2,000 people, thirty years,
+                             assistance solved for rather than chosen, and what
+                             tracking the machine's tempo costs. See
+                             THE_PSYCHOLOGICAL_LAYER.md. The cohort is drawn once and
+                             run twice on the same seed, so the printed differences are
+                             the tempo's cost and not a difference between two groups
+  --psyche-persons <n>       cohort size                       (default {psy_persons})
+  --psyche-tempo <x>         machine tempo growth, per year    (default {psy_tempo:.2})
+  --psyche-runway <years>    years before expectations rise    (default {psy_runway})
+                             to meet the machine's tempo
+  --psyche-training <x>      share of the period spent         (default {psy_training:.2})
+                             learning rather than producing
+  --psyche-autonomy-floor <x>  the DECLARED point below which  (default {psy_floor:.2})
+                             a person counts as led rather than
+                             judging; no measurement fixes it
+
   `--seed` is printed above in the decimal form it is parsed from, so the value
   can be copied straight back onto the command line.
 
@@ -686,6 +743,11 @@ across parameter ranges and which flip on small changes. See report.rs.",
         st_coop = d.strategy_coop_gain,
         st_spoil = d.strategy_spoil_gain,
         st_punish = d.strategy_punishment,
+        psy_persons = d.psyche_persons,
+        psy_tempo = d.psyche_tempo,
+        psy_runway = d.psyche_runway,
+        psy_training = d.psyche_training,
+        psy_floor = d.psyche_autonomy_floor,
     );
 }
 
@@ -1219,7 +1281,10 @@ fn run_information(base: &Args) {
             .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.bare_wars)))
             .0;
         let contestable = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years)))
+            .summarize(|o| {
+                o.information
+                    .map_or(0.0, |i| f64::from(i.contestable_years))
+            })
             .0;
         let marker = if (force_cost - base.information_force_cost).abs() < 1e-9 {
             " *"
@@ -1284,7 +1349,10 @@ fn run_information(base: &Args) {
             .0;
         let wars = ensemble.summarize(|o| f64::from(o.shock_counts.2)).0;
         let contestable = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years)))
+            .summarize(|o| {
+                o.information
+                    .map_or(0.0, |i| f64::from(i.contestable_years))
+            })
             .0;
         let marker = if verification > threshold { " " } else { "*" };
         println!(
@@ -2086,9 +2154,9 @@ fn strategy_statistics(config: &Config, ensemble: &Ensemble) -> Vec<[f64; 6]> {
         .outcomes
         .iter()
         .map(|outcome| {
-            let (conflict, rent) = outcome
-                .strategy
-                .map_or((0.0, 0.0), |s| (s.mean_regions_in_conflict, s.realised_rent));
+            let (conflict, rent) = outcome.strategy.map_or((0.0, 0.0), |s| {
+                (s.mean_regions_in_conflict, s.realised_rent)
+            });
             [
                 outcome.mean_cooperation,
                 outcome.trap_fraction,
@@ -2274,34 +2342,51 @@ fn run_strategies(base: &Args) {
     println!();
     match plan.horizon_verdict() {
         strategies::HorizonVerdict::Crossing(years) => {
-            println!("  THE CROSSING: spoiling is worth more below {years:.1} years and cooperation");
+            println!(
+                "  THE CROSSING: spoiling is worth more below {years:.1} years and cooperation"
+            );
             println!("  above it. That is the framework's answer to which of the two wins: the");
             println!("  spoiler wins short games, because its prize is collected at once, and the");
             println!("  cooperator wins long ones, because its return is a flow and the spoil-");
             println!("  er's prize is capped by depletion.");
         }
         strategies::HorizonVerdict::CooperationAlways => {
-            println!("  NO CROSSING, AND IT FAVOURS COOPERATION: cooperation is worth more at every");
-            println!("  horizon tried, from {HORIZON_REPORT_LIMIT:.0} years down to half a year. The");
+            println!(
+                "  NO CROSSING, AND IT FAVOURS COOPERATION: cooperation is worth more at every"
+            );
+            println!(
+                "  horizon tried, from {HORIZON_REPORT_LIMIT:.0} years down to half a year. The"
+            );
             println!("  spoiler is never ahead, so there is no window for it to exploit.");
         }
         strategies::HorizonVerdict::SpoilingAlways => {
-            println!("  NO CROSSING, AND IT FAVOURS SPOILING: spoiling is worth more at every horizon");
-            println!("  tried, up to {HORIZON_REPORT_LIMIT:.0} years. The cooperator never gets ahead,");
+            println!(
+                "  NO CROSSING, AND IT FAVOURS SPOILING: spoiling is worth more at every horizon"
+            );
+            println!(
+                "  tried, up to {HORIZON_REPORT_LIMIT:.0} years. The cooperator never gets ahead,"
+            );
             println!("  whatever the horizon.");
         }
     }
     match plan.critical_discount_rate() {
         Some(rate) => {
-            println!("  THE CRITICAL DISCOUNT RATE: {:.3} a year. Below it the crossing exists and", rate);
-            println!("  cooperation eventually wins. Above it there is no crossing at any horizon:");
+            println!(
+                "  THE CRITICAL DISCOUNT RATE: {:.3} a year. Below it the crossing exists and",
+                rate
+            );
+            println!(
+                "  cooperation eventually wins. Above it there is no crossing at any horizon:"
+            );
             println!("  the strategist is too impatient for a return paid in instalments, and");
             println!("  spoiling dominates outright. Note the direction -- impatience locks the");
             println!("  spoiler IN, which is the opposite of the intuition that a deferred return");
             println!("  suffers from it, because here it is the cooperator who is paid later.");
         }
         None => {
-            println!("  THE CRITICAL DISCOUNT RATE: none inside the range searched, so the ordering");
+            println!(
+                "  THE CRITICAL DISCOUNT RATE: none inside the range searched, so the ordering"
+            );
             println!("  does not reverse with patience alone at these parameters.");
         }
     }
@@ -2409,11 +2494,8 @@ fn run_strategies(base: &Args) {
             ("SPOILING - COOP", 1, 2),
         ];
         for (label, first, second) in contrasts {
-            let (mean, standard_error, ahead) = paired_difference(
-                &statistics[first].1,
-                &statistics[second].1,
-                index,
-            );
+            let (mean, standard_error, ahead) =
+                paired_difference(&statistics[first].1, &statistics[second].1, index);
             let t = if standard_error > 0.0 {
                 mean / standard_error
             } else {
@@ -2436,8 +2518,14 @@ fn run_strategies(base: &Args) {
     }
     println!();
     println!("  The t column is the mean divided by its own standard error. Note how small");
-    println!("  those errors are: with {} runs the *unpaired* noise on a cooperation rate is", base.runs);
-    println!("  around {:.4}, an order of magnitude larger, and comparing two arms run", 0.5 / (base.runs as f64).sqrt());
+    println!(
+        "  those errors are: with {} runs the *unpaired* noise on a cooperation rate is",
+        base.runs
+    );
+    println!(
+        "  around {:.4}, an order of magnitude larger, and comparing two arms run",
+        0.5 / (base.runs as f64).sqrt()
+    );
     println!("  independently would drown the effect. Pairing is what makes the comparison");
     println!("  readable -- run `n` of every arm faces the same shocks and the same region");
     println!("  realisations, so the difference is taken with that noise already cancelled.");
@@ -2537,7 +2625,9 @@ fn run_strategies(base: &Args) {
         println!("  has nothing to do with appetite for risk.");
     } else {
         println!();
-        println!("  Run again with --strategy-sensitivity to move each declared assumption in turn");
+        println!(
+            "  Run again with --strategy-sensitivity to move each declared assumption in turn"
+        );
         println!("  and see where this verdict stops holding. Without it, the table above is a");
         println!("  description of one parameterisation rather than a finding about strategies.");
     }
@@ -2625,6 +2715,560 @@ fn run_strategies(base: &Args) {
 /// crossing" is a statement with a range attached rather than an absolute.
 const HORIZON_REPORT_LIMIT: f64 = 400.0;
 
+/// Parameters for the psychological layer, taken from the documented defaults with the run's
+/// `--psyche-*` overrides applied.
+fn psyche_parameters(base: &Args) -> psyche::ModelParameters {
+    psyche::ModelParameters {
+        tempo_growth: base.psyche_tempo,
+        expectation_lag_years: base.psyche_runway,
+        training_share: base.psyche_training,
+        ..psyche::ModelParameters::default()
+    }
+}
+
+/// The throughput gain at which holding back stops being optimal, or `None` if the optimum never
+/// reaches full assistance inside the swept range.
+///
+/// Bisection on a quantity that does not vary continuously: the optimal assistance is a decision
+/// on a grid, so it jumps rather than crossing. What is reported is the midpoint of the interval
+/// in which the jump happens, printed with the resolution of the grid that found it -- a crossing
+/// quoted to four decimals from a two-decimal grid would be a precision the search does not have.
+fn psyche_boundary_gain(
+    params: &psyche::ModelParameters,
+    capacity: f64,
+    self_model: f64,
+) -> Option<f64> {
+    const FULL: f64 = 0.995;
+    let at = |gain: f64| {
+        let mut probe = params.clone();
+        probe.throughput_gain = gain;
+        psyche::best_fixed_assistance(capacity, self_model, &probe, params.human_share).0
+    };
+    if at(0.0) >= FULL || at(4.0) < FULL {
+        return None;
+    }
+    let (mut low, mut high) = (0.0_f64, 4.0_f64);
+    for _ in 0..60 {
+        let mid = 0.5 * (low + high);
+        if at(mid) >= FULL {
+            high = mid;
+        } else {
+            low = mid;
+        }
+    }
+    Some(0.5 * (low + high))
+}
+
+/// The substitution coefficient at which holding back becomes optimal at the current speed-up.
+///
+/// The same construction as [`psyche_boundary_gain`], on the other axis of the phase diagram. The
+/// pair is what makes the claim conditional rather than absolute: assistance stops paying for
+/// itself either because it is not fast enough or because it substitutes too much.
+fn psyche_boundary_substitution(
+    params: &psyche::ModelParameters,
+    capacity: f64,
+    self_model: f64,
+) -> Option<f64> {
+    const FULL: f64 = 0.995;
+    let at = |substitution: f64| {
+        let mut probe = params.clone();
+        probe.channels.substitution = substitution;
+        psyche::best_fixed_assistance(capacity, self_model, &probe, params.human_share).0
+    };
+    if at(0.0) < FULL || at(1.0) >= FULL {
+        return None;
+    }
+    let (mut low, mut high) = (0.0_f64, 1.0_f64);
+    for _ in 0..60 {
+        let mid = 0.5 * (low + high);
+        if at(mid) >= FULL {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    Some(0.5 * (low + high))
+}
+
+/// The psychological layer of `THE_PSYCHOLOGICAL_LAYER.md`.
+///
+/// # Why this run reports paired differences rather than levels
+///
+/// Every parameter is declared, so no level printed here is a prediction about anything. What is
+/// not arbitrary is the *difference* between the same people under two assistance policies: the
+/// cohort is drawn once and run twice, so the gap is what the tempo costs, not a difference
+/// between two groups. Figures appear as gaps wherever a gap exists, and as levels only where the
+/// level is the thing being described.
+fn run_psyche(base: &Args) {
+    let params = psyche_parameters(base);
+    let floor = base.psyche_autonomy_floor;
+    let cohort = psyche::draw_cohort(base.psyche_persons, &params, base.seed);
+    let tracking = psyche::run_cohort(&cohort, &params, psyche::Strategy::Tracking);
+    let held = psyche::run_cohort(
+        &cohort,
+        &params,
+        psyche::Strategy::Fixed(params.initial_assistance),
+    );
+    let tracked = psyche::summarise(&tracking, floor);
+    let still = psyche::summarise(&held, floor);
+
+    println!();
+    println!("{}", "=".repeat(78));
+    println!("THE PSYCHOLOGICAL LAYER");
+    println!("{}", "=".repeat(78));
+    println!(
+        "  {} people, {} years, seed {}. The machine sets the tempo; the question is",
+        cohort.len(),
+        params.horizon_years,
+        base.seed
+    );
+    println!("  what happens to the person who has to keep up with it.");
+    println!();
+    println!("  EVERY PARAMETER IS DECLARED. Nothing here is calibrated, so no LEVEL is a");
+    println!("  prediction. The findings are the SHAPES: which relationships hold whatever the");
+    println!("  numbers are, and which flip when the numbers change. A table of levels read as");
+    println!("  a forecast would be a misuse of this run.");
+
+    // ---- the mechanism, on one person -------------------------------------
+    const REPRESENTATIVE_CAPACITY: f64 = 0.7;
+    const REPRESENTATIVE_SELF_MODEL: f64 = 0.4;
+    let one_tracked = psyche::simulate(
+        REPRESENTATIVE_CAPACITY,
+        REPRESENTATIVE_SELF_MODEL,
+        &params,
+        psyche::Strategy::Tracking,
+        params.human_share,
+    );
+    let one_held = psyche::simulate(
+        REPRESENTATIVE_CAPACITY,
+        REPRESENTATIVE_SELF_MODEL,
+        &params,
+        psyche::Strategy::Fixed(params.initial_assistance),
+        params.human_share,
+    );
+
+    println!();
+    println!("  THE INVERSION, IN ONE PERSON");
+    println!("  {}", "-".repeat(74));
+    println!("  Same person twice. TRACKED keeps pace with the machine, so their assistance is");
+    println!(
+        "  whatever clears the bar. HELD somehow keeps assistance at {:.2} throughout -- not",
+        params.initial_assistance
+    );
+    println!("  a choice anyone has, but the counterfactual that makes the cost visible.");
+    println!();
+    println!(
+        "  {:>4}  {:>9} {:>8} {:>9} {:>10} {:>9}   {:>8}",
+        "year", "assist", "capacity", "autonomy", "eff.output", "defects", "held cap."
+    );
+    let marks = [0_usize, 1, 2, 4, 7, 10, 15, 20, 25, 29];
+    for year in marks {
+        if year >= params.horizon_years as usize {
+            continue;
+        }
+        let Some(t) = one_tracked.get(year) else {
+            continue;
+        };
+        let h = one_held.get(year).copied().unwrap_or(*t);
+        println!(
+            "  {:>4}  {:>9.3} {:>8.3} {:>9.3} {:>10.3} {:>9.3}   {:>8.3}",
+            t.year,
+            t.assistance,
+            t.capacity,
+            t.autonomy,
+            t.effective_output,
+            t.residual_defect_rate,
+            h.capacity
+        );
+    }
+    println!();
+    println!("  Assistance is not chosen here. It is solved for: the bar rises with the machine's");
+    println!("  tempo, and the only way to clear it within the period is to accept more help. The");
+    println!(
+        "  person who would rather keep the practice cannot, without falling behind a standard"
+    );
+    println!("  they did not set. That is the whole mechanism, and it is not laziness.");
+
+    // ---- the cohort -------------------------------------------------------
+    println!();
+    println!("  THE COHORT");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:>28} {:>14} {:>14} {:>14}",
+        "", "tracked", "held", "difference"
+    );
+    let row = |label: &str, a: f64, b: f64, scale: f64, unit: &str| {
+        println!(
+            "  {:<28} {:>13.3}{} {:>13.3}{} {:>+13.3}{}",
+            label,
+            a * scale,
+            unit,
+            b * scale,
+            unit,
+            (a - b) * scale,
+            unit
+        );
+    };
+    row(
+        "mean capacity",
+        tracked.mean_capacity,
+        still.mean_capacity,
+        1.0,
+        "",
+    );
+    row(
+        "p10 capacity",
+        tracked.p10_capacity,
+        still.p10_capacity,
+        1.0,
+        "",
+    );
+    row(
+        "median capacity",
+        tracked.median_capacity,
+        still.median_capacity,
+        1.0,
+        "",
+    );
+    row(
+        "mean autonomy",
+        tracked.mean_autonomy,
+        still.mean_autonomy,
+        1.0,
+        "",
+    );
+    row(
+        "mean effective output",
+        tracked.mean_effective_output,
+        still.mean_effective_output,
+        1.0,
+        "",
+    );
+    row(
+        "mean residual defects",
+        tracked.mean_residual_defect_rate,
+        still.mean_residual_defect_rate,
+        100.0,
+        "%",
+    );
+    row(
+        "share below autonomy floor",
+        tracked.share_led,
+        still.share_led,
+        100.0,
+        "%",
+    );
+    println!();
+    println!(
+        "  The autonomy floor is {floor:.2}, and it is DECLARED: no measurement fixes the point at"
+    );
+    println!("  which a person has stopped judging for themselves. Every 'share below' figure is");
+    println!("  conditional on it, and moving it moves that row and nothing else.");
+    if tracked.mean_year_autonomy_lost.is_finite() {
+        println!(
+            "  Mean year at which autonomy first crosses the floor: {:.1}. Held: {}.",
+            tracked.mean_year_autonomy_lost,
+            if still.mean_year_autonomy_lost.is_finite() {
+                format!("{:.1}", still.mean_year_autonomy_lost)
+            } else {
+                "never".to_string()
+            }
+        );
+    }
+
+    // ---- the runway -------------------------------------------------------
+    println!();
+    println!("  WHAT THE RUNWAY BUYS");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  Years between the machine arriving and expectations rising to meet it. This is the"
+    );
+    println!(
+        "  one variable in the model an employer or a funder controls directly, which makes it"
+    );
+    println!("  the only policy instrument here.");
+    println!();
+    println!(
+        "  {:>7} {:>16} {:>12} {:>13} {:>16}",
+        "runway", "years autonomous", "mean cap.", "below floor", "eff. output"
+    );
+    let mut runway_curve = Vec::new();
+    for lag in 0..=6_u32 {
+        let mut probe = params.clone();
+        probe.expectation_lag_years = lag;
+        let summary = psyche::summarise(
+            &psyche::run_cohort(&cohort, &probe, psyche::Strategy::Tracking),
+            floor,
+        );
+        runway_curve.push((lag, summary));
+        println!(
+            "  {:>7} {:>16.1} {:>12.3} {:>12.1}% {:>16.3}",
+            lag,
+            summary.mean_autonomous_years,
+            summary.mean_capacity,
+            summary.share_led * 100.0,
+            summary.mean_effective_output
+        );
+    }
+    let first = runway_curve
+        .first()
+        .map(|(_, s)| s.mean_autonomous_years)
+        .unwrap_or(f64::NAN);
+    let last = runway_curve
+        .last()
+        .map(|(_, s)| s.mean_autonomous_years)
+        .unwrap_or(f64::NAN);
+    println!();
+    println!(
+        "  Six extra years of runway buys {:+.1} years spent judging, and {:+.3} of mean",
+        last - first,
+        runway_curve
+            .last()
+            .map(|(_, s)| s.mean_capacity)
+            .unwrap_or(f64::NAN)
+            - runway_curve
+                .first()
+                .map(|(_, s)| s.mean_capacity)
+                .unwrap_or(f64::NAN)
+    );
+    println!("  capacity at the horizon. Read those two numbers together, because the difference");
+    println!("  between them is what this model has to say about the runway:");
+    println!();
+    println!(
+        "  the runway changes WHEN, not WHERE. It buys years of autonomous practice -- the time"
+    );
+    println!(
+        "  in which the inner work actually happens -- and it does not buy a different endpoint,"
+    );
+    println!(
+        "  because the endpoint is set by the bar the role settles at rather than by the path"
+    );
+    println!("  taken to it. A contraction forgets its initial condition, and this one forgets it");
+    println!(
+        "  within a decade. That is a property of the dynamics, not a finding about employers,"
+    );
+    println!("  and it bounds what this model can say about who gets the runway.");
+
+    // ---- the tempo --------------------------------------------------------
+    println!();
+    println!("  WHAT THE TEMPO COSTS");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  {:>7} {:>16} {:>12} {:>13} {:>16}",
+        "tempo", "years autonomous", "mean cap.", "below floor", "eff. output"
+    );
+    for tempo in [0.0, 0.05, 0.10, 0.15, 0.20, 0.30] {
+        let mut probe = params.clone();
+        probe.tempo_growth = tempo;
+        let summary = psyche::summarise(
+            &psyche::run_cohort(&cohort, &probe, psyche::Strategy::Tracking),
+            floor,
+        );
+        println!(
+            "  {:>7.2} {:>16.1} {:>12.3} {:>12.1}% {:>16.3}",
+            tempo,
+            summary.mean_autonomous_years,
+            summary.mean_capacity,
+            summary.share_led * 100.0,
+            summary.mean_effective_output
+        );
+    }
+    println!();
+    println!(
+        "  A faster machine costs years of autonomy and buys almost no output: the throughput"
+    );
+    println!(
+        "  column is flat because the bar reaches its ceiling either way, so the speed decides"
+    );
+    println!(
+        "  how quickly the person is cornered rather than how much they end up producing. That"
+    );
+    println!(
+        "  is the sharpest thing this model says, and it is not what a myopic objective sees."
+    );
+
+    // ---- the thresholds ---------------------------------------------------
+    println!();
+    println!("  THE THRESHOLDS");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  Computed for a person at capacity {REPRESENTATIVE_CAPACITY:.1} with a training share of {:.2}.",
+        params.training_share
+    );
+    match psyche::deskilling_threshold(REPRESENTATIVE_CAPACITY, params.training_share, &params) {
+        Some(threshold) => {
+            println!(
+                "  Deskilling threshold: full assistance erodes capacity once the substitution"
+            );
+            println!(
+                "  coefficient exceeds {threshold:.3}. The default is {:.2}, so at this training",
+                params.channels.substitution
+            );
+            println!(
+                "  share the model is {} the threshold.",
+                if params.channels.substitution > threshold {
+                    "above"
+                } else {
+                    "below"
+                }
+            );
+        }
+        None => println!("  Deskilling threshold: undefined at this capacity or training share."),
+    }
+    if let Some(share) = psyche::critical_human_share(0.6, &params) {
+        println!();
+        println!(
+            "  Emotional coherence: falls below 0.6 once the human share of interaction drops"
+        );
+        println!(
+            "  under {share:.3}. The default mix is {:.2}, giving coherence {:.3}.",
+            params.human_share,
+            psyche::emotional_coherence(params.human_share, &params)
+        );
+    }
+    println!();
+    println!(
+        "  Residual defect floor: {:.3}. That is the share of characteristic defects the same",
+        psyche::residual_defect_floor(&params)
+    );
+    println!("  machine wrote the tests for. No amount of assistance removes it, because the");
+    println!(
+        "  correlation is the binding constraint and not the effort. Perfection is not for sale."
+    );
+
+    // ---- who actually loses capacity -------------------------------------
+    println!();
+    println!("  WHO IS ACTUALLY DESKILLED");
+    println!("  {}", "-".repeat(74));
+    println!(
+        "  The same well-trained person, capacity {:.2} at the start, against the bar their role",
+        0.75
+    );
+    println!("  settles at. This is the table the argument turns on, and it does not say what a");
+    println!("  reader expecting a decline might expect: at the default bar the person ends ABOVE");
+    println!("  where they started. What they lose is the gap to the counterfactual.");
+    println!();
+    println!(
+        "  {:>8} {:>10} {:>12} {:>14} {:>16}",
+        "settled", "assistance", "capacity", "change from", "effective"
+    );
+    println!(
+        "  {:>8} {:>10} {:>12} {:>14} {:>16}",
+        "bar", "at horizon", "at horizon", "0.75 start", "output"
+    );
+    for ceiling in [1.10, 1.30, 1.50, 1.70, 1.90, 2.20, 2.50] {
+        let mut probe = params.clone();
+        probe.expectation_ceiling = ceiling;
+        let path = psyche::simulate(
+            0.75,
+            REPRESENTATIVE_SELF_MODEL,
+            &probe,
+            psyche::Strategy::Tracking,
+            params.human_share,
+        );
+        let Some(last) = path.last() else { continue };
+        println!(
+            "  {:>8.2} {:>10.3} {:>12.3} {:>+14.3} {:>16.3}",
+            ceiling,
+            last.assistance,
+            last.capacity,
+            last.capacity - 0.75,
+            last.effective_output
+        );
+    }
+    println!();
+    println!(
+        "  The decline appears only once the bar is high enough to force near-total delegation,"
+    );
+    println!("  which is the model's real claim: deskilling is a function of the bar, not of the");
+    println!(
+        "  tool. That is also the claim's empirical vulnerability, because the bar is the one"
+    );
+    println!("  quantity in the model that nobody has measured. A reader who doubts the argument");
+    println!("  should attack the bar, and this table is where to do it.");
+
+    // ---- the phase boundary ----------------------------------------------
+    println!();
+    println!("  WHERE HOLDING BACK BECOMES OPTIMAL");
+    println!("  {}", "-".repeat(74));
+    println!("  The argument is conditional, and this is the condition. Two ways for maximum");
+    println!("  assistance to stop being the best available policy:");
+    println!();
+    match psyche_boundary_gain(&params, REPRESENTATIVE_CAPACITY, REPRESENTATIVE_SELF_MODEL) {
+        Some(gain) => {
+            println!("    speed-up:   below a throughput gain of {gain:.2} -- output rising by");
+            println!("                that much per unit of assistance -- holding back becomes");
+            println!("                the better policy.");
+        }
+        None => {
+            println!("    speed-up:   no gain in the swept range makes holding back optimal at");
+            println!("                these settings -- see the note below.");
+        }
+    }
+    match psyche_boundary_substitution(&params, REPRESENTATIVE_CAPACITY, REPRESENTATIVE_SELF_MODEL)
+    {
+        Some(substitution) => {
+            println!("    substitution: at the current speed-up, holding back becomes optimal");
+            println!(
+                "                once the substitution coefficient exceeds {substitution:.2} \
+                 (default {:.2}).",
+                params.channels.substitution
+            );
+        }
+        None => {
+            println!("    substitution: no coefficient in 0..1 makes holding back optimal at");
+            println!("                this speed-up -- the tool is simply worth using maximally.");
+        }
+    }
+    println!();
+    println!(
+        "  The default parameterisation sits on the side where full assistance wins. That is a"
+    );
+    println!(
+        "  finding about the numbers, not about the world: it says the argument's premise needs"
+    );
+    println!(
+        "  a tool that is either slower or more substitutive than the one declared here. Anyone"
+    );
+    println!(
+        "  who believes the risk is real is claiming a point on the other side of this boundary,"
+    );
+    println!("  and now has to say which side and why.");
+
+    // ---- what this cannot say --------------------------------------------
+    println!();
+    println!("  WHAT THIS RUN DOES NOT ESTABLISH");
+    println!("  {}", "-".repeat(74));
+    println!("  - That capacity falls in the world. No longitudinal measurement of the capacity");
+    println!("    to judge is used or produced here, and none is known to the author.");
+    println!("  - The size of anything. Every parameter is declared, so every number is an");
+    println!("    illustration of the mechanism and not an estimate of its magnitude.");
+    println!("  - Which side of the boundary reality is on. The boundary is computable; the");
+    println!("    position of the actual tool is an empirical question this model cannot answer.");
+    println!("  - That assistance is bad. The model has an interior optimum in some of its");
+    println!("    parameter range, which means it can argue for assistance as easily as against;");
+    println!("    what it forbids is the assumption that more is always better.");
+
+    if let Some(dir) = &base.export {
+        match psyche::export::write_bundle(dir, &params, &cohort, floor, base.seed) {
+            Ok(files) => {
+                println!();
+                println!("  EXPORTED for plotting ({}):", dir.display());
+                for file in files {
+                    println!("    {}", file.display());
+                }
+                println!();
+                println!("  Draw the figures with:");
+                println!("    python tools/plot_psyche.py {}", dir.display());
+            }
+            Err(error) => eprintln!("warning: could not write the export: {error}"),
+        }
+    }
+
+    println!();
+    println!("{}", "=".repeat(78));
+}
+
 fn main() {
     let args = parse_args();
 
@@ -2640,6 +3284,11 @@ fn main() {
 
     if args.strategies {
         run_strategies(&args);
+        return;
+    }
+
+    if args.psyche {
+        run_psyche(&args);
         return;
     }
 

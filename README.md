@@ -143,8 +143,17 @@ security.
 
 ```bash
 cargo run -p multipolar_sim -- --sweep     # the informative mode
+cargo run -p multipolar_sim -- --psyche    # the psychological layer
 cargo run -p multipolar_sim -- --help
 ```
+
+It also carries a second, independent model: a psychological layer of the sort
+[`THE_PSYCHOLOGICAL_LAYER.md`](THE_PSYCHOLOGICAL_LAYER.md) documents, in which
+assistance is *solved for* rather than chosen, and what it costs is the practice that
+builds the capacity to judge. `--psyche` runs a 2,000-person cohort twice on the same
+seed — once tracking the machine's tempo, once holding assistance still — and prints
+the gap. Its parameters are declared for the same reason the world simulator's are
+invented: no measurement exists for them.
 
 It exists because the optimizer above answers "what is best for *you*" and has no way
 to represent "what happens if everyone does this" — the question
@@ -397,9 +406,14 @@ life-optimizer/
 ├── STRATEGY_COMPARISON.md        Buying the peace against buying the war, priced on one
 │                                 budget and one clock: the crossing horizon, the critical
 │                                 discount rate, and a paired Monte Carlo of both
+├── THE_PSYCHOLOGICAL_LAYER.md    What assistance does to the capacity that judges it: the
+│                                 machine-to-human inversion, a deskilling threshold, a defect
+│                                 floor that review cannot remove, a paired Monte Carlo over
+│                                 2,000 people, and the bar as the argument's empirical joint
 ├── figures/                      Figures drawn by tools/plot_ai_catalyst.py,
 │                                 tools/plot_information_warfare.py, tools/plot_spoiler.py,
-│                                 tools/plot_strategies.py and tools/plot_early_retirement.py
+│                                 tools/plot_strategies.py, tools/plot_early_retirement.py
+│                                 and tools/plot_psyche.py
 ├── EXAMPLES.md                   Worked usage examples
 ├── QUICKSTART.md                 Getting-started guide
 └── PROJECT_SUMMARY.md            Executive overview
