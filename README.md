@@ -501,9 +501,13 @@ life-optimizer/
 
 ## Assumptions & limitations
 
-- Tax tables are calibrated to **Stadt Bern, 2024**. Other cantons/municipalities
-  will differ — use `--custom-tax-rate` with your own observed rate for accuracy
-  anywhere else.
+- **Cantonal tax: 23 of 26 cantons are priced.** Bern uses its own official Stadt Bern 2024
+  table (cantonal, municipal and church). Every other priced canton uses the ESTV Tarife export
+  scale multiplied by that canton's Steuerfuss, both from the same year, and the output names
+  which basis it used. Three cantons cannot be priced — **Fribourg, Geneva and Valais** — because
+  their cantonal Steuerfuss cell in the official export is blank or ambiguous (`147.5%9)` for
+  Geneva). The tool refuses rather than guessing, and the refusal names the cantons that work.
+  For those three, use `--custom-tax-rate` with your own observed effective rate.
 - Pension projections are **estimates**, not financial advice. Real BVG plans vary
   by employer (contribution rates, conversion rates, buy-in options).
 - Market return assumptions are calibrated to historical Swiss BVG fund performance
@@ -560,14 +564,16 @@ configuration, and the documents that record what has and has not been checked (
 `CRITIQUE_RESPONSE.md`) are kept honest, because a financial-adjacent tool that lets its validation
 drift is worse than one that never claimed any.
 
-**What ages.** The tax tables are Stadt Bern 2024 with all 26 cantons' Steuerfuss values; Swiss tax
-law changes annually, so the tables drift out of date and `--custom-tax-rate` is the mitigation.
+**What ages.** Bern's table is Stadt Bern 2024 and the other 22 priced cantons use ESTV imports of
+the same vintage. Swiss tax law changes annually, so the tables drift out of date and
+`--custom-tax-rate` is the mitigation.
 `SWISS_TAX_DATA.md` records the provenance and the known defects. `CHANGELOG.md` records what
 changed and when.
 
 ## Contributing
 
 Issues and PRs welcome, particularly:
-- Tax tables for other Swiss cantons
+- The three unpriced cantonal Steuerfuss values, resolved against the official source
+  (Fribourg, Geneva, Valais — see the assumptions block)
 - Refinements to the regime-switching calibration
 - Additional life-stage/preference profiles

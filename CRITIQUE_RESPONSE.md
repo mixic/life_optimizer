@@ -20,11 +20,15 @@ do first. The plan in §7 follows from the verdicts rather than from the review'
 they were wrong:
 
 - I wrote that the review's single-canton claim was refuted because "cantons.rs covers all 26 with
-  enforced provenance". That is half wrong. `cantons.rs` has the full 26-canton `enum` with a
-  Steuerfuss for each and a no-fallback provenance rule (`canton_steuerfuss_data.rs` carries 866
-  Steuerfuss references), but **verified full tax tables exist only for Bern**, and `README.md:442`
-  says so plainly. The review's *characterisation of the architecture* is wrong; its *finding* is
-  right, and its remedy — "this is a data problem, not an architecture problem" — is exactly right.
+  enforced provenance". That is half wrong, and it took a second pass to find out which half.
+  `cantons.rs` has the full 26-canton `enum` with a no-fallback provenance rule, but at the time only
+  Bern carried a verified table -- so the review's *finding* looked right and its *characterisation*
+  wrong. Then the second review repeated the claim and sent me to `estv_scales_data.rs`, which is
+  generated from ESTV Tarife exports for the whole country: **23 of the 26 cantons are priced**, from
+  an imported scale multiplied by that canton's Steuerfuss, and `TaxSchedule::from_canton_scale` was
+  already wired to all of them. So the finding was wrong too, with a residue of three: Fribourg and
+  Valais have blank source cells, and Geneva's reads `"147.5%9)"`, which the importer refuses to
+  interpret. See §5b.
 - I wrote that the review's "no CI" claim was refuted by `.github/workflows/ci.yml`. The CI does
   exist and runs clippy, the full test suite on Ubuntu and Windows, and three rustdoc builds with
   `-D warnings`. But what the review actually observed — **no CI badge and no validation section** —
@@ -47,7 +51,7 @@ same treatment this repository gives everything else: the claim, the evidence, a
 | 1.1 | Model the team externality or warn on every reduction | **Verified** | See C4 |
 | 1.2 | Make retirement needs a first-class input, report a range and break-even | **Verified, now fixed** | Needs were derived, never asked for. `--retirement-needs`, `--retirement-needs-percent` and an interactive prompt now set it; a 60/75/90 range and the break-even are printed. |
 | 1.3 | Surface the utility aggregation, print components and weights, add sensitivity | **Partly — components already printed; weights and sensitivity are now added** | `display.rs:191-200` printed the five components and the total. The weights were never shown and nothing was perturbed; both are now done, by `src/robustness.rs`. |
-| 1.4 | Single-canton calibration is a structural limit | **Partly — the finding is right, the architecture claim is not** | All 26 cantons are modelled and provenance-enforced; verified tables exist only for Bern. Data problem, as the review says. |
+| 1.4 | Single-canton calibration is a structural limit | **Refuted by the code, with a residue of three** | **23 of 26 cantons are priced**: Bern from its own official table, the other 22 from an ESTV Tarife import multiplied by the canton's Steuerfuss. Fribourg and Valais have blank source cells; Geneva's reads `"147.5%9)"` and the importer refuses to guess. See §5b. |
 | 1.5 | Pension parameters asserted without figures in the README | **Verified** | `README.md:96` mentions "the higher conversion rate you earn by working longer" and never gives the number |
 | 2.1 | The scope has swallowed the product | **Verified, now restructured** | Same evidence as C1; the root README is tool-first and `documents/README.md` indexes the arguments. |
 | 2.2 | No validation or test evidence in the README | **Verified for the badge, now added** | CI exists and passes; there was no badge and no validation document. `VALIDATION.md` now records the fifteen ESTV-sourced reference points, the measured Bern discrepancies, the convergence check, and what could not be checked. The README now carries the CI badge and points at `VALIDATION.md`. |
@@ -61,9 +65,8 @@ same treatment this repository gives everything else: the claim, the evidence, a
 
 **Score: 10 verified, 7 partly true, 0 wholly false.** Two rows moved from verified to partly true
 after checking `display.rs` and `cantons.rs` more closely than my first pass did; the review is a
-good review. The two places it
-is wrong are both about *what the architecture already does*, and both matter because they change
-which work is worth doing.
+good review. The two places it is wrong are both about *what the architecture already does*, and
+both matter because they change which work is worth doing.
 
 ## 3. The four claims that should drive the plan
 
@@ -201,6 +204,40 @@ accumulate the same BVG capital, because the scheme insures the same amount of b
 
 The cap was also missing from `early_retirement.rs`, which documented the upper limit in its
 parameter table and never applied it. Both are fixed.
+
+## 5b. The second review: what it got right, and the two claims it got wrong
+
+A second review, after the restructure, is recorded here because it repeated one claim this
+document had already corrected and added a new one that was also wrong about the code.
+
+**Right, and fixed.** The README's example output was stale: it still showed the old single-point
+`Coverage: 117% of needs` format while the README promised a 60/75/90 range, a margin, a robustness
+block and a team warning. The features were all wired — a live run prints every one of them — so
+this was a documentation failure rather than a code one, which is the better of the two. It is fixed
+by regenerating the example from a real run, which also exposed that the old 80% recommendation no
+longer reproduces and that the search grid started at 50%, making 50% the answer for anyone
+preferring less work.
+
+**Wrong: "the tool remains Bern-accurate and Bern-adjacent-approximate."** Twenty-three of the
+twenty-six cantons are priced, from ESTV Tarife exports multiplied by each canton's Steuerfuss, and
+`TaxSchedule::from_canton_scale` was already wired to all of them. Four of the five cantons the
+review named — Zürich, Vaud, Basel-Stadt and Zug — have worked all along; naming them as gaps
+suggests the review tested the README rather than the binary.
+
+What is true is smaller and more interesting. Three cantons cannot be priced: **Fribourg and
+Valais** because the source cells are blank, and **Geneva** because the cell reads `"147.5%9)"` — a
+value with a footnote marker fused to it, or a percentage of another base, and the importer
+deliberately refuses to guess which. That refusal is the repository's own discipline applied to its
+own data, and inventing `1.475` would be exactly the sin the rest of this work is about.
+
+The README now says 23 of 26 rather than "Stadt Bern 2024", the assumptions block names the three
+cantons and the reason, and `tests/canton_priceability.rs` pins the split so a fourth canton cannot
+silently join them.
+
+**Wrong: "either the warning isn't wired into the display, or the example predates the feature."**
+It was the second, and the review's own hedge was the correct answer. `display::print_team_externality`
+prints a bordered warning for any reduction whose team effect is unmodelled; the old example was
+written before it existed.
 ## 6. What the review gets wrong, stated plainly
 
 - **The canton architecture.** See §1. The review infers a Bern-only design from a Bern-only
