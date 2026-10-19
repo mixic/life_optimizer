@@ -42,9 +42,12 @@ const SNAPSHOT: &str = "source-documents/estv_scales_expected.csv";
 
 /// Ladders the export cannot supply, each for a stated reason.
 const SNAPSHOT_EXEMPT: [&str; 6] = [
-    "BL_SINGLE", "BL_MARRIED", // formula tariff, published as expressions
-    "OW_SINGLE", "OW_MARRIED", // no Einkommen/Kanton band rows in the export
-    "UR_SINGLE", "UR_MARRIED", // same
+    "BL_SINGLE",
+    "BL_MARRIED", // formula tariff, published as expressions
+    "OW_SINGLE",
+    "OW_MARRIED", // no Einkommen/Kanton band rows in the export
+    "UR_SINGLE",
+    "UR_MARRIED", // same
 ];
 
 /// The Bern table is not part of the ESTV import; `bern_city_default` carries it.
@@ -57,9 +60,12 @@ struct Row {
 
 #[test]
 fn the_generated_cantonal_scales_match_the_estv_workbooks() {
-    let text = std::fs::read_to_string(SNAPSHOT)
-        .unwrap_or_else(|error| panic!("cannot read {SNAPSHOT}: {error}. Re-run \
-             `python tools/verify_estv_import.py --emit`."));
+    let text = std::fs::read_to_string(SNAPSHOT).unwrap_or_else(|error| {
+        panic!(
+            "cannot read {SNAPSHOT}: {error}. Re-run \
+             `python tools/verify_estv_import.py --emit`."
+        )
+    });
 
     let mut expected: std::collections::BTreeMap<String, Vec<Row>> = Default::default();
     for line in text.lines().skip(1) {
@@ -86,11 +92,7 @@ fn the_generated_cantonal_scales_match_the_estv_workbooks() {
             continue;
         }
         for married in [false, true] {
-            let key = format!(
-                "{}_{}",
-                canton.code(),
-                if married { "MARRIED" } else { "SINGLE" }
-            );
+            let key = format!("{}_{}", canton.code(), if married { "MARRIED" } else { "SINGLE" });
             let Some(rows) = expected.get(&key) else {
                 assert!(
                     SNAPSHOT_EXEMPT.contains(&key.as_str()),
@@ -99,9 +101,9 @@ fn the_generated_cantonal_scales_match_the_estv_workbooks() {
                 continue;
             };
 
-            let scale = cantons::imported_scale(*canton)
-                .unwrap_or_else(|| panic!("{key} is in the snapshot but {} has no imported scale",
-                    canton.code()));
+            let scale = cantons::imported_scale(*canton).unwrap_or_else(|| {
+                panic!("{key} is in the snapshot but {} has no imported scale", canton.code())
+            });
             let generated = scale.brackets(married);
             assert_eq!(
                 generated.len(),
@@ -127,10 +129,7 @@ fn the_generated_cantonal_scales_match_the_estv_workbooks() {
             compared += 1;
         }
     }
-    assert_eq!(
-        compared, 44,
-        "expected 44 ladders to be compared, got {compared}"
-    );
+    assert_eq!(compared, 44, "expected 44 ladders to be compared, got {compared}");
 }
 
 /// Every canton the tax engine prices must either come from the ESTV import or be the Bern table.
@@ -173,9 +172,12 @@ fn every_priced_canton_is_covered_by_the_import_or_by_bern() {
 fn the_federal_tariff_matches_the_estv_workbook() {
     use life_optimizer::federal_tariff_data::{FEDERAL_MARRIED_BRACKETS, FEDERAL_SINGLE_BRACKETS};
 
-    let text = std::fs::read_to_string(SNAPSHOT)
-        .unwrap_or_else(|error| panic!("cannot read {SNAPSHOT}: {error}. Re-run \
-             `python tools/verify_estv_import.py --emit`."));
+    let text = std::fs::read_to_string(SNAPSHOT).unwrap_or_else(|error| {
+        panic!(
+            "cannot read {SNAPSHOT}: {error}. Re-run \
+             `python tools/verify_estv_import.py --emit`."
+        )
+    });
 
     let mut expected: std::collections::BTreeMap<String, Vec<Row>> = Default::default();
     for line in text.lines().skip(1) {
@@ -187,22 +189,17 @@ fn the_federal_tariff_matches_the_estv_workbook() {
         if !fields[0].starts_with("BUND_") {
             continue;
         }
-        expected
-            .entry(fields[0].to_string())
-            .or_default()
-            .push(Row {
-                threshold: fields[2].parse().expect("threshold"),
-                rate: fields[3].parse().expect("rate"),
-            });
+        expected.entry(fields[0].to_string()).or_default().push(Row {
+            threshold: fields[2].parse().expect("threshold"),
+            rate: fields[3].parse().expect("rate"),
+        });
     }
 
-    for (key, source) in [
-        ("BUND_SINGLE", FEDERAL_SINGLE_BRACKETS),
-        ("BUND_MARRIED", FEDERAL_MARRIED_BRACKETS),
-    ] {
-        let rows = expected
-            .get(key)
-            .unwrap_or_else(|| panic!("{key} is missing from the snapshot"));
+    for (key, source) in
+        [("BUND_SINGLE", FEDERAL_SINGLE_BRACKETS), ("BUND_MARRIED", FEDERAL_MARRIED_BRACKETS)]
+    {
+        let rows =
+            expected.get(key).unwrap_or_else(|| panic!("{key} is missing from the snapshot"));
         assert_eq!(
             source.len(),
             rows.len(),

@@ -35,6 +35,15 @@ _spec = importlib.util.spec_from_file_location(
 )
 _xlsx_dump = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_xlsx_dump)
+
+# Format the emitted file so regeneration cannot leave `cargo fmt --check`
+# failing on generated code.
+_spec_fmt = importlib.util.spec_from_file_location(
+    "format_rust", os.path.join(_here, "format_rust.py")
+)
+_fmt = importlib.util.module_from_spec(_spec_fmt)
+_spec_fmt.loader.exec_module(_fmt)
+format_generated = _fmt.format_generated
 read_xlsx = _xlsx_dump.read_xlsx
 
 # The ESTV workbooks live in `source-documents/` at the repository root. A bare
@@ -326,6 +335,7 @@ def main():
 
     with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines))
+    format_generated(out_path)
 
     total_rows = sum(len(v) for v in per_year.values())
     print(f"wrote {out_path}")

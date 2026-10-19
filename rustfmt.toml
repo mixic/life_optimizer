@@ -1,0 +1,8 @@
+# One-line struct literals are how the generated data tables are emitted:
+# thousands of `FederalBracket { threshold: 0.0, rate: 0.0 },` rows. The
+# default heuristics expand each of those into a four-line block, which
+# quadruples the generated files and is undone by the next run of the
+# importer -- leaving `cargo fmt --check` failing on code no human wrote.
+# Allowing wider one-liners keeps generated data readable and keeps the
+# formatting gate meaningful for the files that are written by hand.
+use_small_heuristics = "Max"

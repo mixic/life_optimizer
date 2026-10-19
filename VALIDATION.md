@@ -63,7 +63,7 @@ from the income and applies it to the whole of it, so once the top rate is reach
 proportional. The test now pins the observed behaviour, and `tests/validation.rs` records why.
 
 What remains unverified: whether 24.73% is the correct top rate for Bern. That needs the cantonal
-tariff itself, which this work could not read offline. It is listed in §5, not resolved.
+tariff itself, which this work could not read offline. It is treated in §5.4, not resolved.
 
 ### 2.4 Shape checks
 
@@ -106,14 +106,24 @@ With both handled, the result:
 
 | | |
 |---|---:|
-| Bracket ladders compared | **44** (22 cantons × single/married) |
-| Bracket rows compared | **607** |
+| Bracket ladders compared | **46** (22 cantons × single/married, plus the federal pair) |
+| Bracket rows compared | **635** |
 | Material mismatches | **0** |
 | Exempt, with reasons | 6 — Basel-Landschaft publishes formulae rather than bands; Obwalden and Uri carry no `Einkommen`/`Kanton` rows |
 
 Jura's imported rates carry two extra digits (1.666702% against 1.6667%), which is CHF 0.02 of tax
 on CHF 100,000. The tolerance is 1e-6 for rates and 1e-9 for thresholds, and that choice is
 recorded rather than hidden behind an unexplained bound.
+
+**The federal tariff was the least read file in the repository.** `federal_tariff_data.rs` is
+generated too, and its header records that it replaced a hand-entered table whose top marginal rate
+was 7.39% against the statutory 13.2%. It now comes from `estv_scales_Bund.xlsx` and is compared row
+by row. Getting there needed one correction: the Bund export labels its authority
+`Bundessteuer`, not `Bund`, and matching the wrong label had made the verifier skip both federal
+ladders silently — a skip that looked like coverage. Both ladders now compare, and the two
+descending tails (13.2% to 11.5% at CHF 793,300 for a single taxpayer; 13.0% to 11.5% at CHF
+940,800 for a married one) are confirmed to be **in the published tariff**, not corruption in the
+import. A reader expecting a monotone ladder would have "fixed" them.
 
 The check is now permanent. `tests/estv_import_independent.rs` consumes the snapshot, so CI compares
 the generated constants against the workbooks without needing Python or the spreadsheets, and
@@ -122,8 +132,8 @@ verification fails the test rather than reducing its coverage.
 
 What this establishes and what it does not: it establishes that the import is faithful to its
 source. It does not establish that the ESTV's own published tariff is correct, that the Steuerfuss
-applied to it is current, or that the table vintage matches the year being priced. Those are §5
-items 3 and 4.
+applied to it is current, or that the table vintage matches the year being priced. Those are §5.2,
+§5.3 and §5.4.
 
 ## 3. The pension projection — and the defect validating it found
 
@@ -155,7 +165,7 @@ limit must accumulate the same BVG capital**, because the scheme insures the sam
 Under the old code those differed by nearly a factor of two.
 
 What is *still* not validated: the projection has not been compared against a real BVG statement or
-a fund's own projection, only against the statutory formula. That is §5's largest gap.
+a fund's own projection, only against the statutory formula. That is §5.5's largest gap.
 
 ## 4. Monte Carlo convergence
 
@@ -176,30 +186,194 @@ An eight-path increase in sample size cutting the spread by roughly three quarte
 with `1/√n` within the noise of five seeds. The test asserts the direction rather than the constant,
 since five seeds cannot estimate a standard error precisely enough to assert the constant.
 
-## 5. What has not been validated
+## 5. The seven open statements, re-examined
 
-Stated plainly, because the value of §2–§4 depends on it.
+This section used to be a list of seven things that had not been validated. Each has since been
+either turned into a check with numbers behind it, or examined closely enough to say *why* no check
+is possible and what exactly remains unknown. Both outcomes are recorded below; a check that
+replaced an admission is marked with its result, and one that could not be performed with the
+obstacle that stopped it.
 
-1. **No comparison against the ESTV calculator.** Fifteen published points for three cantons is what
-   exists here. A full matrix of income × status × canton against the official calculator would
-   subsume §2 and supersede it; it needs the calculator, which needs a network session.
-2. **The cantonal scales are now checked against their source, and were not before.** Forty-four
-   ladders and 607 bracket rows re-derived independently from the ESTV workbooks in
-   `source-documents/`, with zero material mismatches — see §2a. Six ladders are exempt for stated
-   reasons. What is *not* established is that the published ESTV tariff is itself correct, that the
-   Steuerfuss is current, or that the table vintage matches the year being priced.
-3. **The Bern table is Steuerjahr 2024 against 2025 figures.** A one-year drift is inside the band
-   and cannot be separated from a table error by this method.
-4. **The Bern top rate of 24.73% is unverified** (§2.3).
-5. **The pension projection is checked against the statutory formula, not against a real pension
-   fund statement.** Deductions for coordination, the insured-salary cap and the entry threshold are
-   now correct; the contribution *history*, the interest credited, and the fund's own conversion rate
-   are modelled, not observed.
-6. **The market assumptions are not calibrated to any fund.** Three presets are run and their range
-   is reported; none is fitted to data.
-7. **The tax engine's *deductions* are not validated here.** `SWISS_TAX_DATA.md` records their
-   provenance and the known defects; §2 above validates the rate schedule, not the deduction
-   estimate that feeds it.
+Three of the seven are now checks. Four are permanent statements, each with a reason specific
+enough to be investigated by someone with the access this work did not have.
+
+### 5.1 The ESTV calculator — a permanent statement, with the coverage stated exactly
+
+**Checked:** 15 published figures, from a secondary report quoting the ESTV Steuerrechner for
+Steuerjahr 2025 under the profile "alleinstehend, konfessionslos, keine Kinder" — three cantons
+(Schwyz, Zürich, Bern) at five taxable incomes (25,000; 50,000; 100,000; 250,000; 500,000).
+
+**Not checked:** the other 23 cantons; every household other than a single, childless,
+confessionless one; every income between and beyond those five points. Against a grid of
+26 cantons × 2 marital statuses × 5 incomes — 260 cells — coverage is 15 cells, or 5.8%.
+
+**Why no more:** the Steuerrechner is an interactive web tool, and this environment has no route to
+it. Outbound TLS from the shell fails (`The SSL connection could not be established`), and the
+fetch path returns `unsupported content type "application/pdf"` for every PDF. The published
+figures here were transcribed from a report, not queried from the calculator. A full matrix
+remains the single most valuable addition anyone with network access could make; it would subsume
+§2 and supersede it.
+
+### 5.2 The cantonal scales — checked against their source, and were not before
+
+**Checked:** 46 bracket ladders — 22 cantons × single and married, plus the federal pair —
+totalling 635 bracket rows, re-derived independently from the ESTV workbooks in
+`source-documents/` by `tools/verify_estv_import.py`, which reads the spreadsheets with openpyxl
+and applies the tariff arithmetic itself rather than reusing the importer. **Zero mismatches.**
+
+Six cantonal ladders are exempt, each for a stated reason and each asserted to be the *only*
+exemption: Basel-Landschaft publishes algebraic formulae rather than bands, and Obwalden and Uri
+carry no income-band rows in their exports.
+
+**Corrected in this section:** an earlier version of this document said the base scales were "not
+checked against anything outside the repository". That was wrong about the sourcing — the scales
+are generated *from* the official ESTV workbooks, which are in the repository as real 10 KB
+spreadsheets, not as pointers — and right about the checking, which is what the work above added.
+
+**Still not established:** that the published ESTV tariff is itself correct; that the Steuerfuss
+applied to it is the current one (partly addressed in 5.3); and that the workbook vintage matches
+the year being priced.
+
+### 5.3 The Bern table's vintage — checked as far as the multiplier, and no further
+
+**Checked:** the Steuerjahr 2024 table against 2025 rules, for the one component that is
+measurable. The cantonal multiplier fell from 3.025 to 2.975 between 2024 and 2025 while the
+municipal one held at 1.540, so a 2024 table overstates a 2025 liability by
+`0.05 / 4.565 = 1.095%` of the cantonal-plus-municipal tax. At the table's top average rate that is
+**0.271 pp**: 24.73% under 2024 rules against 24.46% under 2025 rules. `tests/bern_vintage.rs`
+pins the multipliers, the reduction and the drift, and asserts the direction is safe — the
+multiplier fell, so the vintage error can only overstate.
+
+**Not checked:** whether Bern also changed its *base* tariff between the two years, which would
+move the table as well and which nothing in this repository can measure.
+
+**What this buys:** the vintage explains about 0.3 pp of the 5.7–12.4 pp gap that §2.2 reports.
+That is the useful conclusion — the vintage is *not* the explanation for that gap, and the missing
+federal tax is.
+
+### 5.4 The Bern top rate of 24.73% — a permanent statement
+
+**Not checked, and not checkable here.** The rate appears in `TaxSchedule::bern_city_default` at
+and above CHF 200,000 taxable income, and it cannot be corroborated against an independent
+computation for three reasons, each verified:
+
+1. **There is no Bern workbook to check against.** `source-documents/` holds ESTV Tarife exports
+   for 25 of the 26 cantons. Bern is the only one absent: `estv_scales_data.rs` generates
+   constants for 24 cantons (Basel-Landschaft yields formulae rather than bands), and Bern is not
+   among them. Bern is priced from its own table precisely because no importable scale exists.
+2. **The Stadt Bern tariff PDF did not decode.** `SWISS_TAX_DATA.md` records the attempt in
+   detail: the file is vector text in Identity-H encoding, 244,498 glyph codes resolved and 21,979
+   numeric tokens recovered, but the rate column ("Einheits-Satz [%]") is unreachable — its
+   decimal-point glyph is absent from the visible CMap, so every rate fragments into a leading
+   digit and a trailing integer.
+3. **This environment cannot fetch PDFs at all.** The fetch path rejects `application/pdf`, and
+   the shell cannot open an outbound TLS connection.
+
+The number is therefore a *pinned observation* of the 2024 table, not a verified statutory rate.
+Anyone with the PDF and a working object-stream parser could close this in an afternoon;
+`tools/pdf_text.py` and `tools/characterise_bern_tokens.py` are the starting point.
+
+### 5.5 The pension projection — checked against the statute by hand
+
+**Checked:** `tests/bvg_worked_example.rs` computes the contribution from the statutory figures on
+paper and asserts it against the engine. The headline case, which `VALIDATION.md` §3 reports as the
+defect's cost:
+
+```text
+  insured salary   min(120,000; 90,720)  =  90,720
+  coordination deduction                 -  26,460
+  coordinated salary                         64,260
+  savings credit, age 35-44              x     10%
+  contribution                                6,426
+```
+
+The defect produced CHF 12,000 — 86.7% too much. The test also pins the three statutory
+parameters as literals (90,720 / 26,460 / 22,680) rather than as references to the library's own
+constants, pins the four age bands of BVG Art. 16 Abs. 1 at their boundaries, and checks seven
+salary-and-age combinations against hand arithmetic.
+
+**Not checked:** whether a real pension fund's statement agrees. These are the statutory minimums
+for the obligatory part of the scheme; a fund may credit more, and the conversion rate at
+retirement is a separate assumption. This remains the largest gap in the document.
+
+### 5.6 The market assumptions — compared against published fund data
+
+**Checked:** the three presets against the 26th Swiss Pension Fund Study (Swisscanto, presented
+June 2026, 528 institutions, CHF 939bn, four million insured). `tests/market_presets.rs` asserts
+each parameter, ties them to the legend the tool prints, and compares the implied nominal returns
+against the study:
+
+| | Real | + inflation | Nominal | Published 2025 figure |
+|---|---:|---:|---:|---|
+| Conservative | 2.0% | 1.5% | 3.5% | 10th percentile of credited rate: 2.0% |
+| Base case | 3.2% | 1.5% | 4.7% | Average credited rate: 4.7% |
+| Optimistic | 4.5% | 1.5% | 6.0% | Average net return: 6.0%; 90th percentile: 9.25% |
+
+**What the comparison establishes:** the optimism direction, which is the error that matters in a
+retirement calculator. The most favourable preset sits at 2025's *average* gross return and well
+below the top decile, so even the rosy column is not rosy relative to the best year in a quarter
+century. The presets' 3.5–6.0% band is also much narrower than the observed dispersion (1.25–17%
+across funds; 2.0–9.25% between the 10th and 90th percentiles), and the test says so rather than
+implying the pessimistic column is the worst fund.
+
+**Corrected while writing it:** two doc comments claimed the opposite of what is true. The
+`monte_carlo` module header said the return distribution was "calibrated to Swiss BVG pension fund
+data", and `MarketAssumptions` was documented as "Historical Swiss BVG fund parameters
+(1985-2024)", while `mc_display.rs` and `main.rs` printed that none of the presets was calibrated
+to a specific fund. Four statements, two of them false, in a tool whose purpose is to say what it
+does and does not know. Neither is true — no fitting code exists — and both are corrected.
+
+**Not checked, and not a calibration:** 2025 was the highest real credit in twenty-five years, so
+it is an upper-tail observation. A long-run preset below it is not thereby validated. The study
+itself is published as a PDF which this environment cannot read; the figures above come from two
+independent reports of it (`investrends.ch` and `vorsorgeforum.ch`) which agree on every value
+used.
+
+### 5.7 The deduction engine — re-derived from the workbooks
+
+**Checked:** the whole deduction model against both ESTV exports.
+`tools/verify_estv_deductions_import.py` re-derives **617 rules** and **22 means-tested scales**
+from `estv_deductions.xlsx` and `estv_deduction_scales.xlsx`, and compares them with the imported
+tables as a bijection on *content* rather than on identifiers — so a wrong value, a dropped row, a
+duplicated row or a row filed under the wrong canton fails. **Zero discrepancies.** Each row's
+classification (deduction, threshold, parameter) is re-derived from its label by a rule written
+from the module's own documentation, independently of the importer, and all 617 agree.
+
+`tests/deduction_import_independent.rs` consumes a snapshot written from the *workbook* rather than
+from the generated file, so the test compares two derivations rather than the file with itself; it
+also checks the engine's `clamp(amount + percent/100 × base, minimum, maximum)` against
+hand-computed workbook cases, including a rule with a floor applied before its ceiling, a rule
+whose `maximum` of zero means *no* ceiling, and the Vaud rule the export splits across two rows
+(10% capped at 15,000) which the importer merges.
+
+**Not checked:** 14 wealth (`Vermögen`) rows for two Fribourg abatements, which the importer keeps
+out of the income model by design — counted and reported rather than silently dropped. And the
+tables are a snapshot of the 2025 publications: they will drift, and the check is only as current
+as the workbooks.
+
+**Corrections recorded rather than quietly applied:** the generated module credited Aargau with
+"Pauschalabzug übrige Berufskosten" at `Betrag=700, Prozent=10, Maximum=2400` — those are Appenzell
+Ausserrhoden's figures; Aargau's are `0`, `3%`, floor 2000, ceiling 4000. Regenerating the file
+changed that comment and nothing else, which is also evidence the generated data was in step with
+its importer. And the rule labels are not quite "verbatim" as the module claimed: 23 carry a double
+space in the source that the importer collapses.
+
+### 5.8 A format gate that had been failing
+
+Not one of the seven, but found while finishing them, and recorded because this document's value
+depends on the project's claims about itself being true.
+
+`.github/workflows/ci.yml` runs `cargo fmt --all -- --check`. It **failed on all 57 Rust files** —
+and had been failing on every commit, so the CI badge on the README was advertising a pipeline that
+was not green. Worse, `cargo fmt --all` could not fix it: rustfmt exited with
+`error[internal]: left behind trailing whitespace` on a line in `src/main.rs`.
+
+Both are fixed. The trailing whitespace is gone, the tree is formatted, and regeneration of the
+generated data files no longer undoes the formatting: the three emitters now run rustfmt on their
+own output (`tools/format_rust.py`), and `rustfmt.toml` widens `use_small_heuristics` so the
+one-line struct literals the tables are made of survive formatting instead of being expanded into
+four-line blocks. Verified by regenerating: the emitted files are byte-identical to what
+`cargo fmt` produces.
 
 ## 6. Reproducing this document
 
@@ -210,12 +384,28 @@ cargo test --test published_tax_reference -- --nocapture
 # the shape checks and the convergence check, with the measured spreads
 cargo test --test validation -- --nocapture
 
-# the contribution base, including the test that would have caught the defect
+# the contribution base, and the worked example computed from the statute by hand
 cargo test --test bvg_contribution_base
+cargo test --test bvg_worked_example
+
+# the Bern vintage drift, in percentage points
+cargo test --test bern_vintage
+
+# the three market presets against the published pension-fund figures
+cargo test --test market_presets
+
+# the cantonal scales and the federal tariff, against a snapshot derived from the workbooks
+cargo test --test estv_import_independent
+python tools/verify_estv_import.py --emit
+
+# the deduction rules and scales, against a snapshot derived from the workbooks
+cargo test --test deduction_import_independent
+python tools/verify_estv_deductions_import.py --emit
 
 # the projection's own parameters, on screen
 cargo run -- optimize --salary 120000 --age 40 --verbose
 ```
 
-Every table in this document was produced by one of those commands. None of the numbers was
-estimated.
+Every table in this document was produced by one of those commands or by the arithmetic shown
+beside it. None of the numbers was estimated.
+

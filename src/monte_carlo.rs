@@ -15,12 +15,22 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Monte Carlo simulation for pension fund returns and retirement quality of life
-// Uses log-normal return distribution calibrated to Swiss BVG pension fund data
+// Uses a log-normal return distribution over three illustrative presets.
+//
+// The presets are NOT calibrated to Swiss BVG pension fund data. Earlier versions
+// of this file said they were, in this header and in the doc comment on
+// `MarketAssumptions`, which claimed a fit to 1985-2024 history. No such fit exists
+// in this repository: the three parameter triples are rounded convention values, and
+// `VALIDATION.md` §5 records that they are unfitted. `tests/market_presets.rs` pins
+// the parameters and compares them against the published Swisscanto study figures,
+// which is a bound check rather than a calibration.
 #![allow(dead_code)]
 
+use crate::economic_regimes::{
+    simulate_regime_path, simulate_stress_path, Regime, TransitionMatrix,
+};
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal};
-use crate::economic_regimes::{Regime, TransitionMatrix, simulate_regime_path, simulate_stress_path};
 
 // ─── Conversion rate (Umwandlungssatz) scenarios ─────────────────────────────
 //
@@ -304,11 +314,7 @@ pub fn find_pension_fund(id: &str) -> Option<&'static PensionFundProfile> {
 
 /// Comma-separated list of valid fund identifiers, for error messages.
 pub fn pension_fund_ids() -> String {
-    PENSION_FUND_PROFILES
-        .iter()
-        .map(|f| f.id)
-        .collect::<Vec<_>>()
-        .join(", ")
+    PENSION_FUND_PROFILES.iter().map(|f| f.id).collect::<Vec<_>>().join(", ")
 }
 
 /// Monthly pension outcomes across conversion-rate scenarios for one capital.
@@ -394,8 +400,15 @@ pub fn calculate_pension_range(
 
 // ─── Market assumptions (Swiss BVG / LPP historical data) ───────────────────
 
-/// Historical Swiss BVG fund parameters (1985-2024)
-/// Conservative asset allocation typical for Swiss Pensionskassen
+/// Illustrative market presets, not a fitted model.
+///
+/// The three constructors below return rounded convention values: a bond-heavy, a
+/// balanced and an equity-heavy portfolio. An earlier doc comment here called them
+/// "Historical Swiss BVG fund parameters (1985-2024)", which overstated them — no
+/// fitting against that history exists anywhere in the repository, and
+/// `VALIDATION.md` §5 says so. `tests/market_presets.rs` compares the three against
+/// the published Swisscanto Pensionskassenstudie figures and finds the range
+/// plausible rather than derived.
 pub struct MarketAssumptions {
     /// Expected annual real return (above inflation), e.g. 0.032 = 3.2%
     pub expected_real_return: f64,
@@ -438,7 +451,6 @@ impl MarketAssumptions {
         }
     }
 }
-
 
 // ─── BVG contribution base ────────────────────────────────────────────────────
 //
@@ -510,10 +522,10 @@ pub struct MonteCarloResult {
 
     // Capital at retirement
     pub median_capital: f64,
-    pub p10_capital: f64,    // 10th percentile (bad scenario)
+    pub p10_capital: f64, // 10th percentile (bad scenario)
     pub p25_capital: f64,
     pub p75_capital: f64,
-    pub p90_capital: f64,    // 90th percentile (good scenario)
+    pub p90_capital: f64, // 90th percentile (good scenario)
 
     // Monthly pension (nominal, at retirement)
     pub median_monthly_pension: f64,
@@ -526,8 +538,8 @@ pub struct MonteCarloResult {
     pub p90_real_pension: f64,
 
     // Sustainability until life_expectancy
-    pub prob_adequate: f64,        // probability pension covers needs
-    pub prob_depletion: f64,       // probability capital depletes before life_expectancy
+    pub prob_adequate: f64,  // probability pension covers needs
+    pub prob_depletion: f64, // probability capital depletes before life_expectancy
     pub median_depletion_age: Option<u32>,
 
     // Quality of life scores (0-10)
@@ -574,8 +586,8 @@ pub struct PensionSimulator {
     pub current_salary: f64,
     pub work_percentage: f64,
     pub married: bool,
-    pub existing_bvg_capital: f64,  // already accumulated (if known)
-    pub pillar3a_annual: f64,       // annual Pillar 3a contribution
+    pub existing_bvg_capital: f64, // already accumulated (if known)
+    pub pillar3a_annual: f64,      // annual Pillar 3a contribution
     pub monthly_retirement_needs: f64,
     pub n_simulations: usize,
     pub seed: Option<u64>,
@@ -642,8 +654,7 @@ impl PensionSimulator {
         let bvg_conversion = self.bvg_conversion_rate();
 
         // Inflation factor: deflate pension back to today's CHF
-        let inflation_deflator = (1.0 + assumptions.inflation)
-            .powf(years_working);
+        let inflation_deflator = (1.0 + assumptions.inflation).powf(years_working);
 
         let mut capitals: Vec<f64> = Vec::with_capacity(self.n_simulations);
         let mut monthly_pensions: Vec<f64> = Vec::with_capacity(self.n_simulations);
@@ -735,10 +746,7 @@ impl PensionSimulator {
         let n = self.n_simulations;
 
         // Compute median depletion age
-        let depletion_ages_flat: Vec<u32> = depletion_ages
-            .iter()
-            .filter_map(|x| *x)
-            .collect();
+        let depletion_ages_flat: Vec<u32> = depletion_ages.iter().filter_map(|x| *x).collect();
         let median_depletion_age = if !depletion_ages_flat.is_empty() {
             let mut sorted = depletion_ages_flat.clone();
             sorted.sort();
@@ -751,37 +759,37 @@ impl PensionSimulator {
             n_simulations: n,
             work_percentage: self.work_percentage,
             annual_contribution: coordinated_salary(working_income)
-            * Self::bvg_contribution_rate_at_age(self.retirement_age.saturating_sub(1))
-            + annual_3a_contribution,
+                * Self::bvg_contribution_rate_at_age(self.retirement_age.saturating_sub(1))
+                + annual_3a_contribution,
             years_contributing: self.retirement_age - self.current_age,
 
-            median_capital:  capitals[n / 2],
-            p10_capital:     capitals[n / 10],
-            p25_capital:     capitals[n / 4],
-            p75_capital:     capitals[3 * n / 4],
-            p90_capital:     capitals[9 * n / 10],
+            median_capital: capitals[n / 2],
+            p10_capital: capitals[n / 10],
+            p25_capital: capitals[n / 4],
+            p75_capital: capitals[3 * n / 4],
+            p90_capital: capitals[9 * n / 10],
 
             median_monthly_pension: monthly_pensions[n / 2],
-            p10_monthly_pension:    monthly_pensions[n / 10],
-            p90_monthly_pension:    monthly_pensions[9 * n / 10],
+            p10_monthly_pension: monthly_pensions[n / 10],
+            p90_monthly_pension: monthly_pensions[9 * n / 10],
 
             median_real_pension: real_pensions[n / 2],
-            p10_real_pension:    real_pensions[n / 10],
-            p90_real_pension:    real_pensions[9 * n / 10],
+            p10_real_pension: real_pensions[n / 10],
+            p90_real_pension: real_pensions[9 * n / 10],
 
-            prob_adequate:  adequate_count as f64 / n as f64,
+            prob_adequate: adequate_count as f64 / n as f64,
             prob_depletion: depleted_count as f64 / n as f64,
             median_depletion_age,
 
             median_qol_score: qol_scores[n / 2],
-            p10_qol_score:    qol_scores[n / 10],
-            p90_qol_score:    qol_scores[9 * n / 10],
+            p10_qol_score: qol_scores[n / 10],
+            p90_qol_score: qol_scores[9 * n / 10],
 
             ahv_monthly,
 
             median_total_monthly: ahv_monthly + monthly_pensions[n / 2],
-            p10_total_monthly:    ahv_monthly + monthly_pensions[n / 10],
-            p90_total_monthly:    ahv_monthly + monthly_pensions[9 * n / 10],
+            p10_total_monthly: ahv_monthly + monthly_pensions[n / 10],
+            p90_total_monthly: ahv_monthly + monthly_pensions[9 * n / 10],
         }
     }
 
@@ -835,7 +843,8 @@ impl PensionSimulator {
             for year in 0..years_working {
                 let age_this_year = self.current_age + year as u32;
                 let bvg_rate = Self::bvg_contribution_rate_at_age(age_this_year);
-                let annual_contribution = coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
+                let annual_contribution =
+                    coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
 
                 capital = capital * (1.0 + returns[year]) + annual_contribution;
                 cumulative_inflation *= 1.0 + inflations[year];
@@ -846,9 +855,8 @@ impl PensionSimulator {
             }
             recession_years_experienced.push(n_recession_years);
 
-            let regime_near_retirement = regimes.get(years_working.saturating_sub(1))
-                .copied()
-                .unwrap_or(Regime::Normal);
+            let regime_near_retirement =
+                regimes.get(years_working.saturating_sub(1)).copied().unwrap_or(Regime::Normal);
             regime_at_retirement.push(regime_near_retirement);
 
             // BVG annuity only, matching `run`. AHV is added back explicitly
@@ -901,11 +909,14 @@ impl PensionSimulator {
         qol_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let n = self.n_simulations;
 
-        let recession_frac_recession = regime_at_retirement.iter()
+        let recession_frac_recession = regime_at_retirement
+            .iter()
             .filter(|r| matches!(r, Regime::Recession | Regime::Stagflation))
-            .count() as f64 / n as f64;
+            .count() as f64
+            / n as f64;
 
-        let avg_recession_years = recession_years_experienced.iter().sum::<usize>() as f64 / n as f64;
+        let avg_recession_years =
+            recession_years_experienced.iter().sum::<usize>() as f64 / n as f64;
 
         RegimeSwitchingResult {
             n_simulations: n,
@@ -963,7 +974,12 @@ impl PensionSimulator {
             let shock_regime = if i % 2 == 0 { Regime::Recession } else { Regime::Stagflation };
 
             let (returns, inflations, _regimes) = simulate_stress_path(
-                total_years, shock_start, shock_regime, shock_duration, &transitions, &mut rng,
+                total_years,
+                shock_start,
+                shock_regime,
+                shock_duration,
+                &transitions,
+                &mut rng,
             );
 
             let mut capital = self.existing_bvg_capital;
@@ -972,7 +988,8 @@ impl PensionSimulator {
             for year in 0..years_working {
                 let age_this_year = self.current_age + year as u32;
                 let bvg_rate = Self::bvg_contribution_rate_at_age(age_this_year);
-                let annual_contribution = coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
+                let annual_contribution =
+                    coordinated_salary(working_income) * bvg_rate + self.pillar3a_annual;
                 capital = capital * (1.0 + returns[year]) + annual_contribution;
                 cumulative_inflation *= 1.0 + inflations[year];
             }
@@ -1112,11 +1129,11 @@ impl PensionSimulator {
             c if c >= 1.50 => 10.0, // 150%+ needs: excellent
             c if c >= 1.25 => 9.0,
             c if c >= 1.10 => 8.0,
-            c if c >= 1.00 => 7.0,  // exactly meets needs: good
-            c if c >= 0.90 => 5.5,  // 90%: slightly below
-            c if c >= 0.75 => 4.0,  // 75%: noticeably reduced lifestyle
-            c if c >= 0.60 => 2.5,  // 60%: significant hardship
-            _              => 1.0,  // below 60%: very poor
+            c if c >= 1.00 => 7.0, // exactly meets needs: good
+            c if c >= 0.90 => 5.5, // 90%: slightly below
+            c if c >= 0.75 => 4.0, // 75%: noticeably reduced lifestyle
+            c if c >= 0.60 => 2.5, // 60%: significant hardship
+            _ => 1.0,              // below 60%: very poor
         }
     }
 }
@@ -1141,21 +1158,23 @@ pub fn compare_work_percentages(
     pillar3a_annual: f64,
     candidates: &[f64],
 ) -> Vec<WorkPctComparison> {
-    candidates.iter().map(|&pct| {
-        let mut sim = PensionSimulator::new(
-            current_age,
-            retirement_age,
-            life_expectancy,
-            full_salary,
-            pct,
-            married,
-            monthly_retirement_needs,
-        );
-        sim.pillar3a_annual = pillar3a_annual;
-        sim.n_simulations = 10_000;
+    candidates
+        .iter()
+        .map(|&pct| {
+            let mut sim = PensionSimulator::new(
+                current_age,
+                retirement_age,
+                life_expectancy,
+                full_salary,
+                pct,
+                married,
+                monthly_retirement_needs,
+            );
+            sim.pillar3a_annual = pillar3a_annual;
+            sim.n_simulations = 10_000;
 
-        let (con, base, opt) = sim.run_all_scenarios();
-        WorkPctComparison { work_pct: pct, conservative: con, base, optimistic: opt }
-    }).collect()
+            let (con, base, opt) = sim.run_all_scenarios();
+            WorkPctComparison { work_pct: pct, conservative: con, base, optimistic: opt }
+        })
+        .collect()
 }
-

@@ -164,10 +164,7 @@ fn the_imported_deduction_rules_match_the_estv_workbooks() {
     }
 
     assert_eq!(rules.len(), 617, "the snapshot has {} rules", rules.len());
-    assert_eq!(
-        compared, 617,
-        "expected 617 rules to be compared, got {compared}"
-    );
+    assert_eq!(compared, 617, "expected 617 rules to be compared, got {compared}");
     let unmatched: Vec<&str> = DEDUCTION_RULES
         .iter()
         .zip(matched.iter())
@@ -196,10 +193,7 @@ fn the_imported_means_tested_scales_match_the_estv_workbooks() {
             .filter(|point| !point.is_empty())
             .map(|point| {
                 let (threshold, amount) = point.split_once(':').expect("threshold:amount");
-                (
-                    threshold.parse().expect("threshold"),
-                    amount.parse().expect("amount"),
-                )
+                (threshold.parse().expect("threshold"), amount.parse().expect("amount"))
             })
             .collect();
 
@@ -219,7 +213,8 @@ fn the_imported_means_tested_scales_match_the_estv_workbooks() {
             scale.points.len(),
             expected.len()
         );
-        for (index, (point, (threshold, amount))) in scale.points.iter().zip(expected.iter()).enumerate()
+        for (index, (point, (threshold, amount))) in
+            scale.points.iter().zip(expected.iter()).enumerate()
         {
             assert!(
                 (point.threshold - threshold).abs() < 1e-9,
@@ -234,10 +229,7 @@ fn the_imported_means_tested_scales_match_the_estv_workbooks() {
         }
         compared += 1;
     }
-    assert_eq!(
-        compared, 22,
-        "expected 22 scales to be compared, got {compared}"
-    );
+    assert_eq!(compared, 22, "expected 22 scales to be compared, got {compared}");
 }
 
 /// The formula the engine applies, checked against hand-computed workbook cases.
@@ -276,10 +268,8 @@ fn the_engine_applies_the_workbook_formula() {
     // A rule whose `maximum` is zero. The source states no ceiling for these,
     // so the deduction must stay proportional instead of being cut to zero --
     // the sentinel that a plausible implementation gets backwards.
-    let uncapped = rule(
-        "AG",
-        "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    );
+    let uncapped =
+        rule("AG", "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren");
     assert_eq!(uncapped.maximum, 0.0);
     assert_eq!(uncapped.apply(500_000.0), 50_000.0);
 

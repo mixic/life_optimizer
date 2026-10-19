@@ -68,6 +68,15 @@ _spec2 = importlib.util.spec_from_file_location(
 _lic = importlib.util.module_from_spec(_spec2)
 _spec2.loader.exec_module(_lic)
 
+# Format the emitted file so regeneration cannot leave `cargo fmt --check`
+# failing on generated code.
+_spec_fmt = importlib.util.spec_from_file_location(
+    "format_rust", os.path.join(_HERE, "format_rust.py")
+)
+_fmt = importlib.util.module_from_spec(_spec_fmt)
+_spec_fmt.loader.exec_module(_fmt)
+format_generated = _fmt.format_generated
+
 # The ESTV workbooks live in `source-documents/` at the repository root. Resolving
 # a bare filename against that directory keeps the documented command runnable from
 # any working directory, which a plain relative default did not.
@@ -638,6 +647,7 @@ def main():
 
     with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines))
+    format_generated(out_path)
     print(f"wrote {out_path}  ({len(rules)} rules, {len(scales)} scales)")
 
     # Coverage summary, so a shrinking import is visible rather than silent.
