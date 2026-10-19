@@ -237,9 +237,33 @@ confessionless one; every income between and beyond those five points. Against a
 **Why no more:** the Steuerrechner is an interactive web tool, and this environment has no route to
 it. Outbound TLS from the shell fails (`The SSL connection could not be established`), and the
 fetch path returns `unsupported content type "application/pdf"` for every PDF. The published
-figures here were transcribed from a report, not queried from the calculator. A full matrix
-remains the single most valuable addition anyone with network access could make; it would subsume
-§2 and supersede it.
+figures here were transcribed from a report, not queried from the calculator.
+
+**The fifteen were not extended, and one attempt is recorded so it is not repeated.** A network
+search turned up a marketing guide — AccountEX, "Cantonal tax comparison", updated June 2026 —
+carrying a table of **all 26 cantons** at CHF 100,000 and CHF 200,000 for a single person, federal
+and municipal tax included. It looks like exactly the matrix this document wants. It is not usable,
+for three independent reasons:
+
+1. **Every figure is marked approximate and rounded to one decimal** (`~16.5%`, `~28.0%`). The
+   existing points are exact CHF amounts at stated *taxable* incomes; a rate quoted to 0.1 pp
+   cannot adjudicate a tax engine that is being checked to CHF 1.
+2. **The deduction model is unstated but different.** The guide says its simulations apply "standard
+   deductions (AHV, pillar 3a, health insurance, flat-rate professional expenses)" to a stated
+   income, whereas the fifteen reference points give tax against income *already taxable*. The two
+   are not on the same base.
+3. **It contradicts the ESTV-derived figures where they overlap in the way that difference would
+   predict.** Bern at CHF 100,000: 22.98% from the Steuerrechner, ~19.0% here — a 4.0 pp gap that is
+   far too large to be rounding. Zürich (16.18% against ~16.5%) and Schwyz (12.33% against ~12.0%)
+   agree within 0.35 pp, which is what a deduction-base difference would do to a low-bracket canton
+   and a high-bracket one differently.
+
+Adopting that table would have replaced fifteen exact figures with fifty-two approximate ones on an
+incomparable base — more coverage, less knowledge. It is recorded as declined rather than quietly
+ignored, because the next person will find the same table.
+
+A full matrix from the Steuerrechner remains the single most valuable addition anyone with network
+access could make; it would subsume §2 and supersede it.
 
 ### 5.2 The cantonal scales — checked against their source, and were not before
 
