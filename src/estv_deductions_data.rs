@@ -33,9 +33,12 @@
 //! deduction = clamp(amount + percent/100 * base, minimum, maximum)
 //! ```
 //!
-//! Note that `amount` and `percent` are **not** alternatives: Aargau's
-//! "Pauschalabzug übrige Berufskosten" is `Betrag=700, Prozent=10,
-//! Maximum=2400`, i.e. 700 plus 10% capped at 2400.
+//! Note that `amount` and `percent` are **not** alternatives: Appenzell
+//! Ausserrhoden's "Pauschalabzug übrige Berufskosten" is `Betrag=700,
+//! Prozent=10, Maximum=2400`, i.e. 700 plus 10% capped at 2400. Aargau
+//! carries the same label with different numbers (`Betrag=0, Prozent=3,
+//! Minimum=2000, Maximum=4000`), which is why the rule is looked up per
+//! canton and not per label.
 //!
 //! [`DEDUCTION_SCALES`] gives the means-tested deductions as step
 //! functions of net income. The amount is the one at the highest

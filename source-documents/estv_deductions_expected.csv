@@ -1,0 +1,646 @@
+# Derivation: python tools/verify_estv_deductions_import.py --emit
+# Every value below is read from the ESTV workbooks and computed
+# here; nothing is copied out of src/estv_deductions_data.rs.
+# rule,canton,amount,percent,minimum,maximum,kind,label
+# scale,canton,authority,points,label
+# kind is derived from the label; points are threshold:amount
+# pairs separated by ';'. Labels keep the source's spacing.
+rule,AG,0.000000,0.000000,0.000000,25000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,AG,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,AG,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,AG,0.000000,0.000000,0.000000,7200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,AG,0.000000,0.000000,0.000000,7200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,AG,0.000000,0.000000,0.000000,3600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,AG,0.000000,0.000000,0.000000,3600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,AG,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,AG,9300.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 14
+rule,AG,10300.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter zwischen 14 und 17
+rule,AG,12400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder
+rule,AG,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,AG,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,AG,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,AG,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,AG,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,AG,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,AG,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,AG,0.000000,0.000000,0.000000,600.000000,Deduction,Zweitverdienerabzug
+rule,AI,0.000000,0.000000,0.000000,8000.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,AI,0.000000,0.000000,0.000000,18000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,AI,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,AI,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,AI,0.000000,0.000000,0.000000,600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,AI,0.000000,0.000000,0.000000,5800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,AI,0.000000,0.000000,0.000000,6800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,AI,0.000000,0.000000,0.000000,2900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,AI,0.000000,0.000000,0.000000,3400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,AI,0.000000,30.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,AI,8000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug ab dem 3. Kind
+rule,AI,6000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, 1. und 2. Kind
+rule,AI,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,AI,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,AI,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,AI,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,AI,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,AI,1000.000000,5.000000,0.000000,5000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,AI,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,AI,0.000000,0.000000,0.000000,500.000000,Deduction,Zweitverdienerabzug
+rule,AR,0.000000,0.000000,0.000000,25000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,AR,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,AR,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,AR,0.000000,0.300000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,AR,0.000000,0.000000,0.000000,1000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,AR,0.000000,0.000000,0.000000,5400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,AR,0.000000,0.000000,0.000000,5400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,AR,0.000000,0.000000,0.000000,2700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,AR,0.000000,0.000000,0.000000,2700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,AR,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,AR,0.000000,20.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,AR,5300.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 5
+rule,AR,7400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter zwischen 5 und 15
+rule,AR,11600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 15
+rule,AR,11600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder
+rule,AR,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,AR,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,AR,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,AR,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,AR,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,AR,700.000000,10.000000,0.000000,2400.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,AR,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,AR,0.000000,10.000000,2500.000000,5200.000000,Deduction,Zweitverdienerabzug
+rule,BE,0.000000,0.000000,0.000000,6400.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,BE,0.000000,0.000000,0.000000,16000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,BE,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,BE,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,BE,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,BE,0.000000,0.000000,0.000000,4900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,BE,0.000000,0.000000,0.000000,7200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,BE,0.000000,0.000000,0.000000,2450.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,BE,0.000000,0.000000,0.000000,3600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,BE,1300.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinstehende mit Kindern
+rule,BE,2400.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinstehende mit eigenem Haushalt
+rule,BE,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,BE,5300.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,BE,8300.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,BE,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,BE,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,BE,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,BE,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,BE,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,BE,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,BE,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,BE,600.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen Kind
+rule,BE,1100.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen ledig
+rule,BE,2200.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen verheiratet
+rule,BE,5300.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,BE,5300.000000,0.000000,0.000000,0.000000,Deduction,Zusätzlicher Sozialabzug
+rule,BE,0.000000,2.000000,0.000000,9500.000000,Deduction,Zweitverdienerabzug
+rule,BL,0.000000,0.000000,0.000000,10000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,BL,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,BL,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,BL,0.000000,0.000000,0.000000,450.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,BL,0.000000,0.000000,0.000000,4000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,BL,0.000000,0.000000,0.000000,4000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,BL,0.000000,0.000000,0.000000,2000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,BL,0.000000,0.000000,0.000000,2000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,BL,0.000000,60.000000,0.000000,0.000000,Deduction,Abzug für AHV-/IV-Rentner
+rule,BL,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,BL,0.000000,40.000000,0.000000,0.000000,Deduction,Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
+rule,BL,2000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder ausser Haus
+rule,BL,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,BL,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,BL,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,BL,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,BL,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,BL,0.000000,0.000000,0.000000,500.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,BL,0.000000,25.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,BL,45360.000000,0.000000,0.000000,0.000000,Threshold,Schwellwert für Abzug AHV-/IV-Rentner
+rule,BL,30240.000000,0.000000,0.000000,0.000000,Threshold,Schwellwert für Abzug ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
+rule,BL,750.000000,0.000000,0.000000,0.000000,Other,Steuerermässigung pro Kind
+rule,BL,0.000000,0.000000,0.000000,1000.000000,Deduction,Zweitverdienerabzug
+rule,BS,0.000000,0.000000,0.000000,26000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,BS,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,BS,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,BS,0.000000,0.000000,0.000000,8400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,BS,0.000000,0.000000,0.000000,8400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,BS,0.000000,0.000000,0.000000,4200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,BS,0.000000,0.000000,0.000000,4200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,BS,32600.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinerzieher
+rule,BS,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,BS,3500.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
+rule,BS,19500.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,BS,9000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,BS,5800.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder ausser Haus
+rule,BS,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,BS,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,BS,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,BS,0.000000,0.000000,0.000000,800.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,BS,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,BS,0.000000,0.000000,0.000000,4200.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,BS,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,BS,38000.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,BS,0.000000,0.000000,0.000000,1100.000000,Deduction,Zweitverdienerabzug
+rule,Bund,0.000000,0.000000,0.000000,25800.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,Bund,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,Bund,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,Bund,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,Bund,0.000000,0.000000,0.000000,3700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,Bund,0.000000,0.000000,0.000000,5550.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,Bund,0.000000,0.000000,0.000000,1800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,Bund,0.000000,0.000000,0.000000,2700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,Bund,0.000000,0.000000,0.000000,3300.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,Bund,6800.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,Bund,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,Bund,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,Bund,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,Bund,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,Bund,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,Bund,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,Bund,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,Bund,2800.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,Bund,0.000000,50.000000,8600.000000,14100.000000,Deduction,Zweitverdienerabzug
+rule,FR,0.000000,0.000000,0.000000,12000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,FR,0.000000,0.000000,0.000000,9620.000000,Deduction,Abzug Krankenkassenprämien, Verheiratete
+rule,FR,0.000000,0.000000,0.000000,4810.000000,Deduction,Abzug Krankenkassenprämien, alleinstehende Personen
+rule,FR,0.000000,0.000000,0.000000,1140.000000,Deduction,Abzug Krankenkassenprämien, minderj. Kind
+rule,FR,0.000000,0.000000,0.000000,4210.000000,Deduction,Abzug Krankenkassenprämien, vollj. Kind in Ausbildung
+rule,FR,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,FR,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,FR,0.000000,0.000000,0.000000,300.000000,Deduction,Abzug Sparzinsen, Verheiratete
+rule,FR,0.000000,0.000000,0.000000,150.000000,Deduction,Abzug Sparzinsen, alleinstehende Personen
+rule,FR,0.000000,0.000000,0.000000,12000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,FR,0.000000,0.000000,0.000000,1500.000000,Deduction,Abzug private Versicherungen, Verheiratete
+rule,FR,0.000000,0.000000,0.000000,750.000000,Deduction,Abzug private Versicherungen, alleinstehende Personen
+rule,FR,0.000000,0.000000,8100.000000,9600.000000,Deduction,Kinderabzug ab dem 3. Kind
+rule,FR,0.000000,0.000000,7100.000000,8600.000000,Deduction,Kinderabzug, 1. und 2. Kind
+rule,FR,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,FR,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,FR,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,FR,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,FR,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,FR,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,FR,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,FR,0.000000,0.000000,0.000000,500.000000,Deduction,Zweitverdienerabzug
+rule,GE,0.000000,0.000000,0.000000,26320.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,GE,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,GE,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,GE,0.000000,0.000000,0.000000,959.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,GE,0.000000,0.000000,0.000000,3518.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete
+rule,GE,0.000000,0.000000,0.000000,2345.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen
+rule,GE,0.000000,0.000000,0.000000,534.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,GE,2.000000,0.000000,0.000000,0.000000,Other,Faktor PrivVers/Sparzinsen Verheiratete beide ohne Beiträge an die 2. und 3. Säule
+rule,GE,1.500000,0.000000,0.000000,0.000000,Other,Faktor PrivVers/Sparzinsen Verheiratete eine Person ohne Beiträge an die 2. und 3. Säule
+rule,GE,2.000000,0.000000,0.000000,0.000000,Other,Faktor Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,GE,13660.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,GE,0.000000,0.000000,0.000000,17122.000000,Other,Krankenkasse Durchschnittsprämie Erwachsene
+rule,GE,0.000000,0.000000,0.000000,3965.000000,Other,Krankenkasse Durchschnittsprämie für Minderjährige
+rule,GE,0.000000,0.000000,0.000000,12842.000000,Other,Krankenkasse Durchschnittsprämie junge Erwachsene
+rule,GE,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,GE,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,GE,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,GE,0.000000,20.000000,807.000000,2422.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,GE,0.000000,15.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,GE,0.000000,3.000000,640.000000,1812.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,GE,0.000000,25.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,GE,0.000000,0.000000,0.000000,1051.000000,Deduction,Zweitverdienerabzug
+rule,GL,7200.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,GL,0.000000,0.000000,0.000000,25800.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,GL,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,GL,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,GL,0.000000,0.200000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,GL,0.000000,0.000000,0.000000,1000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,GL,0.000000,0.000000,0.000000,6200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,GL,0.000000,0.000000,0.000000,9300.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,GL,0.000000,0.000000,0.000000,3100.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,GL,0.000000,0.000000,0.000000,4650.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,GL,2100.000000,0.000000,0.000000,0.000000,Deduction,Abzug für AHV-/IV-Rentner
+rule,GL,7200.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,GL,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,GL,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,GL,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,GL,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,GL,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,GL,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,GL,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,GL,0.000000,10.000000,3600.000000,10300.000000,Deduction,Zweitverdienerabzug
+rule,GR,19700.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,GR,0.000000,0.000000,0.000000,10900.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,GR,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,GR,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,GR,0.000000,0.250000,0.000000,9000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,GR,0.000000,0.000000,0.000000,1000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,GR,0.000000,0.000000,0.000000,9200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,GR,0.000000,0.000000,0.000000,11600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,GR,0.000000,0.000000,0.000000,4600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,GR,0.000000,0.000000,0.000000,5800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,GR,0.000000,30.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,GR,6600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 7
+rule,GR,9900.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 6
+rule,GR,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,GR,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,GR,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,GR,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,GR,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,GR,0.000000,10.000000,1400.000000,3300.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,GR,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,GR,0.000000,0.000000,0.000000,600.000000,Deduction,Zweitverdienerabzug
+rule,JU,10600.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,JU,0.000000,0.000000,0.000000,10600.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,JU,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,JU,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,JU,0.000000,0.000000,0.000000,6800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete, beide mit Beiträgen Säule 2/3a
+rule,JU,0.000000,0.000000,0.000000,7590.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiretete, eine Person ohne Beiträge Säule 2/3a
+rule,JU,0.000000,0.000000,0.000000,3400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,JU,0.000000,0.000000,0.000000,4190.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,JU,0.000000,0.000000,0.000000,1020.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, minderj. Kind
+rule,JU,0.000000,0.000000,0.000000,3400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, vollj. Kind
+rule,JU,0.000000,0.000000,0.000000,8380.000000,Deduction,Abzug Versicherungspärmien und Sparzinsen, Verheiratete, beide ohne Beiträge Säule 2/3a
+rule,JU,2700.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinerzieher
+rule,JU,1800.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,JU,6400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug ab dem 3. Kind
+rule,JU,5700.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, 1. und 2. Kind
+rule,JU,2400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder ausser Haus
+rule,JU,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,JU,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,JU,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,JU,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,JU,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,JU,0.000000,20.000000,0.000000,4100.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,JU,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,JU,3700.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,JU,0.000000,0.000000,0.000000,2700.000000,Deduction,Zweitverdienerabzug
+rule,LU,2000.000000,0.000000,0.000000,0.000000,Deduction,Abzug Eigenbetreuung der Kinder
+rule,LU,13200.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,LU,0.000000,0.000000,0.000000,18000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,LU,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,LU,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,LU,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,LU,0.000000,0.000000,0.000000,5200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,LU,0.000000,0.000000,0.000000,6700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,LU,0.000000,0.000000,0.000000,2600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,LU,0.000000,0.000000,0.000000,3300.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,LU,0.000000,0.000000,0.000000,6500.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,LU,0.000000,30.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,LU,50000.000000,0.000000,0.000000,0.000000,Threshold,Entlastungsabzug Alleinstehende Schwellwert
+rule,LU,80000.000000,0.000000,0.000000,0.000000,Threshold,Entlastungsabzug Verheiratete Schwellwert
+rule,LU,8000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,LU,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,LU,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,LU,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,LU,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,LU,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,LU,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,LU,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,LU,0.000000,14.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen
+rule,LU,0.000000,0.000000,0.000000,5000.000000,Deduction,Zweitverdienerabzug
+rule,NE,0.000000,0.000000,0.000000,20400.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,NE,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,NE,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,NE,0.000000,0.000000,0.000000,800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,NE,0.000000,0.000000,0.000000,4900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,NE,0.000000,0.000000,0.000000,6125.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,NE,0.000000,0.000000,0.000000,2500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,NE,0.000000,0.000000,0.000000,3125.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,NE,6200.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 4
+rule,NE,6700.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter zwischen 4 und 13
+rule,NE,8200.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 14
+rule,NE,3100.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder ausser Haus
+rule,NE,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,NE,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,NE,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,NE,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,NE,0.000000,10.000000,0.000000,7200.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,NE,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,NE,0.000000,20.000000,0.000000,12000.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,NE,0.000000,25.000000,0.000000,1200.000000,Deduction,Zweitverdienerabzug
+rule,NW,3100.000000,0.000000,0.000000,0.000000,Deduction,Abzug Eigenbetreuung der Kinder
+rule,NW,7800.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt ab dem 2. Kind
+rule,NW,5600.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt erstes Kind
+rule,NW,1700.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt ausserhalb des Kantons
+rule,NW,0.000000,0.000000,0.000000,8100.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,NW,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,NW,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,NW,0.000000,0.300000,0.000000,9000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,NW,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,NW,0.000000,0.000000,0.000000,3700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,NW,0.000000,0.000000,0.000000,5550.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,NW,0.000000,0.000000,0.000000,1800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,NW,0.000000,0.000000,0.000000,2700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,NW,0.000000,0.000000,0.000000,3900.000000,Deduction,Abzug für Alleinstehende über 65 Jährige
+rule,NW,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,NW,0.000000,40.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,NW,6400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,NW,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,NW,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,NW,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,NW,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,NW,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,NW,0.000000,5.000000,0.000000,7000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,NW,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,NW,0.000000,0.000000,0.000000,1200.000000,Deduction,Zweitverdienerabzug
+rule,OW,5100.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,OW,0.000000,0.000000,0.000000,10000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,OW,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,OW,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,OW,0.000000,0.300000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,OW,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,OW,0.000000,0.000000,0.000000,3300.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,OW,0.000000,0.000000,0.000000,4950.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,OW,0.000000,0.000000,0.000000,1700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,OW,0.000000,0.000000,0.000000,2550.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,OW,0.000000,20.000000,4300.000000,10000.000000,Deduction,Abzug für Alleinerzieher
+rule,OW,0.000000,0.000000,0.000000,10000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,OW,6200.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,OW,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,OW,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,OW,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,OW,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,OW,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,OW,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,OW,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,OW,2400.000000,0.000000,0.000000,0.000000,Deduction,Unterstützungsabzug für volljährige Kinder
+rule,OW,0.000000,20.000000,4300.000000,10000.000000,Deduction,Verheiratetenabzug
+rule,OW,10000.000000,0.000000,0.000000,0.000000,Deduction,Zusätzlicher Sozialabzug
+rule,OW,0.000000,0.000000,0.000000,3400.000000,Deduction,Zweitverdienerabzug
+rule,SG,0.000000,0.000000,0.000000,13700.000000,Deduction,Abzug Kinderausbildungskosten
+rule,SG,0.000000,0.000000,0.000000,26700.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,SG,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,SG,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,SG,0.000000,0.200000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,SG,0.000000,0.000000,0.000000,1100.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,SG,0.000000,0.000000,0.000000,6800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,SG,0.000000,0.000000,0.000000,7900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,SG,0.000000,0.000000,0.000000,3400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,SG,0.000000,0.000000,0.000000,3900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,SG,0.000000,0.000000,0.000000,8000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,SG,0.000000,30.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,SG,7600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 7
+rule,SG,10800.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 6
+rule,SG,3200.000000,0.000000,0.000000,0.000000,Deduction,Kinderausbildungskosten Eigenbeitrag
+rule,SG,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,SG,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,SG,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,SG,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,SG,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,SG,700.000000,10.000000,0.000000,2400.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,SG,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,SG,0.000000,0.000000,0.000000,500.000000,Deduction,Zweitverdienerabzug
+rule,SH,0.000000,0.000000,0.000000,9400.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,SH,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,SH,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,SH,0.000000,0.250000,0.000000,3000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,SH,0.000000,0.000000,0.000000,1000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,SH,0.000000,0.000000,0.000000,7500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,SH,0.000000,0.000000,0.000000,7500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,SH,0.000000,0.000000,0.000000,3750.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,SH,0.000000,0.000000,0.000000,3750.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,SH,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,SH,8400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,SH,3000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 5
+rule,SH,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,SH,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,SH,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,SH,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,SH,0.000000,15.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,SH,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,SH,0.000000,25.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,SH,0.000000,0.000000,0.000000,800.000000,Deduction,Zweitverdienerabzug
+rule,SO,0.000000,0.000000,0.000000,25000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,SO,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,SO,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,SO,0.000000,0.000000,0.000000,650.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind, mit  Beiträgen Säule 2/3a
+rule,SO,0.000000,0.000000,0.000000,975.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind, ohne Beiträgen Säule 2/3a
+rule,SO,0.000000,0.000000,0.000000,5000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,SO,0.000000,0.000000,0.000000,7500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,SO,0.000000,0.000000,0.000000,2500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,SO,0.000000,0.000000,0.000000,3750.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,SO,5000.000000,0.000000,0.000000,0.000000,Deduction,Abzug für AHV-/IV-Rentner
+rule,SO,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,SO,9000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,SO,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,SO,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,SO,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,SO,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,SO,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,SO,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,SO,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,SO,0.000000,0.000000,0.000000,1000.000000,Deduction,Zweitverdienerabzug
+rule,SZ,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,SZ,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,SZ,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,SZ,0.000000,0.300000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,SZ,0.000000,0.000000,0.000000,400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,SZ,0.000000,0.000000,0.000000,6400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,SZ,0.000000,0.000000,0.000000,9600.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,SZ,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,SZ,0.000000,0.000000,0.000000,4800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,SZ,4000.000000,0.000000,0.000000,0.000000,Deduction,Abzug für AHV-/IV-Rentner
+rule,SZ,6300.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinerzieher
+rule,SZ,0.000000,0.000000,0.000000,8000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,SZ,3200.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,SZ,35000.000000,0.000000,0.000000,0.000000,Threshold,Entlastungsabzug Alleinstehende Schwellwert
+rule,SZ,25000.000000,0.000000,0.000000,0.000000,Threshold,Entlastungsabzug Kind Schwellwert
+rule,SZ,70000.000000,0.000000,0.000000,0.000000,Threshold,Entlastungsabzug Verheiratete Schwellwert
+rule,SZ,9000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, minderjährige Kinder
+rule,SZ,11000.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder
+rule,SZ,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,SZ,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,SZ,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,SZ,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,SZ,0.000000,20.000000,0.000000,6900.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,SZ,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,SZ,6400.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,SZ,0.000000,0.000000,0.000000,2100.000000,Deduction,Zweitverdienerabzug
+rule,TG,0.000000,75.000000,0.000000,10100.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,TG,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,TG,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,TG,0.000000,0.200000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,TG,0.000000,0.000000,0.000000,1000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,TG,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,TG,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,TG,0.000000,0.000000,0.000000,3500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,TG,0.000000,0.000000,0.000000,3500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,TG,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,TG,0.000000,40.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,TG,8500.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter 18 oder 19
+rule,TG,10600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 19
+rule,TG,7400.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, minderjährige Kinder
+rule,TG,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,TG,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,TG,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,TG,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,TG,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,TG,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,TG,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,TI,4800.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt innerhalb des Kantons
+rule,TI,2000.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt
+rule,TI,6600.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt ausserhalb des Kantons
+rule,TI,13900.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten, für auswärtige Ausbildung mit Wochenaufenthalt ausserhalb des Kantons
+rule,TI,0.000000,0.000000,0.000000,26200.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,TI,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,TI,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,TI,0.000000,0.000000,0.000000,1200.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,TI,0.000000,0.000000,0.000000,10900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,TI,0.000000,0.000000,0.000000,15400.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,TI,0.000000,0.000000,0.000000,5500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,TI,0.000000,0.000000,0.000000,7800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,TI,0.000000,10.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,TI,11500.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,TI,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,TI,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,TI,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,TI,0.000000,0.000000,0.000000,800.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,TI,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,TI,0.000000,0.000000,0.000000,3000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,TI,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,TI,0.000000,0.000000,0.000000,8100.000000,Deduction,Zweitverdienerabzug
+rule,UR,0.000000,0.000000,0.000000,13500.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt
+rule,UR,0.000000,0.000000,0.000000,4500.000000,Deduction,Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt
+rule,UR,0.000000,0.000000,0.000000,25800.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,UR,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,UR,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,UR,0.000000,0.300000,0.000000,5000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,UR,0.000000,0.000000,0.000000,700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,UR,0.000000,0.000000,0.000000,3700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,UR,0.000000,0.000000,0.000000,5550.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,UR,0.000000,0.000000,0.000000,1800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,UR,0.000000,0.000000,0.000000,2700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,UR,21200.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinerzieher
+rule,UR,0.000000,0.000000,0.000000,13000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,UR,15300.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,UR,0.000000,25.000000,0.000000,7900.000000,Deduction,Abzug vom Eigenmietwert
+rule,UR,8500.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,UR,3200.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder
+rule,UR,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,UR,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,UR,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,UR,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,UR,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,UR,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,UR,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,UR,26900.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,UR,0.000000,0.000000,0.000000,3700.000000,Deduction,Zweitverdienerabzug
+rule,VD,0.000000,0.000000,0.000000,15200.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,VD,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,VD,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,VD,0.000000,0.000000,0.000000,300.000000,Deduction,Abzug Sparzinsen pro Kind
+rule,VD,0.000000,0.000000,0.000000,3300.000000,Deduction,Abzug Sparzinsen, Verheiratete
+rule,VD,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Sparzinsen, alleinstehende Personen
+rule,VD,0.000000,0.000000,0.000000,1300.000000,Deduction,Abzug Versicherungsprämien, Kind
+rule,VD,0.000000,0.000000,0.000000,9800.000000,Deduction,Abzug Versicherungsprämien, Verheiratete
+rule,VD,0.000000,0.000000,0.000000,4900.000000,Deduction,Abzug Versicherungsprämien, alleinstehende Personen
+rule,VD,0.000000,0.000000,0.000000,2800.000000,Deduction,Abzug für Alleinstehende mit Kindern
+rule,VD,0.000000,35.000000,0.000000,0.000000,Deduction,Abzug vom Eigenmietwert
+rule,VD,126300.000000,0.000000,0.000000,0.000000,Threshold,Familien Sozialabzug Schwellwert Austritt 1
+rule,VD,164100.000000,0.000000,0.000000,0.000000,Threshold,Familien Sozialabzug Schwellwert Austritt 2
+rule,VD,0.000000,0.000000,0.000000,1000.000000,Deduction,Kinderabzug, minderjährige Kinder
+rule,VD,0.000000,0.000000,0.000000,6800.000000,Deduction,Maximalabzug Miete
+rule,VD,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,VD,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,VD,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,VD,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,VD,0.000000,0.000000,0.000000,11000.000000,Deduction,Pauschalabzug Miete Ledige
+rule,VD,0.000000,0.000000,0.000000,13500.000000,Deduction,Pauschalabzug Miete Verheiratete
+rule,VD,0.000000,0.000000,0.000000,3700.000000,Deduction,Pauschalabzug Miete je Kind
+rule,VD,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten von selbstbewohnten Liegenschaften mit Alter bis 20 Jahren
+rule,VD,0.000000,10.000000,0.000000,15000.000000,Deduction,Pauschalabzug Unterhaltskosten von vermieteten Liegenschaften mit Alter bis 20 Jahren
+rule,VD,0.000000,0.000000,0.000000,30000.000000,Deduction,Pauschalabzug Unterhaltskosten von vermieteten Liegenschaften mit Alter über 20 Jahren
+rule,VD,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,VD,0.000000,30.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von selbstbewohnten Liegenschaften mit Alter über 20 Jahren
+rule,VD,3500.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen Kind
+rule,VD,23700.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen alleinerziehend mit Kind
+rule,VD,17000.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen ledig
+rule,VD,22700.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidene Einkommen verheiratet
+rule,VD,0.000000,0.000000,0.000000,1300.000000,Deduction,Verheiratetenabzug
+rule,VD,0.000000,0.000000,0.000000,1700.000000,Deduction,Zweitverdienerabzug
+rule,VS,3130.000000,0.000000,0.000000,0.000000,Deduction,Abzug Eigenbetreuung der Kinder
+rule,VS,5220.000000,0.000000,0.000000,0.000000,Deduction,Abzug Kinderausbildungskosten für auswärtige Ausbildung
+rule,VS,0.000000,0.000000,0.000000,10000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,VS,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,VS,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,VS,0.000000,0.100000,0.000000,1000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,VS,0.000000,0.000000,0.000000,1130.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,VS,0.000000,0.000000,0.000000,7240.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,VS,0.000000,0.000000,0.000000,7240.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,VS,0.000000,0.000000,0.000000,3620.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,VS,0.000000,0.000000,0.000000,3620.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,VS,11930.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter 17
+rule,VS,7860.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 7
+rule,VS,8940.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter zwischen 7 und 16
+rule,VS,11930.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, volljährige Kinder
+rule,VS,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,VS,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,VS,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,VS,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,VS,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,VS,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,VS,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,VS,1240.000000,0.000000,0.000000,0.000000,Deduction,Zusätzlicher Kinderabzug ab 3 Kinder
+rule,VS,0.000000,0.000000,0.000000,6290.000000,Deduction,Zweitverdienerabzug
+rule,ZG,12200.000000,0.000000,0.000000,0.000000,Deduction,Abzug Eigenbetreuung der Kinder
+rule,ZG,0.000000,0.000000,0.000000,25400.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,ZG,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,ZG,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,ZG,0.000000,0.300000,0.000000,9000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,ZG,0.000000,0.000000,0.000000,1100.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,ZG,0.000000,0.000000,0.000000,7000.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,ZG,0.000000,0.000000,0.000000,10500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,ZG,0.000000,0.000000,0.000000,3500.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,ZG,0.000000,0.000000,0.000000,5300.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,ZG,24000.000000,0.000000,0.000000,0.000000,Deduction,Abzug für Alleinerzieher
+rule,ZG,0.000000,0.000000,0.000000,6000.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,ZG,12000.000000,0.000000,0.000000,0.000000,Deduction,Abzug für ledige Steuerpflichtige
+rule,ZG,12600.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter unter 15
+rule,ZG,24800.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug, Alter über 14
+rule,ZG,0.000000,0.000000,0.000000,10800.000000,Deduction,Maximalabzug Miete
+rule,ZG,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,ZG,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,ZG,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,ZG,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,ZG,0.000000,10.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,ZG,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,ZG,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,ZG,1700.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidenes Vermögen Rentner geringes Einkommen
+rule,ZG,3400.000000,0.000000,0.000000,0.000000,Deduction,Sozialabzug bescheidenes Vermögen Rentner mittleres Einkommen
+rule,ZG,24000.000000,0.000000,0.000000,0.000000,Deduction,Verheiratetenabzug
+rule,ZG,0.000000,0.000000,0.000000,4600.000000,Deduction,Zweitverdienerabzug
+rule,ZH,0.000000,0.000000,0.000000,25000.000000,Deduction,Abzug Kinderdrittbetreuungskosten
+rule,ZH,0.000000,0.000000,0.000000,1600.000000,Deduction,Abzug Mehrkosten der Verpflegung mit Verbilligung
+rule,ZH,0.000000,0.000000,0.000000,3200.000000,Deduction,Abzug Mehrkosten der Verpflegung ohne Verbilligung
+rule,ZH,0.000000,0.300000,0.000000,6000.000000,Deduction,Abzug Vermögensverwaltungskosten
+rule,ZH,0.000000,0.000000,0.000000,1300.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Kind
+rule,ZH,0.000000,0.000000,0.000000,5800.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit  Beiträgen Säule 2/3a
+rule,ZH,0.000000,0.000000,0.000000,8700.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
+rule,ZH,0.000000,0.000000,0.000000,2900.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen mit Beiträgen Säule 2/3a
+rule,ZH,0.000000,0.000000,0.000000,4350.000000,Deduction,Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen ohne Beiträge Säule 2/3a
+rule,ZH,0.000000,0.000000,0.000000,5200.000000,Deduction,Abzug für Fahrkosten Haupterwerb
+rule,ZH,9300.000000,0.000000,0.000000,0.000000,Deduction,Kinderabzug
+rule,ZH,0.000000,0.000000,0.000000,7258.000000,Deduction,Maximalabzug Säule 3a mit Vorsorgelösung
+rule,ZH,0.000000,0.000000,0.000000,36288.000000,Deduction,Maximalabzug Säule 3a ohne Vorsorgelösung
+rule,ZH,0.000000,350.000000,0.000000,0.000000,Other,Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
+rule,ZH,0.000000,20.000000,800.000000,2400.000000,Deduction,Pauschalabzug Berufsauslagen Nebenerwerb
+rule,ZH,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
+rule,ZH,0.000000,3.000000,2000.000000,4000.000000,Deduction,Pauschalabzug übrige Berufskosten
+rule,ZH,0.000000,20.000000,0.000000,0.000000,Deduction,Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
+rule,ZH,0.000000,0.000000,0.000000,6100.000000,Deduction,Zweitverdienerabzug
+scale,AG,Kanton,0.000000:12000.000000;15000.000000:7500.000000;20000.000000:3000.000000;25000.000000:2000.000000;30000.000000:1000.000000;35000.000000:0.000000,Zusätzlicher Sozialabzug
+scale,FR,Kanton,0.000000:11100.000000;30301.000000:10700.000000;31301.000000:10300.000000;32301.000000:9900.000000;33301.000000:9500.000000;34301.000000:9100.000000;35301.000000:8700.000000;36301.000000:8300.000000;37301.000000:7900.000000;38301.000000:7500.000000;39301.000000:7100.000000;40301.000000:6700.000000;41301.000000:6300.000000;42301.000000:5900.000000;43301.000000:5500.000000;44301.000000:5100.000000;45301.000000:4700.000000;46301.000000:4300.000000;47301.000000:3900.000000;48301.000000:3500.000000;49301.000000:3100.000000;50301.000000:2700.000000;51301.000000:2300.000000;52301.000000:1900.000000;53301.000000:1500.000000;54301.000000:1100.000000;55301.000000:700.000000;56301.000000:300.000000;57301.000000:0.000000,Abzug für AHV/IV-Rentner, mit Unterstützungspflicht
+scale,FR,Kanton,0.000000:9100.000000;24301.000000:8800.000000;25301.000000:8500.000000;26301.000000:8200.000000;27301.000000:7900.000000;28301.000000:7600.000000;29301.000000:7300.000000;30301.000000:7000.000000;31301.000000:6700.000000;32301.000000:6400.000000;33301.000000:6100.000000;34301.000000:5800.000000;35301.000000:5500.000000;36301.000000:5200.000000;37301.000000:4900.000000;38301.000000:4600.000000;39301.000000:4300.000000;40301.000000:4000.000000;41301.000000:3700.000000;42301.000000:3400.000000;43301.000000:3100.000000;44301.000000:2800.000000;45301.000000:2500.000000;46301.000000:2200.000000;47301.000000:1900.000000;48301.000000:1600.000000;49301.000000:1300.000000;50301.000000:1000.000000;51301.000000:700.000000;52301.000000:400.000000;53301.000000:100.000000;54301.000000:0.000000,Abzug für AHV/IV-Rentner, ohne Unterstützungspflicht
+scale,FR,Kanton,0.000000:5100.000000;24301.000000:4900.000000;25301.000000:4700.000000;26301.000000:4500.000000;27301.000000:4300.000000;28301.000000:4100.000000;29301.000000:3900.000000;30301.000000:3700.000000;31301.000000:3500.000000;32301.000000:3300.000000;33301.000000:3100.000000;34301.000000:2900.000000;35301.000000:2700.000000;36301.000000:2500.000000;37301.000000:2300.000000;38301.000000:2100.000000;39301.000000:1900.000000;40301.000000:1700.000000;41301.000000:1500.000000;42301.000000:1300.000000;43301.000000:1100.000000;44301.000000:900.000000;45301.000000:700.000000;46301.000000:500.000000;47301.000000:300.000000;48301.000000:100.000000;49301.000000:0.000000,Abzug für bescheidenes Einkommen, Alleinerziehende oder Verheiratete
+scale,FR,Kanton,0.000000:4100.000000;20301.000000:3900.000000;21301.000000:3700.000000;22301.000000:3500.000000;23301.000000:3300.000000;24301.000000:3100.000000;25301.000000:2900.000000;26301.000000:2700.000000;27301.000000:2500.000000;28301.000000:2300.000000;29301.000000:2100.000000;30301.000000:1900.000000;31301.000000:1700.000000;32301.000000:1500.000000;33301.000000:1300.000000;34301.000000:1100.000000;35301.000000:900.000000;36301.000000:700.000000;37301.000000:500.000000;38301.000000:300.000000;39301.000000:100.000000;40301.000000:0.000000,Abzug für bescheidenes Einkommen, Ledige ohne Kind
+scale,GE,Kanton,0.000000:10661.000000;53305.000000:8529.000000;60448.000000:6397.000000;68230.000000:4264.000000;76226.000000:2132.000000;85288.000000:0.000000,Abzug für AHV/IV-Rentner, Ledig ohne Kind
+scale,GE,Kanton,0.000000:12260.000000;61301.000000:9808.000000;69510.000000:7356.000000;78465.000000:4904.000000;87633.000000:2452.000000;98081.000000:0.000000,Abzug für AHV/IV-Rentner, Verheiratete, beide Partner Rentenbezüger
+scale,GE,Kanton,0.000000:10661.000000;61301.000000:8529.000000;69510.000000:6397.000000;78465.000000:4264.000000;87633.000000:2132.000000;98081.000000:0.000000,Abzug für AHV/IV-Rentner, Verheiratete, eine Person ist Rentenbezüger
+scale,JU,Kanton,0.000000:8900.000000;29100.000000:8300.000000;29900.000000:7800.000000;30800.000000:7200.000000;31600.000000:6700.000000;32500.000000:6200.000000;33400.000000:5600.000000;34200.000000:5100.000000;35100.000000:4500.000000;35900.000000:4000.000000;36800.000000:3500.000000;37700.000000:2900.000000;38500.000000:2400.000000;39400.000000:1800.000000;40200.000000:1300.000000;41100.000000:800.000000;42000.000000:200.000000;42800.000000:0.000000,Abzug für AHV/IV-Rentner, Ledige
+scale,JU,Kanton,0.000000:10300.000000;37200.000000:9700.000000;38000.000000:9200.000000;38900.000000:8600.000000;39700.000000:8100.000000;40600.000000:7600.000000;41500.000000:7000.000000;42300.000000:6500.000000;43200.000000:5900.000000;44000.000000:5400.000000;44900.000000:4900.000000;45800.000000:4300.000000;46600.000000:3800.000000;47500.000000:3200.000000;48300.000000:2700.000000;49200.000000:2200.000000;50100.000000:1600.000000;50900.000000:1100.000000;51800.000000:500.000000;52600.000000:0.000000;53500.000000:0.000000,Abzug für AHV/IV-Rentner, Verheiratete, beide Partner Rentenbezüger
+scale,JU,Kanton,0.000000:8900.000000;37200.000000:8300.000000;38000.000000:7800.000000;38900.000000:7200.000000;39700.000000:6700.000000;40600.000000:6200.000000;41500.000000:5600.000000;42300.000000:5100.000000;43200.000000:4500.000000;44000.000000:4000.000000;44900.000000:3500.000000;45800.000000:2900.000000;46600.000000:2400.000000;47500.000000:1800.000000;48300.000000:1300.000000;49200.000000:800.000000;50100.000000:200.000000;50900.000000:0.000000,Abzug für AHV/IV-Rentner, Verheiratete, eine Person ist Rentenbezüger
+scale,NE,Kanton,0.000000:2100.000000;26001.000000:2000.000000;27001.000000:1900.000000;28001.000000:1800.000000;29001.000000:1700.000000;30001.000000:1600.000000;31001.000000:1500.000000;32001.000000:1400.000000;33001.000000:1300.000000;34001.000000:1200.000000;35001.000000:1100.000000;36001.000000:1000.000000;37001.000000:900.000000;38001.000000:800.000000;39001.000000:700.000000;40001.000000:600.000000;41001.000000:500.000000;42001.000000:400.000000;43001.000000:300.000000;44001.000000:200.000000;45001.000000:100.000000;46001.000000:0.000000,Abzug für bescheidenes Einkommen, Ledige
+scale,NE,Kanton,0.000000:3800.000000;48001.000000:3600.000000;49001.000000:3400.000000;50001.000000:3200.000000;51001.000000:3000.000000;52001.000000:2800.000000;53001.000000:2600.000000;54001.000000:2400.000000;55001.000000:2200.000000;56001.000000:2000.000000;57001.000000:1800.000000;58001.000000:1600.000000;59001.000000:1400.000000;60001.000000:1200.000000;61001.000000:1000.000000;62001.000000:800.000000;63001.000000:600.000000;64001.000000:400.000000;65001.000000:200.000000;66001.000000:0.000000,Abzug für bescheidenes Einkommen, Verheiratete
+scale,SH,Kanton,0.000000:14100.000000;25201.000000:13800.000000;26001.000000:13500.000000;26801.000000:13200.000000;27601.000000:12900.000000;28401.000000:12600.000000;29201.000000:12300.000000;30001.000000:12000.000000;30801.000000:11700.000000;31601.000000:11400.000000;32401.000000:11100.000000;33201.000000:10800.000000;34001.000000:10500.000000;34801.000000:10200.000000;35601.000000:9900.000000;36401.000000:9600.000000;37201.000000:9300.000000;38001.000000:9000.000000;38801.000000:8700.000000;39601.000000:8400.000000;40401.000000:8100.000000;41201.000000:7800.000000;42001.000000:7500.000000;42801.000000:7200.000000;43601.000000:6900.000000;44401.000000:6600.000000;45201.000000:6300.000000;46001.000000:6000.000000;46801.000000:5700.000000;47601.000000:5400.000000;48401.000000:5100.000000;49201.000000:4800.000000;50001.000000:4500.000000;50801.000000:4200.000000;51601.000000:3900.000000;52401.000000:3600.000000;53201.000000:3300.000000;54001.000000:3000.000000;54801.000000:2700.000000;55601.000000:2400.000000;56401.000000:2100.000000;57201.000000:1800.000000;58001.000000:1500.000000;58801.000000:1200.000000;59601.000000:900.000000;60401.000000:600.000000;61201.000000:300.000000;62001.000000:0.000000,Abzug für AHV/IV-Rentner, Alleinerziehende oder Verheiratete
+scale,SH,Kanton,0.000000:7050.000000;16801.000000:6750.000000;17601.000000:6450.000000;18401.000000:6150.000000;19201.000000:5850.000000;20001.000000:5550.000000;20801.000000:5250.000000;21601.000000:4950.000000;22401.000000:4650.000000;23201.000000:4350.000000;24001.000000:4050.000000;24801.000000:3750.000000;25601.000000:3450.000000;26401.000000:3150.000000;27201.000000:2850.000000;28001.000000:2550.000000;28801.000000:2250.000000;29601.000000:1950.000000;30401.000000:1650.000000;31201.000000:1350.000000;32001.000000:1050.000000;32801.000000:750.000000;33601.000000:450.000000;34401.000000:150.000000;35201.000000:0.000000,Abzug für AHV/IV-Rentner, Ledige
+scale,SH,Kanton,0.000000:7050.000000;25201.000000:6900.000000;26001.000000:6750.000000;26801.000000:6600.000000;27601.000000:6450.000000;28401.000000:6300.000000;29201.000000:6150.000000;30001.000000:6000.000000;30801.000000:5850.000000;31601.000000:5700.000000;32401.000000:5550.000000;33201.000000:5400.000000;34001.000000:5250.000000;34801.000000:5100.000000;35601.000000:4950.000000;36401.000000:4800.000000;37201.000000:4650.000000;38001.000000:4500.000000;38801.000000:4350.000000;39601.000000:4200.000000;40401.000000:4050.000000;41201.000000:3900.000000;42001.000000:3750.000000;42801.000000:3600.000000;43601.000000:3450.000000;44401.000000:3300.000000;45201.000000:3150.000000;46001.000000:3000.000000;46801.000000:2850.000000;47601.000000:2700.000000;48401.000000:2550.000000;49201.000000:2400.000000;50001.000000:2250.000000;50801.000000:2100.000000;51601.000000:1950.000000;52401.000000:1800.000000;53201.000000:1650.000000;54001.000000:1500.000000;54801.000000:1350.000000;55601.000000:1200.000000;56401.000000:1050.000000;57201.000000:900.000000;58001.000000:750.000000;58801.000000:600.000000;59601.000000:450.000000;60401.000000:300.000000;61201.000000:150.000000;62001.000000:0.000000,Abzug für bescheidenes Einkommen, Alleinerziehende oder Verheiratete
+scale,SH,Kanton,0.000000:3525.000000;16801.000000:3375.000000;17601.000000:3225.000000;18401.000000:3075.000000;19201.000000:2925.000000;20001.000000:2775.000000;20801.000000:2625.000000;21601.000000:2475.000000;22401.000000:2325.000000;23201.000000:2175.000000;24001.000000:2025.000000;24801.000000:1875.000000;25601.000000:1725.000000;26401.000000:1575.000000;27201.000000:1425.000000;28001.000000:1275.000000;28801.000000:1125.000000;29601.000000:975.000000;30401.000000:825.000000;31201.000000:675.000000;32001.000000:525.000000;32801.000000:375.000000;33601.000000:225.000000;34401.000000:75.000000;35201.000000:0.000000,Abzug für bescheidenes Einkommen, Ledige
+scale,TG,Kanton,0.000000:4200.000000;17900.000000:4000.000000;18900.000000:3800.000000;19900.000000:3600.000000;20900.000000:3400.000000;21900.000000:3200.000000;22900.000000:3000.000000;23900.000000:2800.000000;24900.000000:2600.000000;25900.000000:2400.000000;26900.000000:2200.000000;27900.000000:2000.000000;28900.000000:1800.000000;29900.000000:1600.000000;30900.000000:1400.000000;31900.000000:1200.000000;32900.000000:1000.000000;33900.000000:800.000000;34900.000000:600.000000;35900.000000:400.000000;36900.000000:200.000000;37900.000000:0.000000,Abzug für AHV/IV-Rentner, Ledige
+scale,TG,Kanton,0.000000:4200.000000;25300.000000:4000.000000;26300.000000:3800.000000;27300.000000:3600.000000;28300.000000:3400.000000;29300.000000:3200.000000;30300.000000:3000.000000;31300.000000:2800.000000;32300.000000:2600.000000;33300.000000:2400.000000;34300.000000:2200.000000;35300.000000:2000.000000;36300.000000:1800.000000;37300.000000:1600.000000;38300.000000:1400.000000;39300.000000:1200.000000;40300.000000:1000.000000;41300.000000:800.000000;42300.000000:600.000000;43300.000000:400.000000;44300.000000:200.000000;45300.000000:0.000000,Abzug für AHV/IV-Rentner, Verheiratete
+scale,TI,Kanton,0.000000:8000.000000;27001.000000:7000.000000;30001.000000:6000.000000;33001.000000:5000.000000;36001.000000:4000.000000;39001.000000:3000.000000;42001.000000:2000.000000;45001.000000:1000.000000;48001.000000:0.000000,Abzug für AHV/IV-Rentner, Alleinerziehende oder Verheiratete
+scale,TI,Kanton,0.000000:8000.000000;21001.000000:7000.000000;24001.000000:6000.000000;27001.000000:5000.000000;30001.000000:4000.000000;33001.000000:3000.000000;36001.000000:2000.000000;39001.000000:1000.000000;42001.000000:0.000000,Abzug für AHV/IV-Rentner, Ledig ohne Kind
+scale,VS,Kanton,0.000000:21250.000000;21251.000000:19125.000000;22831.000000:17000.000000;24411.000000:14875.000000;25991.000000:12750.000000;27571.000000:10625.000000;29151.000000:8500.000000;30731.000000:6375.000000;32311.000000:4250.000000;33891.000000:2125.000000;35471.000000:0.000000,Abzug für bescheidenes Einkommen, Ledige ohne Kind

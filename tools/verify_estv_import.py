@@ -61,7 +61,9 @@ def rust_brackets(source: str) -> dict[str, list[tuple[float, float]]]:
     return out
 
 
-def workbook_brackets(path: str, married: bool) -> list[tuple[float, float]] | None:
+def workbook_brackets(
+    path: str, married: bool, authority: str = "Kanton"
+) -> list[tuple[float, float]] | None:
     """The cantonal bracket ladder, or `None` when the workbook does not publish one.
 
     Each row states the width of the next band and the rate that applies to it, so the threshold
@@ -93,7 +95,7 @@ def workbook_brackets(path: str, married: bool) -> list[tuple[float, float]] | N
             threshold_mode = "Steuerbares Einkommen" in cells[5] or "Steuerbares" in cells[5]
             continue
         steuerart, subject, hoheit, value, rate = cells[2], cells[3], cells[4], cells[5], cells[6]
-        if steuerart != "Einkommen" or hoheit != "Kanton":
+        if steuerart != "Einkommen" or hoheit != authority:
             continue
         try:
             number = float(value)
@@ -124,6 +126,32 @@ def workbook_brackets(path: str, married: bool) -> list[tuple[float, float]] | N
     return chosen
 
 
+
+def same_ladder(
+    actual: list[tuple[float, float]], expected: list[tuple[float, float]]
+) -> bool:
+    """Numerically equal ladders, with the tolerances documented in the test."""
+    return len(actual) == len(expected) and all(
+        abs(a_threshold - e_threshold) < 1e-9 and abs(a_rate - e_rate) < 1e-6
+        for (a_threshold, a_rate), (e_threshold, e_rate) in zip(actual, expected)
+    )
+
+
+def rust_federal(path: str) -> dict[str, list[tuple[float, float]]]:
+    """The federal constants, which live outside estv_scales_data.rs."""
+    out: dict[str, list[tuple[float, float]]] = {}
+    with open(path, encoding="utf-8") as handle:
+        source = handle.read()
+    pattern = re.compile(
+        r"pub const FEDERAL_(SINGLE|MARRIED)_BRACKETS\s*:\s*&\[FederalBracket\]\s*=\s*&\[(.*?)\];",
+        re.S,
+    )
+    for match in pattern.finditer(source):
+        out[f"BUND_{match.group(1)}"] = [
+            (float(threshold), float(rate)) for threshold, rate in BRACKET.findall(match.group(2))
+        ]
+    return out
+
 def main() -> int:
     with open(RUST, encoding="utf-8") as handle:
         generated = rust_brackets(handle.read())
@@ -134,9 +162,38 @@ def main() -> int:
     mismatched = 0
     skipped: list[str] = []
 
+    federal = rust_federal(os.path.join(ROOT, "src", "federal_tariff_data.rs"))
+
+    def emit_ladder(key: str, ladder: list[tuple[float, float]]) -> None:
+        for index, (threshold, rate) in enumerate(ladder):
+            rows.append(
+                {
+                    "constant": key,
+                    "index": str(index),
+                    "threshold": f"{threshold:.6f}",
+                    "rate": f"{rate:.6f}",
+                }
+            )
+
     for path in sorted(glob.glob(os.path.join(SOURCES, "estv_scales_*.xlsx"))):
         code = os.path.basename(path).split("_")[-1].split(".")[0].upper()
         if code == "BUND":
+            # The federal tariff is generated from the same kind of export, with Steuerhoheit
+            # "Bundessteuer", and its constants live in a separate file.
+            for married in (False, True):
+                key = f"BUND_{'MARRIED' if married else 'SINGLE'}"
+                expected = workbook_brackets(path, married, "Bundessteuer")
+                actual = federal.get(key)
+                if expected is None or actual is None:
+                    skipped.append(f"{key} (no federal ladder found)")
+                    continue
+                compared += 1
+                if not same_ladder(actual, expected):
+                    mismatched += 1
+                    print(f"MISMATCH {key}")
+                    print(f"  source   {expected}")
+                    print(f"  rust     {actual}")
+                emit_ladder(key, expected)
             continue
         for married in (False, True):
             status = "MARRIED" if married else "SINGLE"
@@ -150,30 +207,19 @@ def main() -> int:
                 skipped.append(f"{key} (no generated constant)")
                 continue
             compared += 1
+            same = same_ladder(actual, expected)
             # Compare numerically, not by representation: 0.018 and 0.018000000000000002 are the
             # same rate written twice, and a verifier that reports them as a mismatch would bury
             # the discrepancies that are real. The rate tolerance is 1e-6 rather than exact
             # because Jura's imported rates carry two extra digits (1.666702% against 1.6667%),
             # which is CHF 0.02 of tax on CHF 100,000 -- immaterial, and recorded here rather
             # than hidden by a loosened bound with no explanation.
-            same = len(actual) == len(expected) and all(
-                abs(a_threshold - e_threshold) < 1e-9 and abs(a_rate - e_rate) < 1e-6
-                for (a_threshold, a_rate), (e_threshold, e_rate) in zip(actual, expected)
-            )
             if not same:
                 mismatched += 1
                 print(f"MISMATCH {key}")
                 print(f"  source   {expected[:6]}{' ...' if len(expected) > 6 else ''}")
                 print(f"  rust     {actual[:6]}{' ...' if len(actual) > 6 else ''}")
-            for index, (threshold, rate) in enumerate(expected):
-                rows.append(
-                    {
-                        "constant": key,
-                        "index": str(index),
-                        "threshold": f"{threshold:.6f}",
-                        "rate": f"{rate:.6f}",
-                    }
-                )
+            emit_ladder(key, expected)
 
     print(f"\ncompared {compared} bracket ladders; {mismatched} mismatch(es)")
     if skipped:

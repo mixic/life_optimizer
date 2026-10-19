@@ -471,6 +471,22 @@ pub fn coordinated_salary(annual_salary: f64) -> f64 {
     }
     (annual_salary.min(BVG_UPPER_LIMIT) - BVG_COORDINATION_DEDUCTION).max(0.0)
 }
+
+/// The age-banded savings credit (Altersgutschrift) the BVG applies to the coordinated salary.
+///
+/// BVG Art. 16 Abs. 1 sets the credits at 7% from age 25, 10% from 35, 15% from 45 and 18% from
+/// 55, with none before 25. Exposed publicly so `tests/bvg_worked_example.rs` can check the
+/// bands against the statute by hand, rather than only observing them through a simulation whose
+/// other assumptions would have to be held fixed first.
+pub fn bvg_savings_rate_at_age(age: u32) -> f64 {
+    match age {
+        0..=24 => 0.00,
+        25..=34 => 0.07,
+        35..=44 => 0.10,
+        45..=54 => 0.15,
+        _ => 0.18, // 55 and over
+    }
+}
 // ─── Single simulation path ───────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
@@ -1028,15 +1044,12 @@ impl PensionSimulator {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /// Age-dependent BVG contribution rate (Altersgutschriften) for a given age
+    /// Age-dependent BVG contribution rate (Altersgutschriften) for a given age.
+    ///
+    /// Delegates to [`bvg_savings_rate_at_age`], which is public so the rates can
+    /// be checked against the statute without running a simulation.
     fn bvg_contribution_rate_at_age(age: u32) -> f64 {
-        match age {
-            0..=24  => 0.00,
-            25..=34 => 0.07,
-            35..=44 => 0.10,
-            45..=54 => 0.15,
-            _       => 0.18, // 55+
-        }
+        bvg_savings_rate_at_age(age)
     }
 
     /// Age-dependent BVG contribution rate at current age (kept for compatibility)
