@@ -42,7 +42,7 @@ fn stderr(output: &Output) -> String {
 /// discretionary figure — the explicit requirement of `THEORY_OF_SPARING.md` §8.
 #[test]
 fn consumption_breakdown_is_reported() {
-    let output = run(&["optimize", "--salary", "120000", "--age", "38"]);
+    let output = run(&["stress-ai", "--salary", "120000", "--age", "38"]);
 
     assert!(
         output.status.success(),
@@ -69,7 +69,7 @@ fn consumption_breakdown_is_reported() {
 #[test]
 fn unknown_consumption_profile_is_rejected() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -96,7 +96,7 @@ fn unknown_consumption_profile_is_rejected() {
 #[test]
 fn luxury_profile_requires_a_larger_basket_than_extreme_saving() {
     let saving = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -105,7 +105,7 @@ fn luxury_profile_requires_a_larger_basket_than_extreme_saving() {
         "extreme-saving",
     ]);
     let luxury = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -137,7 +137,7 @@ fn luxury_profile_requires_a_larger_basket_than_extreme_saving() {
 #[test]
 fn sparing_ratio_reduces_the_basket() {
     let plain = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -146,7 +146,7 @@ fn sparing_ratio_reduces_the_basket() {
         "1.0",
     ]);
     let sparing = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -171,9 +171,9 @@ fn sparing_ratio_reduces_the_basket() {
 /// spending is not something the household can flex.
 #[test]
 fn quasi_inelastic_share_raises_the_floor() {
-    let plain = run(&["optimize", "--salary", "120000", "--age", "38"]);
+    let plain = run(&["stress-ai", "--salary", "120000", "--age", "38"]);
     let locked = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -207,7 +207,7 @@ fn quasi_inelastic_share_raises_the_floor() {
 #[test]
 fn achievement_constraint_is_reported_when_supplied() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -234,7 +234,7 @@ fn achievement_constraint_is_reported_when_supplied() {
 /// behaviour in which work percentage is fully discretionary.
 #[test]
 fn achievement_section_absent_without_the_flag() {
-    let output = run(&["optimize", "--salary", "150000", "--age", "40"]);
+    let output = run(&["stress-ai", "--salary", "150000", "--age", "40"]);
     assert!(output.status.success());
     assert!(
         !stdout(&output).contains("Employer Achievement Capacity"),
@@ -247,7 +247,7 @@ fn achievement_section_absent_without_the_flag() {
 #[test]
 fn unreachable_at_part_time_forces_full_time_recommendation() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -269,7 +269,7 @@ fn unreachable_at_part_time_forces_full_time_recommendation() {
 #[test]
 fn ai_productivity_gain_raises_reported_capacity() {
     let without = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -278,7 +278,7 @@ fn ai_productivity_gain_raises_reported_capacity() {
         "1.0",
     ]);
     let with = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -316,7 +316,7 @@ fn ai_productivity_gain_raises_reported_capacity() {
 #[test]
 fn impossible_goal_is_reported_as_a_workload_problem() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "200000",
         "--age",
@@ -343,7 +343,7 @@ fn impossible_goal_is_reported_as_a_workload_problem() {
 #[test]
 fn consumption_and_achievement_flags_combine() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "140000",
         "--age",
@@ -385,7 +385,7 @@ fn consumption_and_achievement_flags_combine() {
 #[test]
 fn refinement_flags_reach_the_report() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -436,7 +436,7 @@ fn refinement_flags_reach_the_report() {
 #[test]
 fn risk_weighted_mode_offers_what_strict_mode_refuses() {
     let common = [
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -498,7 +498,7 @@ fn risk_weighted_mode_offers_what_strict_mode_refuses() {
 #[test]
 fn risk_weighted_enforcement_without_a_declared_risk_is_refused() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -536,7 +536,7 @@ fn risk_weighted_enforcement_without_a_declared_risk_is_refused() {
 #[test]
 fn an_impossible_assignment_is_not_announced_as_an_optimum() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "150000",
         "--age",
@@ -592,7 +592,7 @@ fn invalid_refinement_values_are_refused() {
         ("--monthly-debt", "-100"),
     ] {
         let output = run(&[
-            "optimize",
+            "stress-ai",
             "--salary",
             "120000",
             "--age",
@@ -616,7 +616,7 @@ fn invalid_refinement_values_are_refused() {
 #[test]
 fn an_inverted_ai_range_is_refused() {
     let output = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "120000",
         "--age",
@@ -641,9 +641,9 @@ fn an_inverted_ai_range_is_refused() {
 /// instalment has a higher floor than without one.
 #[test]
 fn monthly_debt_raises_the_reported_floor() {
-    let without = run(&["optimize", "--salary", "130000", "--age", "40"]);
+    let without = run(&["stress-ai", "--salary", "130000", "--age", "40"]);
     let with = run(&[
-        "optimize",
+        "stress-ai",
         "--salary",
         "130000",
         "--age",

@@ -19,7 +19,7 @@
 use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs, robustness, ai_scenario};
 use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
 
-use clap::{Parser, Subcommand, ArgAction};
+use clap::{Args, Parser, Subcommand, ArgAction};
 use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
 use tax::TaxSchedule;
 use optimizer::{OptimizerConfig, LifeOptimizer};
@@ -41,6 +41,13 @@ enum Commands {
     /// the size difference between enum variants is a real cost: every `Commands`
     /// value would otherwise be as large as this one.
     Optimize(Box<OptimizeArgs>),
+
+    /// Price the employer-side achievement constraint and its AI coefficients.
+    ///
+    /// Split out of `optimize` because every coefficient here is illustrative, and a table of
+    /// eight unmeasured numbers with defaults invites the reading that they were measured.
+    /// Named starting points live in `optimize --ai-scenario`.
+    StressAi(Box<StressAiArgs>),
     /// Compare specific work percentage scenarios
     Compare {
         /// Full-time annual salary in CHF
@@ -386,48 +393,48 @@ struct OptimizeArgs {
     /// Required project output index for your role (G_t). Enables the
     /// employer achievement-capacity constraint; without it, work percentage
     /// is treated as fully discretionary.
-    #[arg(long)]
+    #[arg(skip)]
     required_output_index: Option<f64>,
 
     /// Productivity gain from AI and other tools, as a decimal — e.g. 0.25
     /// for +25%. This is the *pessimistic* end of the range when a range is
     /// declared. Only meaningful with --required-output-index.
-    #[arg(long, default_value = "0.0")]
+    #[arg(skip)]
     ai_productivity_gain: f64,
 
     /// Optimistic end of the AI productivity-gain range — e.g. 0.60 for +60%.
     /// Feasibility is still judged at the pessimistic end: a schedule that only
     /// works if AI delivers at the top of the range is reported as a bet on the
     /// tool rather than a credible reduction.
-    #[arg(long)]
+    #[arg(skip)]
     ai_productivity_gain_high: Option<f64>,
 
     /// Share of the AI gain that survives verification and rework, in [0, 1].
     /// 1.0 (default) assumes AI output is usable as delivered.
-    #[arg(long, default_value = "1.0")]
+    #[arg(skip = 1.0)]
     ai_quality_retention: f64,
 
     /// Delivered quality lost per unit of pace above your sustainable rate.
     /// 0.0 (default) assumes output per hour can be raised freely.
-    #[arg(long, default_value = "0.0")]
+    #[arg(skip)]
     compression_quality_sensitivity: f64,
 
     /// Replacement probability per unit of relative goal shortfall: 2.5 means a
     /// 10% shortfall implies a 25% chance of replacement. Only meaningful with
     /// --required-output-index.
-    #[arg(long, default_value = "0.0")]
+    #[arg(skip)]
     replacement_risk: f64,
 
     /// Years that must be worked at full time before a reduction becomes
     /// credible. Averaged into the workload, so the leisure gain is not
     /// overstated.
-    #[arg(long, default_value = "0.0")]
+    #[arg(skip)]
     evaluation_period_years: f64,
 
     /// What a missed goal does to the search: `strict` (default) does not offer
     /// the work percentage at all, `risk-weighted` offers it and prices the
     /// replacement probability into its security. Requires --replacement-risk.
-    #[arg(long, default_value = "strict")]
+    #[arg(skip = String::from("strict"))]
     enforcement: String,
 
     /// Monthly debt repayment or other unavoidable contractual outflow, in CHF.
@@ -487,6 +494,58 @@ struct OptimizeArgs {
     /// use a percentage instead. 0.75 is the conventional figure and is *not* a measurement.
     #[arg(long)]
     retirement_needs_percent: Option<f64>,
+}
+
+
+/// The employer-side achievement constraint and its AI coefficients, split out of `optimize`.
+///
+/// These eight flags model what an employer does with the productivity gain -- what output it
+/// demands, how much of the gain survives review, what compression does to quality, and what
+/// missing the bar costs. Every coefficient is illustrative, and presenting them beside `--salary`
+/// with defaults invited the reading that they were measured. They are therefore a separate verb:
+/// `optimize` answers the household question and takes `--ai-scenario` for a named position;
+/// `stress-ai` is where the employer model lives, for someone who wants to move one coefficient.
+#[derive(Args, Debug, Clone)]
+struct StressAiArgs {
+    #[command(flatten)]
+    base: OptimizeArgs,
+
+    /// Required output relative to the pre-AI baseline -- the employer-side
+    /// achievement-capacity constraint; without it, work percentage
+    /// is treated as fully discretionary.
+    #[arg(long)]
+    required_output_index: Option<f64>,
+
+    /// Productivity gain from AI and other tools, as a decimal -- e.g. 0.25
+    /// for +25%. This is the *pessimistic* end of the range when a range is
+    /// declared. Only meaningful with --required-output-index.
+    #[arg(long, default_value = "0.0")]
+    ai_productivity_gain: f64,
+
+    /// Optimistic end of the AI productivity-gain range -- e.g. 0.55 for +55%.
+    /// Feasibility is still judged at the pessimistic end.
+    #[arg(long)]
+    ai_productivity_gain_high: Option<f64>,
+
+    /// Share of the AI gain that survives verification and rework, in [0, 1].
+    #[arg(long, default_value = "1.0")]
+    ai_quality_retention: f64,
+
+    /// Delivered quality lost per unit of pace above your sustainable rate.
+    #[arg(long, default_value = "0.0")]
+    compression_quality_sensitivity: f64,
+
+    /// Replacement probability per unit of relative goal shortfall.
+    #[arg(long, default_value = "0.0")]
+    replacement_risk: f64,
+
+    /// Years that must be worked at full time before a reduction becomes credible.
+    #[arg(long, default_value = "0.0")]
+    evaluation_period_years: f64,
+
+    /// What a missed goal does to the search: `strict` or `risk-weighted`.
+    #[arg(long, default_value = "strict")]
+    enforcement: String,
 }
 
 /// Optimise an early-retirement plan.
@@ -1067,7 +1126,37 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
 fn main() {
     let cli = Cli::parse();
 
-    match cli.command {
+    // `stress-ai` is `optimize` with the employer coefficients supplied. Normalising it here
+    // rather than duplicating the dispatch body is what stops the two verbs drifting: there is
+    // one code path, and the only difference is where eight numbers came from.
+    let command = match cli.command {
+        Commands::StressAi(args) => {
+            let StressAiArgs {
+                base,
+                required_output_index,
+                ai_productivity_gain,
+                ai_productivity_gain_high,
+                ai_quality_retention,
+                compression_quality_sensitivity,
+                replacement_risk,
+                evaluation_period_years,
+                enforcement,
+            } = *args;
+            let mut base = base;
+            base.required_output_index = required_output_index;
+            base.ai_productivity_gain = ai_productivity_gain;
+            base.ai_productivity_gain_high = ai_productivity_gain_high;
+            base.ai_quality_retention = ai_quality_retention;
+            base.compression_quality_sensitivity = compression_quality_sensitivity;
+            base.replacement_risk = replacement_risk;
+            base.evaluation_period_years = evaluation_period_years;
+            base.enforcement = enforcement;
+            Commands::Optimize(Box::new(base))
+        }
+        other => other,
+    };
+
+    match command {
         Commands::Optimize(args) => {
             let OptimizeArgs {
                 salary,
@@ -1238,6 +1327,10 @@ fn main() {
         Commands::Interactive => {
             run_interactive();
         }
+        // `stress-ai` was normalised into `Optimize` above; reaching here would mean the
+        // normalisation stopped working.
+        Commands::StressAi(_) => unreachable!("stress-ai is normalised into optimize"),
+
         Commands::EarlyRetirement(args) => {
             run_early_retirement(&args);
         }

@@ -408,14 +408,24 @@ Key flags (`optimize` / `pension`):
 | `--profile` | `balanced` / `family` / `career` preference weighting | `balanced` |
 | `--consumption-profile` | `extreme-saving` / `moderate` / `normal` / `luxury` lifestyle baseline | `normal` |
 | `--monthly-debt` | Debt repayment or other unavoidable monthly outflow (CHF) — joins the mandatory floor | `0` |
-| `--required-output-index` | Required project output for your role. Engages the employer achievement constraint | unset |
-| `--ai-productivity-gain` | AI/tool productivity gain (decimal); pessimistic end when a range is given | `0.0` |
-| `--ai-productivity-gain-high` | Optimistic end of the productivity range | unset |
-| `--ai-quality-retention` | Share of the AI gain surviving verification and rework | `1.0` |
-| `--compression-quality-sensitivity` | Output per hour lost per unit of pace above your sustainable rate | `0.0` |
-| `--replacement-risk` | Replacement probability per unit of relative goal shortfall | `0.0` |
-| `--evaluation-period-years` | Years at full time before a reduction becomes credible, averaged into the workload | `0.0` |
-| `--enforcement` | `strict` (refuse undelivered schedules) / `risk-weighted` (offer and price them) | `strict` |
+| `--ai-scenario` | Named AI-adoption position: `sceptical`, `neutral` or `optimistic`. Sets the productivity gain, its optimistic end, the quality retention and the required output together, prints what it set, and is anchored to the published range in `documents/AI_AS_CATALYST.md` §4 | unset |
+
+The employer-side achievement model — eight coefficients for what an employer demands, how much of
+the AI gain survives review, and what missing the bar costs — is not on `optimize`. Every one of
+those coefficients is illustrative, and a table of eight unmeasured numbers with defaults invites
+the reading that they were measured. It is a separate verb:
+
+```bash
+./life-optimizer stress-ai --salary 120000 --age 40 \
+  --required-output-index 1.2 --ai-productivity-gain 0.25 --ai-quality-retention 0.85 \
+  --replacement-risk 2.5 --enforcement risk-weighted
+```
+
+`stress-ai` accepts every `optimize` flag plus the eight employer coefficients:
+`--required-output-index`, `--ai-productivity-gain`, `--ai-productivity-gain-high`,
+`--ai-quality-retention`, `--compression-quality-sensitivity`, `--replacement-risk`,
+`--evaluation-period-years` and `--enforcement`. It runs the same search as `optimize`; the only
+difference is where those eight numbers came from.
 
 ---
 
