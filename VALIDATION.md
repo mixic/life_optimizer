@@ -131,9 +131,36 @@ asserts that the six exemptions are the *only* ones — a canton silently droppi
 verification fails the test rather than reducing its coverage.
 
 What this establishes and what it does not: it establishes that the import is faithful to its
-source. It does not establish that the ESTV's own published tariff is correct, that the Steuerfuss
-applied to it is current, or that the table vintage matches the year being priced. Those are §5.2,
-§5.3 and §5.4.
+workbook. It does not establish that the workbook is right, and on one point it now knows the
+workbook disagrees with another official document — see below. Nor does it establish that the
+Steuerfuss applied to the tariff is current, or that the table vintage matches the year being
+priced. Those are §5.2's residue, §5.3 and §5.4.
+
+**A second official source contradicts the export, at the bottom of the married federal table.**
+The workbook is not the only published statement of the federal tariff:
+`source-documents/Tarif Art. 42 - Abs. 1 - 2026-20XX_d.pdf` is the ESTV's own tariff table for
+married taxpayers from Steuerjahr 2026, in Einheits-Satz form. Its low rows disagree with the
+imported ladder.
+
+| Taxable income | PDF rate | PDF simple tax | Tax from the imported ladder |
+|---:|---:|---:|---:|
+| CHF 100 | 1.5500% | 1.55 | **0.00** |
+| CHF 500 | 1.5500% | 7.75 | **0.00** |
+| CHF 900 | 1.5500% | 13.95 | **0.00** |
+
+The imported ladder opens with a zero band — `(0.0, 0.0)` then `(29_700.0, 0.01)` — so it charges
+nothing below CHF 29,700, while the PDF charges 1.55% from the first CHF 100.
+
+**This is not resolved, and deliberately so.** Resolving it needs the statute, and
+`source-documents/SR 642.11.pdf` (the DBG) yields no extractable text at all: it is the Identity-H
+case. Between an official export and an official PDF, with the law unreadable, choosing one would be
+a guess presented as a fix. `tools/verify_federal_pdf.py` reproduces the comparison and
+`tests/federal_tariff_pdf.rs` pins the contradiction, so that correcting either source fails a test
+carrying instructions rather than passing unnoticed.
+
+**Coverage of that comparison is nine rows, CHF 100 to 900.** The PDF lays each page out in three
+column blocks and the tokens stop lining up after the first few rows, so the rest of the table was
+not compared. The single taxpayer's ladder is not in this PDF at all.
 
 ## 3. The pension projection — and the defect validating it found
 
@@ -397,6 +424,10 @@ cargo test --test market_presets
 # the cantonal scales and the federal tariff, against a snapshot derived from the workbooks
 cargo test --test estv_import_independent
 python tools/verify_estv_import.py --emit
+
+# the federal tariff PDF against the imported ladder -- nine rows, and they disagree
+cargo test --test federal_tariff_pdf
+python tools/verify_federal_pdf.py --emit
 
 # the deduction rules and scales, against a snapshot derived from the workbooks
 cargo test --test deduction_import_independent

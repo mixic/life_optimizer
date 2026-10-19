@@ -1,0 +1,12 @@
+# Derivation: python tools/verify_federal_pdf.py --emit
+# income,rate_percent,tax_chf -- read from the ESTV federal tariff PDF
+# for married taxpayers from Steuerjahr 2026 (Einheits-Satz form)
+100,1.5500,1.55
+200,1.5500,3.10
+300,1.5500,4.65
+400,1.5500,6.20
+500,1.5500,7.75
+600,1.5500,9.30
+700,1.5500,10.85
+800,1.5500,12.40
+900,1.5500,13.95
