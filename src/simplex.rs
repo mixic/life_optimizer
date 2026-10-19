@@ -130,19 +130,13 @@ impl LpSolution {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LpError {
     /// A row's length does not match the number of columns.
-    RaggedRow {
-        row: usize,
-        expected: usize,
-        got: usize,
-    },
+    RaggedRow { row: usize, expected: usize, got: usize },
     /// A right-hand side is negative.
     ///
     /// Not handled by negating the row here, because negating a row flips its
     /// inequality and the caller's `dual_ub` sign would silently change meaning. A
     /// caller with a negative right-hand side should write it as the constraint it is.
-    NegativeRhs {
-        row: usize,
-    },
+    NegativeRhs { row: usize },
     /// Nothing to solve.
     Empty,
 }
@@ -150,11 +144,9 @@ pub enum LpError {
 impl fmt::Display for LpError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LpError::RaggedRow {
-                row,
-                expected,
-                got,
-            } => write!(f, "row {row} has {got} entries, expected {expected}"),
+            LpError::RaggedRow { row, expected, got } => {
+                write!(f, "row {row} has {got} entries, expected {expected}")
+            }
             LpError::NegativeRhs { row } => write!(
                 f,
                 "row {row} has a negative right-hand side; write it as the constraint it is \
@@ -188,20 +180,12 @@ pub fn solve(
     }
     for (row, entries) in a_ub.iter().enumerate() {
         if entries.len() != n {
-            return Err(LpError::RaggedRow {
-                row,
-                expected: n,
-                got: entries.len(),
-            });
+            return Err(LpError::RaggedRow { row, expected: n, got: entries.len() });
         }
     }
     for (row, entries) in a_eq.iter().enumerate() {
         if entries.len() != n {
-            return Err(LpError::RaggedRow {
-                row: m_ub + row,
-                expected: n,
-                got: entries.len(),
-            });
+            return Err(LpError::RaggedRow { row: m_ub + row, expected: n, got: entries.len() });
         }
     }
     if b_ub.len() != m_ub || b_eq.len() != m_eq {
@@ -246,35 +230,16 @@ pub fn solve(
     }
     build_objective_row(&mut tableau, &cost, &basis, rows, total_columns);
     let mut iterations = 0;
-    let mut status = run_phase(
-        &mut tableau,
-        &mut basis,
-        rows,
-        total_columns,
-        rhs,
-        &mut iterations,
-    );
+    let mut status = run_phase(&mut tableau, &mut basis, rows, total_columns, rhs, &mut iterations);
     if status != LpStatus::Optimal {
-        return Ok(LpSolution::empty(
-            status,
-            n,
-            m_ub,
-            m_eq,
-            iterations,
-        ));
+        return Ok(LpSolution::empty(status, n, m_ub, m_eq, iterations));
     }
 
     // Phase-1 objective is the sum of the artificials still basic; a positive value
     // means some row could not be satisfied by any feasible point.
     let phase_one = -tableau[rows][rhs];
     if phase_one > 1e-7 {
-        return Ok(LpSolution::empty(
-            LpStatus::Infeasible,
-            n,
-            m_ub,
-            m_eq,
-            iterations,
-        ));
+        return Ok(LpSolution::empty(LpStatus::Infeasible, n, m_ub, m_eq, iterations));
     }
 
     // ---- drive any remaining artificials out of the basis ------------------
@@ -318,13 +283,7 @@ pub fn solve(
         &mut iterations,
     );
     if status != LpStatus::Optimal {
-        return Ok(LpSolution::empty(
-            status,
-            n,
-            m_ub,
-            m_eq,
-            iterations,
-        ));
+        return Ok(LpSolution::empty(status, n, m_ub, m_eq, iterations));
     }
 
     // ---- read the answer back ---------------------------------------------
@@ -340,9 +299,7 @@ pub fn solve(
     // an equality row `r = -y` as well. Both dual vectors are therefore negatives of
     // reduced costs, which the tests check against hand-computed values.
     let dual_ub = (0..m_ub).map(|row| -tableau[rows][slack_start + row]).collect();
-    let dual_eq = (0..m_eq)
-        .map(|row| -tableau[rows][artificial_start + m_ub + row])
-        .collect();
+    let dual_eq = (0..m_eq).map(|row| -tableau[rows][artificial_start + m_ub + row]).collect();
 
     Ok(LpSolution {
         status: LpStatus::Optimal,
@@ -406,15 +363,7 @@ fn run_phase(
     iterations: &mut usize,
 ) -> LpStatus {
     let forbidden = vec![false; total_columns];
-    run_phase_masked(
-        tableau,
-        basis,
-        rows,
-        total_columns,
-        rhs,
-        &forbidden,
-        iterations,
-    )
+    run_phase_masked(tableau, basis, rows, total_columns, rhs, &forbidden, iterations)
 }
 
 /// Pivot with Bland's rule: entering column is the lowest-indexed one with a negative
@@ -521,14 +470,9 @@ mod tests {
         //   x, y >= 0
         // Vertices: (0,0)=0, (3,0)=9, (2,2)=10, (0,4)=8. The optimum is (2,2), where
         // both constraints bind, giving 3*2 + 2*2 = 10.
-        let solution = solve(
-            &[-3.0, -2.0],
-            &[vec![1.0, 1.0], vec![2.0, 1.0]],
-            &[4.0, 6.0],
-            &[],
-            &[],
-        )
-        .expect("well-formed");
+        let solution =
+            solve(&[-3.0, -2.0], &[vec![1.0, 1.0], vec![2.0, 1.0]], &[4.0, 6.0], &[], &[])
+                .expect("well-formed");
         assert_eq!(solution.status, LpStatus::Optimal);
         assert!(close(solution.objective, -10.0, 1e-9), "{:?}", solution);
         assert!(close(solution.x[0], 2.0, 1e-9), "{:?}", solution.x);
@@ -542,28 +486,17 @@ mod tests {
     #[test]
     fn dual_values_are_the_derivative_of_the_optimum() {
         // minimise -x - y subject to x <= 2, x + y <= 3.
-        let base = solve(
-            &[-1.0, -1.0],
-            &[vec![1.0, 0.0], vec![1.0, 1.0]],
-            &[2.0, 3.0],
-            &[],
-            &[],
-        )
-        .expect("well-formed");
+        let base = solve(&[-1.0, -1.0], &[vec![1.0, 0.0], vec![1.0, 1.0]], &[2.0, 3.0], &[], &[])
+            .expect("well-formed");
         assert_eq!(base.status, LpStatus::Optimal);
         assert!(close(base.objective, -3.0, 1e-9), "{:?}", base);
 
         // Relaxing the binding constraint by one unit improves the minimum from -3 to
         // -4, so the derivative is -1 and the dual must equal the observed change rather
         // than its negation.
-        let perturbed = solve(
-            &[-1.0, -1.0],
-            &[vec![1.0, 0.0], vec![1.0, 1.0]],
-            &[2.0, 4.0],
-            &[],
-            &[],
-        )
-        .expect("well-formed");
+        let perturbed =
+            solve(&[-1.0, -1.0], &[vec![1.0, 0.0], vec![1.0, 1.0]], &[2.0, 4.0], &[], &[])
+                .expect("well-formed");
         let observed = perturbed.objective - base.objective;
         assert!(
             close(observed, base.dual_ub[1], 1e-6),
@@ -606,13 +539,7 @@ mod tests {
     fn an_impossible_problem_is_reported_as_infeasible() {
         // x >= 5 written as -x <= -5 is refused (negative right-hand side), so the
         // infeasible case is built from two constraints that cannot both hold.
-        let solution = solve(
-            &[1.0],
-            &[vec![1.0], vec![-1.0]],
-            &[1.0, -3.0],
-            &[],
-            &[],
-        );
+        let solution = solve(&[1.0], &[vec![1.0], vec![-1.0]], &[1.0, -3.0], &[], &[]);
         // -3 on the right-hand side of a <= row is refused up front.
         assert!(matches!(solution, Err(LpError::NegativeRhs { .. })));
 
@@ -622,8 +549,8 @@ mod tests {
         assert_eq!(solution.status, LpStatus::Optimal);
 
         // x + 0*y = 2 with x <= 1: feasible set empty.
-        let solution = solve(&[1.0], &[vec![1.0]], &[1.0], &[vec![1.0]], &[2.0])
-            .expect("well-formed");
+        let solution =
+            solve(&[1.0], &[vec![1.0]], &[1.0], &[vec![1.0]], &[2.0]).expect("well-formed");
         assert_eq!(solution.status, LpStatus::Infeasible, "{:?}", solution);
     }
 
@@ -716,4 +643,3 @@ mod tests {
         assert!(close(solution.x[2], 1.0, 1e-9), "{:?}", solution.x);
     }
 }
-

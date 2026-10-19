@@ -135,12 +135,7 @@ pub fn write_bundle(dir: &Path, config: &Config, ensemble: &Ensemble) -> io::Res
     );
     for year in 0..ensemble.horizon {
         let at = |runs: &Vec<Vec<f64>>| -> Vec<f64> {
-            sorted(
-                runs.iter()
-                    .filter_map(|run| run.get(year))
-                    .copied()
-                    .collect(),
-            )
+            sorted(runs.iter().filter_map(|run| run.get(year)).copied().collect())
         };
         let cooperation = at(&ensemble.cooperation_trajectories);
         let tension = at(&ensemble.tension_trajectories);
@@ -148,14 +143,7 @@ pub fn write_bundle(dir: &Path, config: &Config, ensemble: &Ensemble) -> io::Res
         if cooperation.is_empty() {
             continue;
         }
-        writeln!(
-            world,
-            "{year},{},{},{}",
-            band(&cooperation),
-            band(&tension),
-            band(&loss)
-        )
-        .ok();
+        writeln!(world, "{year},{},{},{}", band(&cooperation), band(&tension), band(&loss)).ok();
     }
     files.push(write_file(dir.join("world-bands.csv"), world)?);
 
@@ -199,11 +187,7 @@ pub fn write_bundle(dir: &Path, config: &Config, ensemble: &Ensemble) -> io::Res
                 .copied()
                 .collect(),
         );
-        let mean = if ends.is_empty() {
-            0.0
-        } else {
-            ends.iter().sum::<f64>() / ends.len() as f64
-        };
+        let mean = if ends.is_empty() { 0.0 } else { ends.iter().sum::<f64>() / ends.len() as f64 };
         writeln!(
             summary,
             "{},{:.6},{},{:.6},{:.6}",
@@ -503,11 +487,7 @@ fn describe(config: &Config) -> String {
     writeln!(out, "seed: {}", config.seed).ok();
     writeln!(out, "runs: {}", config.runs).ok();
     writeln!(out, "horizon (years): {}", config.horizon).ok();
-    writeln!(
-        out,
-        "years are zero-based: year 0 is the first simulated year"
-    )
-    .ok();
+    writeln!(out, "years are zero-based: year 0 is the first simulated year").ok();
     writeln!(out).ok();
 
     out.push_str("blocs (name, power_share, growth_bias, volatility, cooperation_affinity, cooperation_valuation)\n");
@@ -541,20 +521,10 @@ fn describe(config: &Config) -> String {
     out.push_str("pension link (illustrative: these are not Swiss pension figures)\n");
     let p = &config.pension;
     writeln!(out, "  base_replacement_rate: {}", p.base_replacement_rate).ok();
-    writeln!(
-        out,
-        "  fiscal_crowding_per_competition: {}",
-        p.fiscal_crowding_per_competition
-    )
-    .ok();
+    writeln!(out, "  fiscal_crowding_per_competition: {}", p.fiscal_crowding_per_competition).ok();
     writeln!(out, "  ratio_sensitivity: {}", p.ratio_sensitivity).ok();
     writeln!(out, "  reference_ratio: {}", p.reference_ratio).ok();
-    writeln!(
-        out,
-        "  fragmentation_return_drag: {}",
-        p.fragmentation_return_drag
-    )
-    .ok();
+    writeln!(out, "  fragmentation_return_drag: {}", p.fragmentation_return_drag).ok();
     writeln!(out, "  cooperative_return: {}", p.cooperative_return).ok();
     out
 }
@@ -572,11 +542,7 @@ mod tests {
     /// here rather than only in the script.
     #[test]
     fn the_export_writes_every_table_with_the_columns_the_plots_read() {
-        let config = Config {
-            runs: 4,
-            horizon: 3,
-            ..Config::default()
-        };
+        let config = Config { runs: 4, horizon: 3, ..Config::default() };
         let ensemble = Ensemble::run(&config);
         let dir = std::env::temp_dir().join("multipolar_sim_export_test");
         let _ = fs::remove_dir_all(&dir);
@@ -613,11 +579,7 @@ mod tests {
             shares.lines().count()
         );
         let pension = fs::read_to_string(dir.join("pension-runs.csv")).expect("readable");
-        assert_eq!(
-            pension.lines().count(),
-            1 + config.runs,
-            "one pension row per run"
-        );
+        assert_eq!(pension.lines().count(), 1 + config.runs, "one pension row per run");
 
         let _ = fs::remove_dir_all(&dir);
     }

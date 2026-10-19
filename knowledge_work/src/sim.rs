@@ -163,24 +163,14 @@ pub fn simulate(
     let mean_cycle_time = total_cycle / items as f64;
     let mean_service = total_service / items as f64;
     let rho = mean_service * arrival_rate / wf.servers as f64;
-    Outcome {
-        mean_cycle_time,
-        mean_wip: arrival_rate * mean_cycle_time,
-        items,
-        arrival_rate,
-        rho,
-    }
+    Outcome { mean_cycle_time, mean_wip: arrival_rate * mean_cycle_time, items, arrival_rate, rho }
 }
 
 /// The arrival rate at which the simulation's own effective utilisation reaches `target`.
 ///
 /// Used by the tests and the report to place a simulation on a chosen point of the utilisation
 /// axis without having to invert the load model by hand.
-pub fn arrival_rate_for_utilisation(
-    wf: &WorkflowParameters,
-    escape: f64,
-    target: f64,
-) -> f64 {
+pub fn arrival_rate_for_utilisation(wf: &WorkflowParameters, escape: f64, target: f64) -> f64 {
     let mean_service = wf.base_service() * crate::workflow::load_per_item(escape, wf);
     if mean_service <= 0.0 || !mean_service.is_finite() {
         return 0.0;

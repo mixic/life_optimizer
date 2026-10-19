@@ -207,10 +207,7 @@ pub struct Bimatrix {
 impl Bimatrix {
     /// The symmetric game: one matrix describing both sides.
     pub fn symmetric(payoffs: Payoffs) -> Self {
-        Bimatrix {
-            mine: payoffs,
-            theirs: payoffs,
-        }
+        Bimatrix { mine: payoffs, theirs: payoffs }
     }
 }
 
@@ -303,10 +300,7 @@ pub fn solve_pair(mine: &Payoffs, theirs: &Payoffs) -> Solution {
     if mine == theirs {
         solve(mine)
     } else {
-        solve_bimatrix(&Bimatrix {
-            mine: *mine,
-            theirs: *theirs,
-        })
+        solve_bimatrix(&Bimatrix { mine: *mine, theirs: *theirs })
     }
 }
 
@@ -363,10 +357,7 @@ pub fn solve_bimatrix(game: &Bimatrix) -> Solution {
     // total, which is worth knowing, but neither can be selected without deciding
     // which of two identical players is the exploiter.
     let profiles: &[(Action, Action)] = if a == b {
-        &[
-            (Action::Cooperate, Action::Cooperate),
-            (Action::Compete, Action::Compete),
-        ]
+        &[(Action::Cooperate, Action::Cooperate), (Action::Compete, Action::Compete)]
     } else {
         &[
             (Action::Cooperate, Action::Cooperate),
@@ -436,19 +427,8 @@ pub fn solve_bimatrix(game: &Bimatrix) -> Solution {
             _ => Equilibrium::Asymmetric,
         };
         let p = if mine == Action::Cooperate { 1.0 } else { 0.0 };
-        let q = if theirs == Action::Cooperate {
-            1.0
-        } else {
-            0.0
-        };
-        return finish(
-            label,
-            p,
-            q,
-            a.payoff(mine, theirs),
-            b.payoff(theirs, mine),
-            game,
-        );
+        let q = if theirs == Action::Cooperate { 1.0 } else { 0.0 };
+        return finish(label, p, q, a.payoff(mine, theirs), b.payoff(theirs, mine), game);
     }
 
     // --- 3. The mixed equilibrium -------------------------------------------
@@ -486,14 +466,7 @@ pub fn solve_bimatrix(game: &Bimatrix) -> Solution {
     let mine_payoff = q * a.cc + (1.0 - q) * a.cd;
     let theirs_payoff = p * b.cc + (1.0 - p) * b.cd;
 
-    finish(
-        Equilibrium::Cyclical,
-        p,
-        q,
-        mine_payoff,
-        theirs_payoff,
-        game,
-    )
+    finish(Equilibrium::Cyclical, p, q, mine_payoff, theirs_payoff, game)
 }
 
 #[cfg(test)]
@@ -505,12 +478,7 @@ mod tests {
     /// `documents/THEORY_OF_SPARING.md` section 7d describes for engineered obsolescence.
     #[test]
     fn prisoners_dilemma_is_solved_as_a_dilemma() {
-        let pd = Payoffs {
-            cc: 3.0,
-            cd: 0.0,
-            dc: 5.0,
-            dd: 1.0,
-        };
+        let pd = Payoffs { cc: 3.0, cd: 0.0, dc: 5.0, dd: 1.0 };
         let solution = solve(&pd);
         assert_eq!(solution.equilibrium, Equilibrium::Dilemma);
         assert_eq!(solution.cooperate_probability, 0.0);
@@ -531,12 +499,7 @@ mod tests {
     /// assumption that actors behave well.
     #[test]
     fn coordination_selects_the_pareto_superior_equilibrium() {
-        let hunt = Payoffs {
-            cc: 4.0,
-            cd: 0.0,
-            dc: 3.0,
-            dd: 2.0,
-        };
+        let hunt = Payoffs { cc: 4.0, cd: 0.0, dc: 3.0, dd: 2.0 };
         let solution = solve(&hunt);
         assert_eq!(solution.equilibrium, Equilibrium::Coordination);
         assert_eq!(solution.cooperate_probability, 1.0);
@@ -555,12 +518,7 @@ mod tests {
     /// competition is not zero-sum.
     #[test]
     fn harmony_has_no_dilemma() {
-        let harmony = Payoffs {
-            cc: 5.0,
-            cd: 2.0,
-            dc: 4.0,
-            dd: 1.0,
-        };
+        let harmony = Payoffs { cc: 5.0, cd: 2.0, dc: 4.0, dd: 1.0 };
         let solution = solve(&harmony);
         assert_eq!(solution.equilibrium, Equilibrium::Harmony);
         assert_eq!(solution.cooperate_probability, 1.0);
@@ -598,18 +556,8 @@ mod tests {
         // Matching-pennies-like across two *different* matrices: neither pure profile
         // is an equilibrium for both sides at once.
         let game = Bimatrix {
-            mine: Payoffs {
-                cc: 1.0,
-                cd: 0.0,
-                dc: 0.0,
-                dd: 1.0,
-            },
-            theirs: Payoffs {
-                cc: 0.0,
-                cd: 1.0,
-                dc: 1.0,
-                dd: 0.0,
-            },
+            mine: Payoffs { cc: 1.0, cd: 0.0, dc: 0.0, dd: 1.0 },
+            theirs: Payoffs { cc: 0.0, cd: 1.0, dc: 1.0, dd: 0.0 },
         };
         let solution = solve_bimatrix(&game);
         assert_eq!(solution.equilibrium, Equilibrium::Cyclical);
@@ -651,12 +599,7 @@ mod tests {
     /// of an arbitrary pick, so it is pinned directly rather than left implicit.
     #[test]
     fn a_symmetric_game_is_never_answered_asymmetrically() {
-        let game = Payoffs {
-            cc: 0.0,
-            cd: 2.0,
-            dc: 1.0,
-            dd: 0.0,
-        };
+        let game = Payoffs { cc: 0.0, cd: 2.0, dc: 1.0, dd: 0.0 };
 
         // Both asymmetric profiles really are Nash equilibria of this game -- the
         // reason a naive "prefer the pure one" rule would select them.
@@ -686,22 +629,9 @@ mod tests {
         // One side already wants to cooperate against cooperation; the other's
         // cooperation payoff is too low, so `(C,C)` is not an equilibrium and the
         // dilemma's `(D,D)` is. Both compete.
-        let keen = Payoffs {
-            cc: 5.5,
-            cd: 0.0,
-            dc: 5.0,
-            dd: 1.0,
-        };
-        let cool = Payoffs {
-            cc: 4.0,
-            cd: 0.0,
-            dc: 5.0,
-            dd: 1.0,
-        };
-        let before = solve_bimatrix(&Bimatrix {
-            mine: keen,
-            theirs: cool,
-        });
+        let keen = Payoffs { cc: 5.5, cd: 0.0, dc: 5.0, dd: 1.0 };
+        let cool = Payoffs { cc: 4.0, cd: 0.0, dc: 5.0, dd: 1.0 };
+        let before = solve_bimatrix(&Bimatrix { mine: keen, theirs: cool });
         assert_eq!(
             before.equilibrium,
             Equilibrium::Dilemma,
@@ -712,10 +642,7 @@ mod tests {
         // Now raise only the second side's cooperation payoff past its temptation.
         // Cooperation becomes its best response to cooperation, `(C,C)` becomes an
         // equilibrium, and it pays better in total than `(D,D)`.
-        let after = solve_bimatrix(&Bimatrix {
-            mine: keen,
-            theirs: Payoffs { cc: 5.5, ..cool },
-        });
+        let after = solve_bimatrix(&Bimatrix { mine: keen, theirs: Payoffs { cc: 5.5, ..cool } });
         assert!(
             after.opponent_cooperate_probability > before.opponent_cooperate_probability,
             "raising a side's cooperation payoff must raise how often it cooperates: \
@@ -742,20 +669,10 @@ mod tests {
                     for &a_dd in &values {
                         for &b_dc in &values {
                             let game = Bimatrix {
-                                mine: Payoffs {
-                                    cc: a_cc,
-                                    cd: a_cd,
-                                    dc: a_dc,
-                                    dd: a_dd,
-                                },
+                                mine: Payoffs { cc: a_cc, cd: a_cd, dc: a_dc, dd: a_dd },
                                 // Vary the opponent's matrix too, so the asymmetric
                                 // equilibria this solver can now reach are exercised.
-                                theirs: Payoffs {
-                                    cc: a_cc,
-                                    cd: a_cd,
-                                    dc: b_dc,
-                                    dd: a_dd,
-                                },
+                                theirs: Payoffs { cc: a_cc, cd: a_cd, dc: b_dc, dd: a_dd },
                             };
                             let solution = solve_bimatrix(&game);
                             let p = solution.cooperate_probability;
@@ -831,16 +748,10 @@ mod tests {
                     for &dd in &values {
                         for &other_cc in &values {
                             let mine = Payoffs { cc, cd, dc, dd };
-                            let theirs = Payoffs {
-                                cc: other_cc,
-                                ..mine
-                            };
+                            let theirs = Payoffs { cc: other_cc, ..mine };
 
                             let forward = solve_bimatrix(&Bimatrix { mine, theirs });
-                            let reversed = solve_bimatrix(&Bimatrix {
-                                mine: theirs,
-                                theirs: mine,
-                            });
+                            let reversed = solve_bimatrix(&Bimatrix { mine: theirs, theirs: mine });
 
                             assert_eq!(
                                 forward.equilibrium, reversed.equilibrium,
@@ -889,42 +800,12 @@ mod tests {
     #[test]
     fn the_general_solver_reduces_to_the_symmetric_one() {
         let games = [
-            Payoffs {
-                cc: 3.0,
-                cd: 0.0,
-                dc: 5.0,
-                dd: 1.0,
-            },
-            Payoffs {
-                cc: 4.0,
-                cd: 0.0,
-                dc: 3.0,
-                dd: 2.0,
-            },
-            Payoffs {
-                cc: 5.0,
-                cd: 2.0,
-                dc: 4.0,
-                dd: 1.0,
-            },
-            Payoffs {
-                cc: 0.0,
-                cd: 2.0,
-                dc: 1.0,
-                dd: 0.0,
-            },
-            Payoffs {
-                cc: 10.0,
-                cd: -5.0,
-                dc: 12.0,
-                dd: -2.0,
-            },
-            Payoffs {
-                cc: 1.0,
-                cd: 1.0,
-                dc: 1.0,
-                dd: 1.0,
-            },
+            Payoffs { cc: 3.0, cd: 0.0, dc: 5.0, dd: 1.0 },
+            Payoffs { cc: 4.0, cd: 0.0, dc: 3.0, dd: 2.0 },
+            Payoffs { cc: 5.0, cd: 2.0, dc: 4.0, dd: 1.0 },
+            Payoffs { cc: 0.0, cd: 2.0, dc: 1.0, dd: 0.0 },
+            Payoffs { cc: 10.0, cd: -5.0, dc: 12.0, dd: -2.0 },
+            Payoffs { cc: 1.0, cd: 1.0, dc: 1.0, dd: 1.0 },
         ];
 
         for payoffs in games {
@@ -956,36 +837,11 @@ mod tests {
     #[test]
     fn efficiency_loss_is_positive_exactly_when_equilibrium_falls_short_of_cooperation() {
         let games = [
-            Payoffs {
-                cc: 3.0,
-                cd: 0.0,
-                dc: 5.0,
-                dd: 1.0,
-            }, // dilemma
-            Payoffs {
-                cc: 4.0,
-                cd: 0.0,
-                dc: 3.0,
-                dd: 2.0,
-            }, // coordination
-            Payoffs {
-                cc: 5.0,
-                cd: 2.0,
-                dc: 4.0,
-                dd: 1.0,
-            }, // harmony
-            Payoffs {
-                cc: 0.0,
-                cd: 2.0,
-                dc: 1.0,
-                dd: 0.0,
-            }, // cyclical: cooperation is the worst outcome
-            Payoffs {
-                cc: 10.0,
-                cd: -5.0,
-                dc: 12.0,
-                dd: -2.0,
-            },
+            Payoffs { cc: 3.0, cd: 0.0, dc: 5.0, dd: 1.0 }, // dilemma
+            Payoffs { cc: 4.0, cd: 0.0, dc: 3.0, dd: 2.0 }, // coordination
+            Payoffs { cc: 5.0, cd: 2.0, dc: 4.0, dd: 1.0 }, // harmony
+            Payoffs { cc: 0.0, cd: 2.0, dc: 1.0, dd: 0.0 }, // cyclical: cooperation is the worst outcome
+            Payoffs { cc: 10.0, cd: -5.0, dc: 12.0, dd: -2.0 },
         ];
 
         for payoffs in games {
@@ -1013,31 +869,16 @@ mod tests {
     /// non-finite values.
     #[test]
     fn degenerate_games_are_handled() {
-        let flat = Payoffs {
-            cc: 1.0,
-            cd: 1.0,
-            dc: 1.0,
-            dd: 1.0,
-        };
+        let flat = Payoffs { cc: 1.0, cd: 1.0, dc: 1.0, dd: 1.0 };
         let solution = solve(&flat);
         assert!(solution.efficiency_loss.abs() < 1e-12);
         assert!(solution.equilibrium_payoff.is_finite());
         assert!(solution.cooperate_probability.is_finite());
 
-        let no_span = Payoffs {
-            cc: 2.0,
-            cd: 2.0,
-            dc: 2.0,
-            dd: 2.0,
-        };
+        let no_span = Payoffs { cc: 2.0, cd: 2.0, dc: 2.0, dd: 2.0 };
         assert!(solve(&no_span).efficiency_loss.is_finite());
 
-        let extreme = Payoffs {
-            cc: 1e6,
-            cd: -1e6,
-            dc: 1e9,
-            dd: -1e9,
-        };
+        let extreme = Payoffs { cc: 1e6, cd: -1e6, dc: 1e9, dd: -1e9 };
         let solution = solve(&extreme);
         assert!(solution.efficiency_loss.is_finite());
         assert!((0.0..=1.0).contains(&solution.efficiency_loss));

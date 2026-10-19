@@ -33,10 +33,7 @@ use std::process::{Command, Output};
 const BIN: &str = env!("CARGO_BIN_EXE_life-optimizer");
 
 fn run(args: &[&str]) -> Output {
-    Command::new(BIN)
-        .args(args)
-        .output()
-        .expect("failed to execute life-optimizer binary")
+    Command::new(BIN).args(args).output().expect("failed to execute life-optimizer binary")
 }
 
 fn stdout(output: &Output) -> String {
@@ -78,14 +75,8 @@ fn unpriced_canton_fails_loudly_and_suggests_a_way_forward() {
     );
     let err = stderr(&output);
     assert!(err.contains("cannot price canton VS"), "got: {err}");
-    assert!(
-        err.contains("Missing:"),
-        "the message must say what is missing: {err}"
-    );
-    assert!(
-        err.contains("--custom-tax-rate"),
-        "the message must offer a usable workaround: {err}"
-    );
+    assert!(err.contains("Missing:"), "the message must say what is missing: {err}");
+    assert!(err.contains("--custom-tax-rate"), "the message must offer a usable workaround: {err}");
     assert!(
         err.contains("SWISS_TAX_DATA.md"),
         "the message must point at the format documentation: {err}"
@@ -125,10 +116,7 @@ fn imported_cantons_produce_a_result_and_disclose_the_basis() {
             stderr(&output)
         );
         let out = stdout(&output);
-        assert!(
-            out.contains("Tax basis:"),
-            "{code} should disclose its tax basis: {out}"
-        );
+        assert!(out.contains("Tax basis:"), "{code} should disclose its tax basis: {out}");
         assert!(
             out.contains("Verify against your own tax assessment"),
             "{code} should carry a verification reminder"
@@ -172,15 +160,8 @@ fn bern_remains_fully_priceable() {
         args.extend(canton_args.iter().copied());
 
         let output = run(&args);
-        assert!(
-            output.status.success(),
-            "{args:?} failed: {}",
-            stderr(&output)
-        );
-        assert!(
-            stdout(&output).contains("OPTIMAL SOLUTION"),
-            "{args:?} should produce a result"
-        );
+        assert!(output.status.success(), "{args:?} failed: {}", stderr(&output));
+        assert!(stdout(&output).contains("OPTIMAL SOLUTION"), "{args:?} should produce a result");
     }
 }
 
@@ -203,10 +184,14 @@ fn unknown_canton_code_is_rejected_as_a_code() {
 fn custom_tax_rate_bypasses_canton_resolution() {
     let output = run(&[
         "optimize",
-        "--salary", "120000",
-        "--age", "40",
-        "--canton", "ZH",
-        "--custom-tax-rate", "0.14",
+        "--salary",
+        "120000",
+        "--age",
+        "40",
+        "--canton",
+        "ZH",
+        "--custom-tax-rate",
+        "0.14",
     ]);
 
     assert!(
@@ -221,21 +206,14 @@ fn custom_tax_rate_bypasses_canton_resolution() {
 #[test]
 fn canton_codes_are_case_insensitive() {
     let lower = run(&["optimize", "--salary", "120000", "--age", "40", "--canton", "be"]);
-    assert!(
-        lower.status.success(),
-        "lowercase 'be' should be accepted: {}",
-        stderr(&lower)
-    );
+    assert!(lower.status.success(), "lowercase 'be' should be accepted: {}", stderr(&lower));
 }
 
 /// The help text must not promise a default canton that the tool does not use.
 #[test]
 fn help_describes_the_real_canton_behaviour() {
     let help = stdout(&run(&["optimize", "--help"]));
-    assert!(
-        help.contains("--canton"),
-        "the flag should still be documented"
-    );
+    assert!(help.contains("--canton"), "the flag should still be documented");
     assert!(
         help.contains("SWISS_TAX_DATA.md"),
         "help should point at the data-status document: {help}"

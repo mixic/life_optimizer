@@ -74,10 +74,8 @@ fn published_rate(r: &Reference) -> f64 {
 #[test]
 fn published_figures_show_progression() {
     for canton in ["SZ", "ZH", "BE"] {
-        let mut points: Vec<&Reference> = REFERENCES
-            .iter()
-            .filter(|r| r.canton == canton)
-            .collect();
+        let mut points: Vec<&Reference> =
+            REFERENCES.iter().filter(|r| r.canton == canton).collect();
         points.sort_by(|a, b| a.taxable_income.partial_cmp(&b.taxable_income).unwrap());
 
         for pair in points.windows(2) {
@@ -127,23 +125,14 @@ fn cantonal_ordering_matches_the_published_table() {
     // From CHF 50,000 up, Schwyz is the cheapest and Bern the dearest.
     for income in [50_000.0, 100_000.0, 250_000.0, 500_000.0] {
         let (sz, zh, be) = (at("SZ", income), at("ZH", income), at("BE", income));
-        assert!(
-            sz < zh,
-            "at CHF {income}: Schwyz {sz} should be below Zürich {zh}"
-        );
-        assert!(
-            zh < be,
-            "at CHF {income}: Zürich {zh} should be below Bern {be}"
-        );
+        assert!(sz < zh, "at CHF {income}: Schwyz {sz} should be below Zürich {zh}");
+        assert!(zh < be, "at CHF {income}: Zürich {zh} should be below Bern {be}");
     }
 
     // Bern is dearest at every level, including the low end.
     for income in [25_000.0, 50_000.0, 100_000.0, 250_000.0, 500_000.0] {
         let (zh, be) = (at("ZH", income), at("BE", income));
-        assert!(
-            zh < be,
-            "at CHF {income}: Zürich {zh} should be below Bern {be}"
-        );
+        assert!(zh < be, "at CHF {income}: Zürich {zh} should be below Bern {be}");
     }
 }
 

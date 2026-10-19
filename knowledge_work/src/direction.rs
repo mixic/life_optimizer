@@ -146,10 +146,7 @@ impl Weights {
                  reports, which is precisely why the framework has to show what ignoring the \
                  others would choose",
             ),
-            (
-                "cycle time",
-                "declared: the commitment made to whoever receives the work",
-            ),
+            ("cycle time", "declared: the commitment made to whoever receives the work"),
             (
                 "escaped defects",
                 "declared: the cost that lands on someone outside the team, which is why no \
@@ -202,14 +199,9 @@ fn score(options: &[Outcome], weights: &Weights, index: usize) -> f64 {
 /// Order the options best-first under a weighting. Higher score wins; ties by original order.
 pub fn rank(options: &[Outcome], weights: &Weights) -> Vec<usize> {
     let mut indices: Vec<usize> = (0..options.len()).collect();
-    let scores: Vec<f64> = (0..options.len())
-        .map(|index| score(options, weights, index))
-        .collect();
+    let scores: Vec<f64> = (0..options.len()).map(|index| score(options, weights, index)).collect();
     indices.sort_by(|a, b| {
-        scores[*b]
-            .partial_cmp(&scores[*a])
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then(a.cmp(b))
+        scores[*b].partial_cmp(&scores[*a]).unwrap_or(std::cmp::Ordering::Equal).then(a.cmp(b))
     });
     indices
 }
@@ -227,13 +219,7 @@ pub fn weight_simplex(steps: usize) -> Vec<Weights> {
             for c in 0..=(n - a - b) {
                 for d in 0..=(n - a - b - c) {
                     let e = n - a - b - c - d;
-                    out.push(Weights::new([
-                        a as f64,
-                        b as f64,
-                        c as f64,
-                        d as f64,
-                        e as f64,
-                    ]));
+                    out.push(Weights::new([a as f64, b as f64, c as f64, d as f64, e as f64]));
                 }
             }
         }
@@ -268,9 +254,7 @@ pub fn acceptance(options: &[Outcome], steps: usize) -> Acceptance {
     for share in shares.iter_mut() {
         *share /= total;
     }
-    let never_first = (0..options.len())
-        .filter(|index| shares[*index] <= 0.0)
-        .collect();
+    let never_first = (0..options.len()).filter(|index| shares[*index] <= 0.0).collect();
     Acceptance {
         shares,
         weightings: grid.len(),

@@ -68,12 +68,7 @@ fn the_absorbable_share_falls_as_review_capacity_falls() {
         previous = share;
     }
     // And at zero capacity it is materially below one: the workflow cannot take its own output.
-    assert!(
-        envelope_at(&wf, 0.0, &params)
-            .absorbable_share
-            .unwrap_or(1.0)
-            < 0.95
-    );
+    assert!(envelope_at(&wf, 0.0, &params).absorbable_share.unwrap_or(1.0) < 0.95);
 }
 
 /// The critical absorption capacity must bracket its own predicate, and it must sit **above**
@@ -86,9 +81,7 @@ fn the_commitment_binds_before_stability_does() {
         .expect("the defaults absorb their own output at full capacity");
     let stability = workflow::critical_review_capacity(&wf, Policy::Push, &params)
         .expect("the defaults have a stability crossing");
-    println!(
-        "capacity needed for the commitment: {absorption:.4}; for stability: {stability:.4}"
-    );
+    println!("capacity needed for the commitment: {absorption:.4}; for stability: {stability:.4}");
     assert!(
         absorption > stability,
         "the commitment binds at {absorption} but stability only fails at {stability}, so the \
@@ -122,10 +115,8 @@ fn a_tighter_commitment_costs_capacity_and_eventually_becomes_impossible() {
             .join(", ")
     );
 
-    let reachable: Vec<(f64, f64)> = curve
-        .iter()
-        .filter_map(|(deadline, critical)| critical.map(|c| (*deadline, c)))
-        .collect();
+    let reachable: Vec<(f64, f64)> =
+        curve.iter().filter_map(|(deadline, critical)| critical.map(|c| (*deadline, c))).collect();
     assert!(
         reachable.len() >= 3,
         "the fixture should contain several reachable deadlines, got {reachable:?}"

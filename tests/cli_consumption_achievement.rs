@@ -22,10 +22,7 @@ use std::process::{Command, Output};
 const BIN: &str = env!("CARGO_BIN_EXE_life-optimizer");
 
 fn run(args: &[&str]) -> Output {
-    Command::new(BIN)
-        .args(args)
-        .output()
-        .expect("failed to execute life-optimizer binary")
+    Command::new(BIN).args(args).output().expect("failed to execute life-optimizer binary")
 }
 
 fn stdout(output: &Output) -> String {
@@ -44,22 +41,12 @@ fn stderr(output: &Output) -> String {
 fn consumption_breakdown_is_reported() {
     let output = run(&["stress-ai", "--salary", "120000", "--age", "38"]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
 
-    assert!(
-        out.contains("Consumption by Elasticity Tier"),
-        "missing tier section"
-    );
+    assert!(out.contains("Consumption by Elasticity Tier"), "missing tier section");
     assert!(out.contains("Inelastic"), "missing inelastic tier");
-    assert!(
-        out.contains("Elastic (sparing-eligible)"),
-        "missing elastic tier"
-    );
+    assert!(out.contains("Elastic (sparing-eligible)"), "missing elastic tier");
     assert!(out.contains("Mandatory floor"), "missing mandatory floor");
     assert!(out.contains("Full lifestyle basket"), "missing full basket");
 }
@@ -68,27 +55,13 @@ fn consumption_breakdown_is_reported() {
 /// treated as normal.
 #[test]
 fn unknown_consumption_profile_is_rejected() {
-    let output = run(&[
-        "stress-ai",
-        "--salary",
-        "120000",
-        "--age",
-        "38",
-        "--consumption-profile",
-        "lavish",
-    ]);
+    let output =
+        run(&["stress-ai", "--salary", "120000", "--age", "38", "--consumption-profile", "lavish"]);
 
-    assert_eq!(
-        output.status.code(),
-        Some(2),
-        "should exit 2 on a bad profile"
-    );
+    assert_eq!(output.status.code(), Some(2), "should exit 2 on a bad profile");
     let err = stderr(&output);
     assert!(err.contains("unknown consumption profile"), "got: {err}");
-    assert!(
-        err.contains("extreme-saving"),
-        "the message should list valid values: {err}"
-    );
+    assert!(err.contains("extreme-saving"), "the message should list valid values: {err}");
 }
 
 /// A luxury profile must need a strictly larger basket than extreme saving,
@@ -104,15 +77,8 @@ fn luxury_profile_requires_a_larger_basket_than_extreme_saving() {
         "--consumption-profile",
         "extreme-saving",
     ]);
-    let luxury = run(&[
-        "stress-ai",
-        "--salary",
-        "120000",
-        "--age",
-        "38",
-        "--consumption-profile",
-        "luxury",
-    ]);
+    let luxury =
+        run(&["stress-ai", "--salary", "120000", "--age", "38", "--consumption-profile", "luxury"]);
 
     assert!(saving.status.success());
     assert!(luxury.status.success());
@@ -127,24 +93,14 @@ fn luxury_profile_requires_a_larger_basket_than_extreme_saving() {
 
     let s = basket(&stdout(&saving));
     let l = basket(&stdout(&luxury));
-    assert!(
-        l > s,
-        "luxury basket ({l}) should exceed extreme-saving basket ({s})"
-    );
+    assert!(l > s, "luxury basket ({l}) should exceed extreme-saving basket ({s})");
 }
 
 /// A sparing ratio must reduce the basket relative to no sparing.
 #[test]
 fn sparing_ratio_reduces_the_basket() {
-    let plain = run(&[
-        "stress-ai",
-        "--salary",
-        "120000",
-        "--age",
-        "38",
-        "--utilization-discipline",
-        "1.0",
-    ]);
+    let plain =
+        run(&["stress-ai", "--salary", "120000", "--age", "38", "--utilization-discipline", "1.0"]);
     let sparing = run(&[
         "stress-ai",
         "--salary",
@@ -172,15 +128,8 @@ fn sparing_ratio_reduces_the_basket() {
 #[test]
 fn quasi_inelastic_share_raises_the_floor() {
     let plain = run(&["stress-ai", "--salary", "120000", "--age", "38"]);
-    let locked = run(&[
-        "stress-ai",
-        "--salary",
-        "120000",
-        "--age",
-        "38",
-        "--quasi-inelastic-share",
-        "0.5",
-    ]);
+    let locked =
+        run(&["stress-ai", "--salary", "120000", "--age", "38", "--quasi-inelastic-share", "0.5"]);
 
     assert!(plain.status.success());
     assert!(locked.status.success());
@@ -195,10 +144,7 @@ fn quasi_inelastic_share_raises_the_floor() {
 
     let p = floor(&stdout(&plain));
     let l = floor(&stdout(&locked));
-    assert!(
-        l > p,
-        "locking spending in should raise the floor: {l} vs {p}"
-    );
+    assert!(l > p, "locking spending in should raise the floor: {l} vs {p}");
 }
 
 // ─── Achievement constraint (§5.2) ──────────────────────────────────────────
@@ -206,26 +152,12 @@ fn quasi_inelastic_share_raises_the_floor() {
 /// Supplying a required output index must engage the constraint and report it.
 #[test]
 fn achievement_constraint_is_reported_when_supplied() {
-    let output = run(&[
-        "stress-ai",
-        "--salary",
-        "150000",
-        "--age",
-        "40",
-        "--required-output-index",
-        "1.0",
-    ]);
+    let output =
+        run(&["stress-ai", "--salary", "150000", "--age", "40", "--required-output-index", "1.0"]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
-    assert!(
-        out.contains("Employer Achievement Capacity"),
-        "missing constraint section: {out}"
-    );
+    assert!(out.contains("Employer Achievement Capacity"), "missing constraint section: {out}");
     assert!(out.contains("Required (G)"), "missing required-output line");
     assert!(out.contains("Capacity (A)"), "missing capacity line");
 }
@@ -246,15 +178,8 @@ fn achievement_section_absent_without_the_flag() {
 /// even for a household that could comfortably afford to work less.
 #[test]
 fn unreachable_at_part_time_forces_full_time_recommendation() {
-    let output = run(&[
-        "stress-ai",
-        "--salary",
-        "150000",
-        "--age",
-        "40",
-        "--required-output-index",
-        "1.0",
-    ]);
+    let output =
+        run(&["stress-ai", "--salary", "150000", "--age", "40", "--required-output-index", "1.0"]);
 
     assert!(output.status.success());
     let out = stdout(&output);
@@ -268,15 +193,8 @@ fn unreachable_at_part_time_forces_full_time_recommendation() {
 /// reported capacity.
 #[test]
 fn ai_productivity_gain_raises_reported_capacity() {
-    let without = run(&[
-        "stress-ai",
-        "--salary",
-        "150000",
-        "--age",
-        "40",
-        "--required-output-index",
-        "1.0",
-    ]);
+    let without =
+        run(&["stress-ai", "--salary", "150000", "--age", "40", "--required-output-index", "1.0"]);
     let with = run(&[
         "stress-ai",
         "--salary",
@@ -305,31 +223,17 @@ fn ai_productivity_gain_raises_reported_capacity() {
     // the achievement maths instead of assuming equal work percentages.
     let c_without = capacity(&stdout(&without));
     let c_with = capacity(&stdout(&with));
-    assert!(
-        c_with >= c_without,
-        "AI gain must not lower capacity: {c_with} vs {c_without}"
-    );
+    assert!(c_with >= c_without, "AI gain must not lower capacity: {c_with} vs {c_without}");
 }
 
 /// An impossible goal must be explained as a workload problem, distinguishing
 /// it from an affordability problem.
 #[test]
 fn impossible_goal_is_reported_as_a_workload_problem() {
-    let output = run(&[
-        "stress-ai",
-        "--salary",
-        "200000",
-        "--age",
-        "40",
-        "--required-output-index",
-        "2.0",
-    ]);
+    let output =
+        run(&["stress-ai", "--salary", "200000", "--age", "40", "--required-output-index", "2.0"]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
     assert!(
         out.contains("NO OPTION MEETS THE REQUIRED OUTPUT") || out.contains("workload problem"),
@@ -362,11 +266,7 @@ fn consumption_and_achievement_flags_combine() {
         "0.1",
     ]);
 
-    assert!(
-        output.status.success(),
-        "combined flags failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "combined flags failed: {}", stderr(&output));
     let out = stdout(&output);
     assert!(out.contains("Consumption by Elasticity Tier"));
     assert!(out.contains("Employer Achievement Capacity"));
@@ -404,11 +304,7 @@ fn refinement_flags_reach_the_report() {
         "300",
     ]);
 
-    assert!(
-        output.status.success(),
-        "refinement flags failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "refinement flags failed: {}", stderr(&output));
     let out = stdout(&output);
 
     assert!(
@@ -448,19 +344,11 @@ fn risk_weighted_mode_offers_what_strict_mode_refuses() {
     ];
 
     let strict = run(&common);
-    assert!(
-        strict.status.success(),
-        "strict run failed: {}",
-        stderr(&strict)
-    );
+    assert!(strict.status.success(), "strict run failed: {}", stderr(&strict));
     let strict_out = stdout(&strict);
 
     let weighted = run(&[common.as_slice(), &["--enforcement", "risk-weighted"]].concat());
-    assert!(
-        weighted.status.success(),
-        "risk-weighted run failed: {}",
-        stderr(&weighted)
-    );
+    assert!(weighted.status.success(), "risk-weighted run failed: {}", stderr(&weighted));
     let weighted_out = stdout(&weighted);
 
     // Strict will only ever offer a schedule that delivers, so it never prints the
@@ -549,11 +437,7 @@ fn an_impossible_assignment_is_not_announced_as_an_optimum() {
         "2.5",
     ]);
 
-    assert!(
-        output.status.success(),
-        "the run itself is valid: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "the run itself is valid: {}", stderr(&output));
     let out = stdout(&output);
 
     assert!(
@@ -568,10 +452,7 @@ fn an_impossible_assignment_is_not_announced_as_an_optimum() {
         out.contains("BELOW REQUIRED OUTPUT"),
         "the achievement status must read as a shortfall, not as an offer: {out}"
     );
-    assert!(
-        !out.contains("OFFERED BUT NOT DELIVERED"),
-        "nothing was offered here: {out}"
-    );
+    assert!(!out.contains("OFFERED BUT NOT DELIVERED"), "nothing was offered here: {out}");
     assert!(
         out.contains("Work Percentage: 100%"),
         "the least-bad option is full time, not the most leisurely one: {out}"
@@ -591,24 +472,9 @@ fn invalid_refinement_values_are_refused() {
         ("--enforcement", "lenient"),
         ("--monthly-debt", "-100"),
     ] {
-        let output = run(&[
-            "stress-ai",
-            "--salary",
-            "120000",
-            "--age",
-            "40",
-            flag,
-            value,
-        ]);
-        assert_eq!(
-            output.status.code(),
-            Some(2),
-            "{flag} {value} should be refused"
-        );
-        assert!(
-            stderr(&output).contains("error:"),
-            "{flag} {value} should explain itself"
-        );
+        let output = run(&["stress-ai", "--salary", "120000", "--age", "40", flag, value]);
+        assert_eq!(output.status.code(), Some(2), "{flag} {value} should be refused");
+        assert!(stderr(&output).contains("error:"), "{flag} {value} should explain itself");
     }
 }
 
@@ -630,11 +496,7 @@ fn an_inverted_ai_range_is_refused() {
     ]);
 
     assert_eq!(output.status.code(), Some(2));
-    assert!(
-        stderr(&output).contains("below the pessimistic end"),
-        "got: {}",
-        stderr(&output)
-    );
+    assert!(stderr(&output).contains("below the pessimistic end"), "got: {}", stderr(&output));
 }
 
 /// Debt must reach the mandatory floor end to end: the same household with an
@@ -642,15 +504,7 @@ fn an_inverted_ai_range_is_refused() {
 #[test]
 fn monthly_debt_raises_the_reported_floor() {
     let without = run(&["stress-ai", "--salary", "130000", "--age", "40"]);
-    let with = run(&[
-        "stress-ai",
-        "--salary",
-        "130000",
-        "--age",
-        "40",
-        "--monthly-debt",
-        "700",
-    ]);
+    let with = run(&["stress-ai", "--salary", "130000", "--age", "40", "--monthly-debt", "700"]);
 
     assert!(without.status.success() && with.status.success());
 

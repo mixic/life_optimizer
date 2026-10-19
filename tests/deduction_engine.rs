@@ -46,19 +46,13 @@ fn marriage_allowance_requires_a_married_household() {
 
     let single_assessment = assess("Bund", &single);
     assert!(
-        !single_assessment
-            .applied
-            .iter()
-            .any(|d| d.category == RuleCategory::Marriage),
+        !single_assessment.applied.iter().any(|d| d.category == RuleCategory::Marriage),
         "a single taxpayer must not receive a marriage allowance: {:?}",
         single_assessment.applied
     );
 
     let married_assessment = assess("Bund", &married);
-    let marriage = married_assessment
-        .applied
-        .iter()
-        .find(|d| d.category == RuleCategory::Marriage);
+    let marriage = married_assessment.applied.iter().find(|d| d.category == RuleCategory::Marriage);
     assert!(
         marriage.is_some_and(|d| d.amount > 0.0),
         "a married household should receive the marriage allowance: {:?}",
@@ -74,11 +68,8 @@ fn mutually_exclusive_child_brackets_are_not_summed() {
     let household = Household::employee(100_000.0, true, 2);
     let assessment = assess("AG", &household);
 
-    let child_deductions: Vec<_> = assessment
-        .applied
-        .iter()
-        .filter(|d| d.category == RuleCategory::Children)
-        .collect();
+    let child_deductions: Vec<_> =
+        assessment.applied.iter().filter(|d| d.category == RuleCategory::Children).collect();
 
     assert_eq!(
         child_deductions.len(),
@@ -109,10 +100,7 @@ fn secondary_employment_expenses_need_a_secondary_income() {
     let without = Household::employee(100_000.0, false, 0);
     let assessment = assess("Bund", &without);
     assert!(
-        !assessment
-            .applied
-            .iter()
-            .any(|d| d.name.contains("Nebenerwerb")),
+        !assessment.applied.iter().any(|d| d.name.contains("Nebenerwerb")),
         "no secondary income, so no secondary-employment deduction: {:?}",
         assessment.applied
     );
@@ -121,10 +109,7 @@ fn secondary_employment_expenses_need_a_secondary_income() {
     with.secondary_income = Some(20_000.0);
     let assessment = assess("Bund", &with);
     assert!(
-        assessment
-            .applied
-            .iter()
-            .any(|d| d.name.contains("Nebenerwerb")),
+        assessment.applied.iter().any(|d| d.name.contains("Nebenerwerb")),
         "a secondary income should unlock the deduction: {:?}",
         assessment.applied
     );
@@ -140,11 +125,8 @@ fn pillar_3a_variants_are_alternatives_not_additions() {
     household.pillar3a_contribution = Some(7_056.0);
 
     let assessment = assess("Bund", &household);
-    let pillar: Vec<_> = assessment
-        .applied
-        .iter()
-        .filter(|d| d.category == RuleCategory::Pillar3a)
-        .collect();
+    let pillar: Vec<_> =
+        assessment.applied.iter().filter(|d| d.category == RuleCategory::Pillar3a).collect();
 
     assert_eq!(pillar.len(), 1, "only one 3a variant may apply: {pillar:?}");
     assert!(
@@ -162,10 +144,7 @@ fn pillar_3a_variants_are_alternatives_not_additions() {
         .filter(|d| d.category == RuleCategory::Pillar3a)
         .map(|d| d.amount)
         .sum();
-    assert!(
-        total < 50_000.0,
-        "the published maximum must cap a large contribution, got {total}"
-    );
+    assert!(total < 50_000.0, "the published maximum must cap a large contribution, got {total}");
 }
 
 /// `"ohne Kind"` contains `"Kind"`, so a keyword test wrongly required children
@@ -175,15 +154,8 @@ fn pillar_3a_variants_are_alternatives_not_additions() {
 fn means_tested_scales_match_child_conditions_as_conditions() {
     let single_no_kids = Household::employee(15_000.0, false, 0);
     let scale = means_tested_scale("FR", &single_no_kids);
-    assert!(
-        scale.is_some(),
-        "Fribourg's single-person means-tested deduction must be found"
-    );
-    assert!(
-        scale.unwrap().name.contains("Ledige"),
-        "got {:?}",
-        scale.unwrap().name
-    );
+    assert!(scale.is_some(), "Fribourg's single-person means-tested deduction must be found");
+    assert!(scale.unwrap().name.contains("Ledige"), "got {:?}", scale.unwrap().name);
 
     let assessment = assess("FR", &single_no_kids);
     assert!(
@@ -226,10 +198,7 @@ fn deductions_never_exceed_income() {
             "{canton} at {gross}: total {} exceeds income",
             assessment.total()
         );
-        assert!(
-            assessment.taxable_income() >= 0.0,
-            "{canton}: taxable income went negative"
-        );
+        assert!(assessment.taxable_income() >= 0.0, "{canton}: taxable income went negative");
     }
 
     // The cap must be visible rather than hidden: the uncapped sum is larger.
@@ -252,19 +221,10 @@ fn unclassified_rules_are_reported_not_dropped() {
     // The point is accounting: applied + skipped must equal the rules for the
     // jurisdiction, so nothing vanishes between them.
     let total = assessment.applied.len() + assessment.skipped.len();
-    let zh_rules = assessment
-        .skipped
-        .len()
-        + assessment.applied.len();
-    assert_eq!(
-        total, zh_rules,
-        "every rule must be accounted for as applied or skipped"
-    );
+    let zh_rules = assessment.skipped.len() + assessment.applied.len();
+    assert_eq!(total, zh_rules, "every rule must be accounted for as applied or skipped");
     assert!(
-        assessment
-            .skipped
-            .iter()
-            .any(|s| s.reason == SkipReason::NotADeduction),
+        assessment.skipped.iter().any(|s| s.reason == SkipReason::NotADeduction),
         "threshold and non-deduction rows must be reported, not applied"
     );
     // Unclassified rules are surfaced separately, so the count is visible.
@@ -286,10 +246,7 @@ fn classification_handles_the_ambiguous_labels() {
     );
     // A threshold is not a deduction, so it classifies as means-tested (which is
     // applied through the scales) rather than as a flat amount.
-    assert_eq!(
-        classify("Schwellwert für Abzug AHV-/IV-Rentner"),
-        Some(RuleCategory::MeansTested)
-    );
+    assert_eq!(classify("Schwellwert für Abzug AHV-/IV-Rentner"), Some(RuleCategory::MeansTested));
     // Something genuinely unknown returns None rather than a nearest guess.
     assert_eq!(classify("Ein völlig unbekannter Abzug"), None);
 }
@@ -318,10 +275,9 @@ fn sourced_deductions_differ_from_the_hand_entered_estimate() {
     use life_optimizer::cantons::Canton;
     use life_optimizer::tax::TaxSchedule;
 
-    for (canton, gross, married, children) in [
-        (Canton::Zurich, 100_000.0, false, 0u32),
-        (Canton::Aargau, 100_000.0, true, 2),
-    ] {
+    for (canton, gross, married, children) in
+        [(Canton::Zurich, 100_000.0, false, 0u32), (Canton::Aargau, 100_000.0, true, 2)]
+    {
         let schedule =
             TaxSchedule::from_canton_scale(canton, married, children).expect("priceable");
         let estimate = schedule.standard_deduction_estimate(gross);
@@ -351,13 +307,10 @@ fn property_deductions_use_the_rental_value_not_income() {
     let tenant = Household::employee(100_000.0, true, 0);
     let tenant_assessment = assess("ZH", &tenant);
     assert!(
-        !tenant_assessment
-            .applied
-            .iter()
-            .any(|d| matches!(
-                d.category,
-                RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
-            )),
+        !tenant_assessment.applied.iter().any(|d| matches!(
+            d.category,
+            RuleCategory::ImputedRentalValue | RuleCategory::PropertyMaintenance
+        )),
         "a tenant must not receive a property deduction: {:?}",
         tenant_assessment.applied
     );
@@ -505,10 +458,7 @@ fn wealth_management_is_not_deducted_from_income() {
     for canton in ["ZH", "SZ", "OW", "NW", "GL", "UR", "Bund"] {
         let assessment = assess(canton, &household);
         assert!(
-            !assessment
-                .applied
-                .iter()
-                .any(|d| d.category == RuleCategory::WealthManagement),
+            !assessment.applied.iter().any(|d| d.category == RuleCategory::WealthManagement),
             "{canton} deducted a wealth-management cost from income: {:?}",
             assessment.applied
         );
@@ -517,9 +467,7 @@ fn wealth_management_is_not_deducted_from_income() {
     // The rule is still reported rather than dropped, so the omission is visible.
     let zh = assess("ZH", &household);
     assert!(
-        zh.skipped
-            .iter()
-            .any(|s| s.name.contains("Vermögensverwaltung")),
+        zh.skipped.iter().any(|s| s.name.contains("Vermögensverwaltung")),
         "the wealth rule should be reported as not applied"
     );
 }
@@ -539,9 +487,7 @@ fn pensioner_deductions_require_the_pension_fact() {
     for canton in ["SZ", "GL", "SO", "FR", "SH"] {
         let w = assess(canton, &worker);
         assert!(
-            !w.applied
-                .iter()
-                .any(|d| d.category == RuleCategory::Pensioner),
+            !w.applied.iter().any(|d| d.category == RuleCategory::Pensioner),
             "{canton} granted a pensioner deduction to a working household: {:?}",
             w.applied
         );
@@ -678,10 +624,7 @@ fn insurance_variants_follow_marital_status() {
     // The single household declared nothing, so it gets nothing — the point is
     // that it must not have been given the married ceiling.
     assert!(
-        !single
-            .applied
-            .iter()
-            .any(|d| d.category == RuleCategory::InsurancePremiums),
+        !single.applied.iter().any(|d| d.category == RuleCategory::InsurancePremiums),
         "a single household with no declared premiums gets nothing: {:?}",
         single.applied
     );
@@ -821,11 +764,8 @@ fn fribourg_health_insurance_premiums_are_applied_and_do_not_stack() {
         household.insurance_premiums = Some(9_000.0);
         let assessment = assess("FR", &household);
 
-        let health: Vec<_> = assessment
-            .applied
-            .iter()
-            .filter(|d| d.name.contains("Krankenkassen"))
-            .collect();
+        let health: Vec<_> =
+            assessment.applied.iter().filter(|d| d.name.contains("Krankenkassen")).collect();
         assert_eq!(
             health.len(),
             1,
@@ -874,10 +814,7 @@ fn education_contribution_rule_requires_a_declared_contribution() {
     let without = Household::employee(100_000.0, true, 2);
     let assessment = assess("SG", &without);
     assert!(
-        !assessment
-            .applied
-            .iter()
-            .any(|d| d.name == "Kinderausbildungskosten Eigenbeitrag"),
+        !assessment.applied.iter().any(|d| d.name == "Kinderausbildungskosten Eigenbeitrag"),
         "no contribution declared, so no Eigenbeitrag deduction: {:?}",
         assessment.applied
     );
@@ -917,11 +854,7 @@ fn every_rule_is_accounted_for() {
 
         let total_rules = rules_for(canton).len();
         let reported = assessment.applied.len()
-            + assessment
-                .skipped
-                .iter()
-                .filter(|s| s.reason != SkipReason::NotADeduction)
-                .count();
+            + assessment.skipped.iter().filter(|s| s.reason != SkipReason::NotADeduction).count();
         assert!(
             reported >= total_rules / 2,
             "{canton}: only {reported} of {total_rules} rules are accounted for as \
@@ -929,5 +862,3 @@ fn every_rule_is_accounted_for() {
         );
     }
 }
-
-

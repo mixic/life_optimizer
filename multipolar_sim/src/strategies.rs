@@ -197,11 +197,7 @@ impl Region {
     /// A region whose blocs were replaced by `--bloc` is skipped rather than
     /// silently matched to the wrong pair.
     pub fn resolves(&self, blocs: &[PowerBloc]) -> Option<(usize, usize)> {
-        let find = |name: &str| {
-            blocs
-                .iter()
-                .position(|bloc| bloc.name.eq_ignore_ascii_case(name))
-        };
+        let find = |name: &str| blocs.iter().position(|bloc| bloc.name.eq_ignore_ascii_case(name));
         match (find(self.bloc_a), find(self.bloc_b)) {
             (Some(a), Some(b)) if a != b => Some((a, b)),
             _ => None,
@@ -379,11 +375,7 @@ impl StrategyParams {
 
     /// Build an enabled layer running one strategy.
     pub fn running(strategy: Strategy) -> Self {
-        StrategyParams {
-            enabled: true,
-            strategy,
-            ..StrategyParams::default()
-        }
+        StrategyParams { enabled: true, strategy, ..StrategyParams::default() }
     }
 
     /// Present-value factor of a unit annual flow for `years` at rate `r`.
@@ -473,8 +465,7 @@ impl StrategyParams {
     /// `margin(x) * annuity(r, T)`. Note that the budget's own cost is inside the
     /// margin, so this is already net of everything paid.
     pub fn cooperative_value(&self, region: &Region, spend: f64) -> f64 {
-        self.cooperative_margin(region, spend)
-            * Self::annuity(self.discount, self.horizon_years)
+        self.cooperative_margin(region, spend) * Self::annuity(self.discount, self.horizon_years)
     }
 
     /// Present value of the spoiling strategy in one region.
@@ -814,10 +805,7 @@ pub fn compare(params: &StrategyParams) -> Comparison {
             .iter()
             .filter(|r| r.peace_probability_under_cooperation >= 0.5)
             .count(),
-        peaceful_at_baseline: rows
-            .iter()
-            .filter(|r| r.base_peace_probability >= 0.5)
-            .count(),
+        peaceful_at_baseline: rows.iter().filter(|r| r.base_peace_probability >= 0.5).count(),
         in_conflict_under_spoiling: rows
             .iter()
             .filter(|r| r.conflict_probability_under_spoiling >= 0.5)
@@ -863,11 +851,8 @@ impl StrategyState {
     /// Build the layer's state for one run, resolving each region's dyad against the
     /// blocs actually present.
     pub fn new(params: &StrategyParams, blocs: &[PowerBloc], seed: u64) -> Self {
-        let resolved: Vec<Option<(usize, usize)>> = params
-            .regions
-            .iter()
-            .map(|region| region.resolves(blocs))
-            .collect();
+        let resolved: Vec<Option<(usize, usize)>> =
+            params.regions.iter().map(|region| region.resolves(blocs)).collect();
         let monitored = resolved.iter().filter(|entry| entry.is_some()).count() as u32;
         StrategyState {
             in_conflict: vec![false; params.regions.len()],
@@ -888,11 +873,15 @@ impl StrategyState {
         for (index, region) in params.regions.iter().enumerate() {
             let probability = match params.strategy {
                 Strategy::Cooperate => {
-                    1.0 - params.peace_probability_under_cooperation(region, params.funded_spend(region, Strategy::Cooperate))
+                    1.0 - params.peace_probability_under_cooperation(
+                        region,
+                        params.funded_spend(region, Strategy::Cooperate),
+                    )
                 }
-                Strategy::Spoil => {
-                    params.conflict_probability_under_spoiling(region, params.funded_spend(region, Strategy::Spoil))
-                }
+                Strategy::Spoil => params.conflict_probability_under_spoiling(
+                    region,
+                    params.funded_spend(region, Strategy::Spoil),
+                ),
             };
             let draw: f64 = self.rng.gen();
             self.in_conflict[index] = draw < probability;
@@ -967,10 +956,7 @@ impl StrategyState {
 
     /// Region-years spent in conflict in one region.
     pub fn conflict_years_in(&self, index: usize) -> u32 {
-        self.conflict_years_by_region
-            .get(index)
-            .copied()
-            .unwrap_or(0)
+        self.conflict_years_by_region.get(index).copied().unwrap_or(0)
     }
 
     /// Regions monitored, i.e. whose dyad the world actually contains.
@@ -1020,13 +1006,8 @@ fn normal_cdf(z: f64) -> f64 {
 /// The error function, by the same approximation as [`normal_cdf`].
 fn erf(x: f64) -> f64 {
     const P: f64 = 0.327_591_1;
-    const A: [f64; 5] = [
-        0.254_829_592,
-        -0.284_496_736,
-        1.421_413_741,
-        -1.453_152_027,
-        1.061_405_429,
-    ];
+    const A: [f64; 5] =
+        [0.254_829_592, -0.284_496_736, 1.421_413_741, -1.453_152_027, 1.061_405_429];
     let sign = if x < 0.0 { -1.0 } else { 1.0 };
     let x = x.abs();
     let t = 1.0 / (1.0 + P * x);
@@ -1073,12 +1054,7 @@ mod tests {
     use super::*;
 
     fn params(strategy: Strategy) -> StrategyParams {
-        StrategyParams {
-            enabled: true,
-            strategy,
-            intensity: 1.0,
-            ..StrategyParams::default()
-        }
+        StrategyParams { enabled: true, strategy, intensity: 1.0, ..StrategyParams::default() }
     }
 
     /// The distribution has to be a distribution. If the normal CDF were wrong the whole
@@ -1122,9 +1098,8 @@ mod tests {
         assert!((StrategyParams::annuity(0.0, 25.0) - 25.0).abs() < 1e-12);
         // Checked against an explicit geometric sum.
         for (rate, years) in [(0.04_f64, 50.0_f64), (0.10, 10.0), (0.16, 12.0)] {
-            let expected: f64 = (0..years as u32)
-                .map(|year| (1.0 + rate).powi(-(year as i32)))
-                .sum();
+            let expected: f64 =
+                (0..years as u32).map(|year| (1.0 + rate).powi(-(year as i32))).sum();
             let got = StrategyParams::annuity(rate, years);
             assert!(
                 (got - expected).abs() < 1e-9,
@@ -1188,10 +1163,7 @@ mod tests {
     #[test]
     fn the_two_arms_are_two_directions_on_one_variable() {
         let coop = params(Strategy::Cooperate);
-        let spoil = StrategyParams {
-            strategy: Strategy::Spoil,
-            ..coop.clone()
-        };
+        let spoil = StrategyParams { strategy: Strategy::Spoil, ..coop.clone() };
         for region in &coop.regions {
             // Complementarity at a common margin, to the limit of the CDF approximation.
             for step in -30..=30 {
@@ -1364,14 +1336,8 @@ mod tests {
             .iter()
             .find(|r| r.name == "Near East")
             .expect("the Near East is a declared region");
-        let bare = StrategyParams {
-            punishment_scale: 0.0,
-            ..plan.clone()
-        };
-        let priced = StrategyParams {
-            punishment_scale: 1.4,
-            ..plan.clone()
-        };
+        let bare = StrategyParams { punishment_scale: 0.0, ..plan.clone() };
+        let priced = StrategyParams { punishment_scale: 1.4, ..plan.clone() };
 
         // With no punishment channel at all, the spoiler's share is the whole rent.
         assert!((bare.capturable_share(region) - 1.0).abs() < 1e-12);
@@ -1409,11 +1375,8 @@ mod tests {
         assert!((comparison.rent_captured - rent).abs() < 1e-9);
         // Every region's verdict has to match the sign of its own difference.
         for row in &comparison.regions {
-            let expected = if row.difference >= 0.0 {
-                Strategy::Cooperate
-            } else {
-                Strategy::Spoil
-            };
+            let expected =
+                if row.difference >= 0.0 { Strategy::Cooperate } else { Strategy::Spoil };
             assert_eq!(row.prefers(), expected, "{}", row.region.name);
         }
     }
@@ -1426,10 +1389,7 @@ mod tests {
     #[test]
     fn partial_funding_is_worth_less_than_proportionally_less() {
         let full = params(Strategy::Cooperate);
-        let half = StrategyParams {
-            intensity: 0.5,
-            ..full.clone()
-        };
+        let half = StrategyParams { intensity: 0.5, ..full.clone() };
         for region in &full.regions {
             let full_spend = full.funded_spend(region, Strategy::Cooperate);
             let half_spend = half.funded_spend(region, Strategy::Cooperate);
@@ -1462,12 +1422,7 @@ mod tests {
 
         // A dyad that is no region at all: Asia-Pacific against Africa, say.
         let untouched = (5, 6);
-        let mut payoffs = Payoffs {
-            cc: 3.0,
-            cd: -1.0,
-            dc: 4.0,
-            dd: 1.0,
-        };
+        let mut payoffs = Payoffs { cc: 3.0, cd: -1.0, dc: 4.0, dd: 1.0 };
         let before = payoffs;
         state.adjust(&plan, untouched.0, untouched.1, &mut payoffs);
         assert_eq!(payoffs, before, "an unrelated dyad must not move");
@@ -1477,12 +1432,7 @@ mod tests {
         let near_east = plan.regions[0]
             .resolves(&blocs)
             .expect("the Near East resolves against the default blocs");
-        let mut payoffs = Payoffs {
-            cc: 3.0,
-            cd: -1.0,
-            dc: 4.0,
-            dd: 1.0,
-        };
+        let mut payoffs = Payoffs { cc: 3.0, cd: -1.0, dc: 4.0, dd: 1.0 };
         state.adjust(&plan, near_east.0, near_east.1, &mut payoffs);
         let conflict = state.in_conflict[0];
         if conflict {
@@ -1497,12 +1447,7 @@ mod tests {
         let off = StrategyParams::off();
         let mut state = StrategyState::new(&off, &blocs, 99);
         state.step(&off);
-        let mut payoffs = Payoffs {
-            cc: 3.0,
-            cd: -1.0,
-            dc: 4.0,
-            dd: 1.0,
-        };
+        let mut payoffs = Payoffs { cc: 3.0, cd: -1.0, dc: 4.0, dd: 1.0 };
         let before = payoffs;
         state.adjust(&off, near_east.0, near_east.1, &mut payoffs);
         assert_eq!(payoffs, before, "a disabled layer must change nothing");

@@ -174,11 +174,7 @@ fn a_work_in_process_cap_trades_unbounded_lateness_for_unbounded_backlog() {
     assert!(close(pushed.escape, escape));
 
     let capped = evaluate(&wf, Policy::WipCap, 0.5, &params);
-    assert!(
-        capped.stable,
-        "the cap did not restore a steady state: rho {}",
-        capped.rho
-    );
+    assert!(capped.stable, "the cap did not restore a steady state: rho {}", capped.rho);
     assert!(capped.cycle_time_days.is_finite());
     assert!(
         capped.unadmitted_per_day > 0.0,
@@ -310,8 +306,5 @@ fn losing_stability_and_missing_the_deadline_are_different_findings() {
     assert!(tight_envelope.stable);
     assert!(!tight_envelope.meets_deadline);
     assert_eq!(first_year_outside(&[tight_envelope], Requirement::Deadline), Some(0));
-    assert_eq!(
-        first_year_outside(&[tight_envelope], Requirement::Stability),
-        None
-    );
+    assert_eq!(first_year_outside(&[tight_envelope], Requirement::Stability), None);
 }

@@ -116,19 +116,17 @@ impl RobustnessReport {
     /// Whether any perturbation produced no feasible scenario at all, which is a harder finding
     /// than a shifted percentage: the recommendation does not exist under that assumption.
     pub fn any_infeasible(&self) -> bool {
-        self.perturbations
-            .iter()
-            .any(|perturbation| perturbation.optimal.is_none())
+        self.perturbations.iter().any(|perturbation| perturbation.optimal.is_none())
     }
 
     /// The widest shift, in percentage points.
     pub fn widest_shift(&self) -> Option<f64> {
-        self.perturbations
-            .iter()
-            .filter_map(|perturbation| perturbation.shift(self.base))
-            .fold(None, |acc: Option<f64>, shift| {
+        self.perturbations.iter().filter_map(|perturbation| perturbation.shift(self.base)).fold(
+            None,
+            |acc: Option<f64>, shift| {
                 Some(acc.map_or(shift.abs(), |best: f64| best.max(shift.abs())))
-            })
+            },
+        )
     }
 
     /// Whether the baseline optimum sits on the edge of the searched range.
@@ -190,13 +188,7 @@ impl RobustnessReport {
 
 /// The five weights as an array, in [`CRITERIA`] order.
 fn weights_array(weights: &PreferenceWeights) -> [f64; 5] {
-    [
-        weights.consumption,
-        weights.leisure,
-        weights.family,
-        weights.health,
-        weights.security,
-    ]
+    [weights.consumption, weights.leisure, weights.family, weights.health, weights.security]
 }
 
 /// Build weights from an array, renormalising so the vector still sums to one.
@@ -218,7 +210,11 @@ fn weights_from(values: [f64; 5]) -> PreferenceWeights {
 }
 
 /// Move one weight by `factor` and renormalise.
-pub fn perturb_weights(weights: &PreferenceWeights, index: usize, factor: f64) -> PreferenceWeights {
+pub fn perturb_weights(
+    weights: &PreferenceWeights,
+    index: usize,
+    factor: f64,
+) -> PreferenceWeights {
     let mut values = weights_array(weights);
     if index < values.len() {
         values[index] = (values[index] * factor).max(0.0);
@@ -254,9 +250,7 @@ pub fn perturb_requirements(
 pub fn analyse(config: &OptimizerConfig, candidates: &[f64]) -> RobustnessReport {
     let search = |config: &OptimizerConfig| -> Option<f64> {
         let optimizer = LifeOptimizer::new(config.clone());
-        optimizer
-            .search_outcome(candidates)
-            .map(|outcome| outcome.scenario.work_percentage)
+        optimizer.search_outcome(candidates).map(|outcome| outcome.scenario.work_percentage)
     };
 
     let base = search(config);
@@ -286,10 +280,8 @@ pub fn analyse(config: &OptimizerConfig, candidates: &[f64]) -> RobustnessReport
         });
     }
 
-    let optimal: Vec<f64> = perturbations
-        .iter()
-        .filter_map(|perturbation| perturbation.optimal)
-        .collect();
+    let optimal: Vec<f64> =
+        perturbations.iter().filter_map(|perturbation| perturbation.optimal).collect();
     let range = if optimal.is_empty() {
         None
     } else {

@@ -17,7 +17,7 @@
 // Core optimization module
 #![allow(dead_code)]
 use crate::consumption::{ConsumptionProfileConfig, ConsumptionTiers};
-use crate::requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
+use crate::requirements::{FamilySupport, LifeStage, PersonalRequirements, PreferenceWeights};
 use crate::tax::TaxSchedule;
 use serde::{Deserialize, Serialize};
 
@@ -212,9 +212,7 @@ impl AchievementConstraint {
     /// usable. Delivered output is this times the quality factor — see
     /// [`Self::delivered_at`].
     pub fn capacity_at(&self, work_percentage: f64) -> f64 {
-        work_percentage
-            * self.baseline_productivity
-            * (1.0 + self.ai_productivity_gain)
+        work_percentage * self.baseline_productivity * (1.0 + self.ai_productivity_gain)
     }
 
     /// Raw capacity at an explicit AI gain.
@@ -289,10 +287,7 @@ impl AchievementConstraint {
 
     /// Whether the goals are met at the optimistic end of the AI range.
     pub fn is_satisfied_optimistically_at(&self, work_percentage: f64) -> bool {
-        !matches!(
-            self.robustness_at(work_percentage),
-            Robustness::Unreachable
-        )
+        !matches!(self.robustness_at(work_percentage), Robustness::Unreachable)
     }
 
     /// The lowest work percentage that still meets the requirement — the
@@ -381,7 +376,8 @@ impl AchievementConstraint {
             return 0.0;
         }
         let delivered = self.delivered_pessimistic(work_percentage);
-        let shortfall = ((self.required_output_index - delivered) / self.required_output_index).max(0.0);
+        let shortfall =
+            ((self.required_output_index - delivered) / self.required_output_index).max(0.0);
         (shortfall * self.replacement_risk_per_shortfall).clamp(0.0, 1.0)
     }
 
@@ -436,18 +432,17 @@ impl AchievementStatus {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetirementAdequacy {
-    pub retirement_income_monthly: f64,         // After-tax, annuity + lump-sum withdrawal
-    pub self_sustaining_monthly: f64,           // Personal expenses only (no education support)
-    pub total_required_monthly: f64,            // Personal + education support
-    pub monthly_surplus_deficit: f64,           // Positive = surplus
-    pub sustainable_years: f64,                 // Years until savings depleted (4% rule)
-    pub education_support_years: f64,           // Years with active education obligations
-    pub probability_success_to_95: f64,         // Monte Carlo: % of paths with positive balance at 95
-    pub probability_el_required: f64,           // Monte Carlo: % of paths where EL supplement needed
-    pub summary: String,                        // Human-readable adequacy assessment
+    pub retirement_income_monthly: f64, // After-tax, annuity + lump-sum withdrawal
+    pub self_sustaining_monthly: f64,   // Personal expenses only (no education support)
+    pub total_required_monthly: f64,    // Personal + education support
+    pub monthly_surplus_deficit: f64,   // Positive = surplus
+    pub sustainable_years: f64,         // Years until savings depleted (4% rule)
+    pub education_support_years: f64,   // Years with active education obligations
+    pub probability_success_to_95: f64, // Monte Carlo: % of paths with positive balance at 95
+    pub probability_el_required: f64,   // Monte Carlo: % of paths where EL supplement needed
+    pub summary: String,                // Human-readable adequacy assessment
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -494,7 +489,7 @@ pub struct WorkScenario {
     pub achievement: Option<AchievementStatus>,
     pub utility_score: f64,
     pub utility_breakdown: UtilityBreakdown,
-    pub retirement_adequacy: Option<RetirementAdequacy>,  // NEW: family support analysis
+    pub retirement_adequacy: Option<RetirementAdequacy>, // NEW: family support analysis
     /// What this scenario moves onto colleagues, and whether it was modelled at all.
     /// A reduction with [`crate::team::Severity::NotModelled`] must be presented with a warning.
     pub team_externality: crate::team::TeamExternality,
@@ -520,9 +515,7 @@ impl WorkScenario {
     /// not offer it", which is a policy choice the user makes through
     /// [`Enforcement`].
     pub fn blocks_recommendation(&self) -> bool {
-        self.achievement
-            .map(|a| a.blocks_recommendation)
-            .unwrap_or(false)
+        self.achievement.map(|a| a.blocks_recommendation).unwrap_or(false)
     }
 
     /// Whether this scenario is feasible on *both* counts: the household can
@@ -620,7 +613,7 @@ pub struct OptimizerConfig {
     pub preferences: PreferenceWeights,
     pub current_age: u32,
     pub retirement_age: u32,
-    pub discount_rate: f64,  // Time preference
+    pub discount_rate: f64, // Time preference
     /// Consumption-side parameters: lifestyle profile, sparing ratio,
     /// utilization discipline, and the quasi-inelastic share.
     pub consumption: ConsumptionProfileConfig,
@@ -651,7 +644,7 @@ impl OptimizerConfig {
         let current_age = life_stage.age();
         Self {
             full_time_salary,
-            full_time_hours: 42.0,  // Swiss standard
+            full_time_hours: 42.0, // Swiss standard
             tax_schedule,
             requirements,
             life_stage,
@@ -692,11 +685,8 @@ impl LifeOptimizer {
         // returns is what leisure, family and health utility are measured against.
         // Absent constraint means the scenario cannot be ruled out on job-security
         // grounds and the effective workload is the contract.
-        let horizon_years = self
-            .config
-            .retirement_age
-            .saturating_sub(self.config.current_age)
-            .max(1) as f64;
+        let horizon_years =
+            self.config.retirement_age.saturating_sub(self.config.current_age).max(1) as f64;
         let achievement = self.config.achievement.map(|c| {
             let capacity = c.capacity_at(work_percentage);
             let delivered = c.delivered_pessimistic(work_percentage);
@@ -731,16 +721,13 @@ impl LifeOptimizer {
         // here: it is the cover needed if AI lands at the pessimistic end, and
         // adding it unconditionally would count that case twice.
         let work_hours = self.config.full_time_hours * work_percentage;
-        let effective_work_percentage = achievement
-            .map(|a| a.amortised_work_percentage)
-            .unwrap_or(work_percentage);
+        let effective_work_percentage =
+            achievement.map(|a| a.amortised_work_percentage).unwrap_or(work_percentage);
         let effective_work_hours = self.config.full_time_hours * effective_work_percentage;
-        let hidden_work_hours = self
-            .config
-            .full_time_hours
+        let hidden_work_hours = self.config.full_time_hours
             * achievement.map(|a| a.hidden_work_percentage).unwrap_or(0.0);
         let replacement_risk = achievement.map(|a| a.replacement_risk).unwrap_or(0.0);
-        let sleep_hours = 8.0 * 7.0;  // 8 hours/day
+        let sleep_hours = 8.0 * 7.0; // 8 hours/day
         let free_hours = 168.0 - effective_work_hours - sleep_hours;
 
         // Consumption, split by elasticity tier. Feasibility is tested against
@@ -748,7 +735,8 @@ impl LifeOptimizer {
         // not "unable to afford" reduced work merely because it would have to
         // trim discretionary spending. The full basket is still reported as a
         // target, and drives the consumption-utility ratio.
-        let requirements = self.config.requirements.adjusted_for_life_stage(&self.config.life_stage);
+        let requirements =
+            self.config.requirements.adjusted_for_life_stage(&self.config.life_stage);
         let tiers = requirements.elasticity_tiers(&self.config.consumption);
         let mandatory_monthly = tiers.mandatory_monthly();
         let target_monthly = tiers.lifestyle_target_monthly();
@@ -760,7 +748,8 @@ impl LifeOptimizer {
         // first: it is a saving target rather than consumption, so subtracting it
         // here and calling the remainder "capacity to save" would count the same
         // money twice.
-        let saving_capacity_monthly = monthly_after_tax - (target_monthly - requirements.savings_goal);
+        let saving_capacity_monthly =
+            monthly_after_tax - (target_monthly - requirements.savings_goal);
 
         // Calculate utility components
         let utility_breakdown = self.calculate_utility(
@@ -841,7 +830,8 @@ impl LifeOptimizer {
 
         // 3. Family utility (depends on life stage)
         let family_time_value = stage.time_value_factor();
-        let family_utility = prefs.family * (free_hours / 80.0).powf(0.8) * family_time_value * 10.0;
+        let family_utility =
+            prefs.family * (free_hours / 80.0).powf(0.8) * family_time_value * 10.0;
 
         // 4. Health utility (stress penalty - convex, increases sharply with overwork)
         let stress_factor = (work_hours / 42.0).powf(2.0);
@@ -856,7 +846,11 @@ impl LifeOptimizer {
         let security_utility =
             prefs.security * pension_value * (1.0 - replacement_risk.clamp(0.0, 1.0));
 
-        let total = consumption_utility + leisure_utility + family_utility + health_utility + security_utility;
+        let total = consumption_utility
+            + leisure_utility
+            + family_utility
+            + health_utility
+            + security_utility;
 
         UtilityBreakdown {
             consumption_utility,
@@ -885,14 +879,15 @@ impl LifeOptimizer {
         // Swiss pension system (simplified)
         // AHV (1st pillar): ~30% of average income
         // BVG (2nd pillar): depends on contributions
-        
+
         let ahv_expected = annual_income * 0.30;
-        let bvg_contribution_rate = 0.083;  // Rough estimate
+        let bvg_contribution_rate = 0.083; // Rough estimate
         let bvg_annual = annual_income * bvg_contribution_rate;
-        
+
         // Project BVG savings (simplified)
-        let compound_rate: f64 = 1.02;  // 2% annual return
-        let bvg_total = bvg_annual * ((compound_rate.powf(years_to_retirement) - 1.0) / (compound_rate - 1.0));
+        let compound_rate: f64 = 1.02; // 2% annual return
+        let bvg_total =
+            bvg_annual * ((compound_rate.powf(years_to_retirement) - 1.0) / (compound_rate - 1.0));
         // Use the same conversion-rate scenario as the Monte Carlo projection
         // rather than an unconditional 6.8%, so the two engines agree.
         let retirement_year = crate::monte_carlo::retirement_year_from(
@@ -905,20 +900,16 @@ impl LifeOptimizer {
             retirement_year,
         );
         let bvg_annual_pension = bvg_total * conversion_rate;
-        
+
         let total_pension = ahv_expected + bvg_annual_pension;
         let current_income = annual_income;
-        
+
         // Pension replacement rate
         let replacement_rate = total_pension / current_income;
-        
+
         // Score: aim for 60-80% replacement
-        let score = if replacement_rate >= 0.60 {
-            10.0
-        } else {
-            (replacement_rate / 0.60) * 10.0
-        };
-        
+        let score = if replacement_rate >= 0.60 { 10.0 } else { (replacement_rate / 0.60) * 10.0 };
+
         score.min(10.0)
     }
 
@@ -943,10 +934,8 @@ impl LifeOptimizer {
             return None;
         }
 
-        let mut scenarios: Vec<WorkScenario> = candidates
-            .iter()
-            .map(|&pct| self.evaluate_scenario(pct))
-            .collect();
+        let mut scenarios: Vec<WorkScenario> =
+            candidates.iter().map(|&pct| self.evaluate_scenario(pct)).collect();
 
         // Risk weighting relaxes the delivery requirement, because a *contingent*
         // shortfall is exactly what the mode exists to price. It is relaxed only
@@ -962,10 +951,7 @@ impl LifeOptimizer {
         let feasible: Vec<&WorkScenario> = if impossible_assignment {
             Vec::new()
         } else {
-            scenarios
-                .iter()
-                .filter(|s| s.is_feasible())
-                .collect()
+            scenarios.iter().filter(|s| s.is_feasible()).collect()
         };
 
         // Among feasible candidates, the highest utility wins. When none is
@@ -974,36 +960,24 @@ impl LifeOptimizer {
         // least-bad choice", and utility alone can favour deep under-employment
         // because leisure and health scores rise as income falls.
         let (chosen, feasible_found) = if feasible.is_empty() {
-            let least_bad = scenarios
-                .iter()
-                .max_by(|a, b| {
-                    a.surplus_deficit
-                        .partial_cmp(&b.surplus_deficit)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })?;
+            let least_bad = scenarios.iter().max_by(|a, b| {
+                a.surplus_deficit
+                    .partial_cmp(&b.surplus_deficit)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })?;
             (least_bad.clone(), false)
         } else {
-            let best = feasible
-                .iter()
-                .max_by(|a, b| {
-                    a.utility_score
-                        .partial_cmp(&b.utility_score)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })?;
+            let best = feasible.iter().max_by(|a, b| {
+                a.utility_score.partial_cmp(&b.utility_score).unwrap_or(std::cmp::Ordering::Equal)
+            })?;
             ((*best).clone(), true)
         };
 
         scenarios.sort_by(|a, b| {
-            b.utility_score
-                .partial_cmp(&a.utility_score)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            b.utility_score.partial_cmp(&a.utility_score).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        Some(SearchOutcome {
-            scenario: chosen,
-            feasible_found,
-            all_scenarios: scenarios,
-        })
+        Some(SearchOutcome { scenario: chosen, feasible_found, all_scenarios: scenarios })
     }
 
     /// Calculate lifetime utility for a given work percentage
@@ -1024,7 +998,7 @@ impl LifeOptimizer {
             let period_utility = if scenario.monthly_after_tax >= mandatory {
                 scenario.utility_score
             } else {
-                scenario.utility_score - 10.0  // Heavy penalty for not meeting needs
+                scenario.utility_score - 10.0 // Heavy penalty for not meeting needs
             };
 
             total_utility += discount_factor * period_utility;
@@ -1033,7 +1007,7 @@ impl LifeOptimizer {
         // Add terminal pension value
         let final_scenario = self.evaluate_scenario(work_percentage);
         let pension_value = self.calculate_pension_adequacy(final_scenario.after_tax_income);
-        total_utility += pension_value * 5.0;  // Weight pension heavily
+        total_utility += pension_value * 5.0; // Weight pension heavily
 
         total_utility
     }
@@ -1041,7 +1015,7 @@ impl LifeOptimizer {
     /// Simulate life stage at a given age (simplified)
     fn simulate_life_stage_at_age(&self, age: u32) -> LifeStage {
         let children = self.config.life_stage.children_count();
-        
+
         if children > 0 {
             let child_age = age - self.config.current_age;
             if child_age < 6 {
@@ -1072,7 +1046,7 @@ impl LifeOptimizer {
 
         for year in 0..years {
             let age = self.config.current_age + year as u32;
-            
+
             // Find best work percentage for this specific year
             let mut best_pct = 1.0;
             let mut best_utility = f64::NEG_INFINITY;
@@ -1122,10 +1096,8 @@ impl LifeOptimizer {
         let retirement_income_monthly = monthly_withdrawal + monthly_ahv;
 
         // 3. Compute required personal expenses
-        let req_adjusted = self
-            .config
-            .requirements
-            .adjusted_for_life_stage(&self.config.life_stage);
+        let req_adjusted =
+            self.config.requirements.adjusted_for_life_stage(&self.config.life_stage);
         let self_sustaining = req_adjusted.total_monthly();
 
         // 4. Add education support obligations
@@ -1178,8 +1150,8 @@ impl LifeOptimizer {
             monthly_surplus_deficit: monthly_surplus,
             sustainable_years,
             education_support_years: education_years,
-            probability_success_to_95: 0.0,  // Set by Monte Carlo if available
-            probability_el_required: 0.0,    // Set by Monte Carlo if available
+            probability_success_to_95: 0.0, // Set by Monte Carlo if available
+            probability_el_required: 0.0,   // Set by Monte Carlo if available
             summary,
         }
     }
@@ -1188,7 +1160,7 @@ impl LifeOptimizer {
     fn estimate_ahv_monthly(&self, retirement_age: u32) -> f64 {
         // Simplified AHV estimate (2024: CHF 1,225–2,450/month for single)
         match retirement_age {
-            65 => 1850.0,                          // Standard retirement, full pension
+            65 => 1850.0, // Standard retirement, full pension
             66..=70 => 1850.0 * (1.0 + (retirement_age - 65) as f64 * 0.052), // Deferred retirement bonus
             _ => 1850.0,
         }
@@ -1224,8 +1196,10 @@ mod tests {
 
         let scenario = optimizer.evaluate_scenario(1.0);
 
-        assert!((scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
-                "tax-only rate should match the official Bern table");
+        assert!(
+            (scenario.tax_only_rate - schedule.tax_only_rate(140_000.0)).abs() < 1e-9,
+            "tax-only rate should match the official Bern table"
+        );
 
         // The scenario must carry the schedule's figures unchanged, and the pair
         // must satisfy the burden relation: the tax-only rate is a rate on TAXABLE
@@ -1237,9 +1211,8 @@ mod tests {
         // it cannot pass by both sides moving together.
         let gross = scenario.gross_income;
         let taxable = schedule.taxable_income_after_estimated_deductions(gross);
-        let social = schedule.social_security_rate
-            + schedule.unemployment_rate
-            + schedule.pension_rate;
+        let social =
+            schedule.social_security_rate + schedule.unemployment_rate + schedule.pension_rate;
         let expected_effective = scenario.tax_only_rate * taxable / gross + social;
         assert!(
             (scenario.effective_tax_rate - expected_effective).abs() < 1e-9,
@@ -1252,10 +1225,12 @@ mod tests {
             "after-tax income must be the inverse of the effective rate"
         );
 
-        assert!(scenario.effective_tax_rate > schedule.social_security_rate
+        assert!(
+            scenario.effective_tax_rate
+                > schedule.social_security_rate
                     + schedule.unemployment_rate
                     + schedule.pension_rate,
-                "effective rate should still include the mandatory social contributions");
+            "effective rate should still include the mandatory social contributions"
+        );
     }
 }
-

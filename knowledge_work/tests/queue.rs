@@ -33,10 +33,7 @@ fn the_utilisation_term_reduces_to_kingman_at_one_server() {
     for rho in [0.1, 0.3, 0.5, 0.7, 0.9, 0.99] {
         let vut = utilisation_term(rho, 1);
         let kingman = rho / (1.0 - rho);
-        assert!(
-            close(vut, kingman),
-            "at rho {rho} the term is {vut}, Kingman gives {kingman}"
-        );
+        assert!(close(vut, kingman), "at rho {rho} the term is {vut}, Kingman gives {kingman}");
     }
 }
 
@@ -171,10 +168,7 @@ fn the_approximation_is_unreliable_where_there_is_no_queue_to_speak_of() {
         approx / service,
         exact / service
     );
-    assert!(
-        ratio > 20.0,
-        "the expected light-traffic failure did not appear: a factor of {ratio}"
-    );
+    assert!(ratio > 20.0, "the expected light-traffic failure did not appear: a factor of {ratio}");
     // And the failure is irrelevant in the units the argument uses: both answers are a fraction
     // of one service time, so neither is a queue.
     assert!(

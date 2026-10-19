@@ -219,23 +219,10 @@ impl NeedsReport {
     pub fn new(projected_monthly: f64, net_monthly_income: f64, basis: Basis) -> Self {
         let point = |basis: Basis, share: f64| {
             let monthly = basis.monthly(net_monthly_income);
-            let coverage = if monthly > 0.0 {
-                projected_monthly / monthly
-            } else {
-                f64::INFINITY
-            };
-            NeedsPoint {
-                share,
-                basis,
-                monthly,
-                coverage,
-                verdict: Adequacy::of(coverage),
-            }
+            let coverage = if monthly > 0.0 { projected_monthly / monthly } else { f64::INFINITY };
+            NeedsPoint { share, basis, monthly, coverage, verdict: Adequacy::of(coverage) }
         };
-        let range = NEEDS_RANGE
-            .iter()
-            .map(|share| point(basis.at(*share), *share))
-            .collect();
+        let range = NEEDS_RANGE.iter().map(|share| point(basis.at(*share), *share)).collect();
         NeedsReport {
             net_monthly_income,
             chosen: point(basis, basis.share()),
@@ -257,9 +244,7 @@ impl NeedsReport {
     /// is the whole purpose of reporting the range instead of a point.
     pub fn is_sensitive_to_the_range(&self) -> bool {
         let verdicts: Vec<Adequacy> = self.range.iter().map(|point| point.verdict).collect();
-        verdicts
-            .windows(2)
-            .any(|pair| pair[0] != pair[1])
+        verdicts.windows(2).any(|pair| pair[0] != pair[1])
     }
 
     /// One sentence the user can act on.

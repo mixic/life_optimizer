@@ -23,9 +23,7 @@
 //! source workbook did *not* express as plain multipliers are preserved as
 //! exceptions rather than silently substituted.
 
-use life_optimizer::canton_steuerfuss_data::{
-    steuerfuss_row, STEUERFUSS_ROWS, STEUERFUSS_YEARS,
-};
+use life_optimizer::canton_steuerfuss_data::{steuerfuss_row, STEUERFUSS_ROWS, STEUERFUSS_YEARS};
 use life_optimizer::cantons::{Canton, ALL_CANTONS};
 
 /// Every canton must appear in every covered year. A gap would silently drop a
@@ -35,11 +33,7 @@ fn every_canton_present_in_every_year() {
     for year in STEUERFUSS_YEARS {
         for canton in ALL_CANTONS {
             let row = steuerfuss_row(canton.code(), *year);
-            assert!(
-                row.is_some(),
-                "missing Steuerfuss row for {} in {year}",
-                canton.code()
-            );
+            assert!(row.is_some(), "missing Steuerfuss row for {} in {year}", canton.code());
         }
     }
 }
@@ -112,10 +106,7 @@ fn parsed_multipliers_are_plausible() {
 #[test]
 fn parsed_values_agree_with_raw_source_text() {
     for row in STEUERFUSS_ROWS {
-        for (value, raw) in [
-            (row.cantonal, row.cantonal_raw),
-            (row.municipal, row.municipal_raw),
-        ] {
+        for (value, raw) in [(row.cantonal, row.cantonal_raw), (row.municipal, row.municipal_raw)] {
             let Some(value) = value else { continue };
             let raw = raw.trim();
             let normalized = raw.replace(',', ".");
@@ -179,14 +170,9 @@ fn non_numeric_cells_are_classified_not_silently_dropped() {
 /// the distinction is untested, and if everything is, it is meaningless.
 #[test]
 fn blank_classification_is_actually_used() {
-    let blank_count = STEUERFUSS_ROWS
-        .iter()
-        .filter(|r| r.municipal_blank)
-        .count();
-    let unparsed_count = STEUERFUSS_ROWS
-        .iter()
-        .filter(|r| r.municipal.is_none() && !r.municipal_blank)
-        .count();
+    let blank_count = STEUERFUSS_ROWS.iter().filter(|r| r.municipal_blank).count();
+    let unparsed_count =
+        STEUERFUSS_ROWS.iter().filter(|r| r.municipal.is_none() && !r.municipal_blank).count();
 
     assert!(blank_count > 0, "the source has blank cells, so some rows should be blank");
     assert!(
@@ -221,18 +207,12 @@ fn documented_source_exceptions_are_preserved() {
     // municipal tax is included in the cantonal one, so there is no separate
     // municipal multiplier to add.
     let basel = steuerfuss_row("BS", 2024).expect("Basel-Stadt 2024 present");
-    assert!(
-        basel.municipal.is_none(),
-        "Basel-Stadt has no separate municipal multiplier"
-    );
+    assert!(basel.municipal.is_none(), "Basel-Stadt has no separate municipal multiplier");
 
     // Sion: "Kein Vielfaches" — no multiplier at all for the cantonal tax.
     let sion = steuerfuss_row("VS", 2024);
     if let Some(row) = sion {
-        assert!(
-            row.cantonal.is_none(),
-            "Valais cantonal cell is marked 'kein Vielfaches'"
-        );
+        assert!(row.cantonal.is_none(), "Valais cantonal cell is marked 'kein Vielfaches'");
     }
 
     // Chur: municipal expressed as "88% 7)" — a percentage of the cantonal tax,
@@ -259,10 +239,7 @@ fn zurich_anchor_values_are_correct() {
 fn bern_multiplier_reflects_its_high_tax_position() {
     let bern = steuerfuss_row("BE", 2024).expect("Bern 2024 present");
     let cantonal = bern.cantonal.expect("Bern's cantonal multiplier is numeric");
-    assert!(
-        cantonal > 2.5,
-        "Bern's cantonal multiplier should be around 2.975, got {cantonal}"
-    );
+    assert!(cantonal > 2.5, "Bern's cantonal multiplier should be around 2.975, got {cantonal}");
 }
 
 /// Years must be unique per canton, contiguous within the reported range, and
@@ -308,11 +285,8 @@ fn historical_range_is_substantial() {
 #[test]
 fn multipliers_vary_across_cantons() {
     let year = 2024;
-    let mut values: Vec<f64> = STEUERFUSS_ROWS
-        .iter()
-        .filter(|r| r.year == year)
-        .filter_map(|r| r.cantonal)
-        .collect();
+    let mut values: Vec<f64> =
+        STEUERFUSS_ROWS.iter().filter(|r| r.year == year).filter_map(|r| r.cantonal).collect();
     values.sort_by(|a, b| a.partial_cmp(b).unwrap());
     values.dedup();
 

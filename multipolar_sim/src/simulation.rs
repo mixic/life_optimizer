@@ -481,11 +481,13 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                 if !assertive[i] {
                     continue;
                 }
-                let detected = rng.gen::<f64>() < params.credibility.detection_probability(params.effort[i]);
+                let detected =
+                    rng.gen::<f64>() < params.credibility.detection_probability(params.effort[i]);
                 if detected {
                     information_outcome.detected_lies += 1;
                 }
-                credibility[i] = params.credibility.step(credibility[i], params.effort[i], detected);
+                credibility[i] =
+                    params.credibility.step(credibility[i], params.effort[i], detected);
             }
         }
 
@@ -507,11 +509,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                         continue;
                     }
                     let total = power[i] + power[j];
-                    let gap = if total > 0.0 {
-                        (power[i] - power[j]).abs() / total
-                    } else {
-                        0.0
-                    };
+                    let gap = if total > 0.0 { (power[i] - power[j]).abs() / total } else { 0.0 };
                     let interdependence = economy.interdependence(i, j);
                     let mut payoffs = config.game.payoffs_for(
                         gap,
@@ -532,7 +530,13 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
                     let spoils = (payoffs.dc - payoffs.dd).max(0.0);
                     let cost = payoffs.cc.max(0.0) + config.information.force_cost;
                     let legitimation = &config.information.legitimation;
-                    let bare = attack_payoff(spoils, cost, config.information.coalition_channel, legitimation, 0.0);
+                    let bare = attack_payoff(
+                        spoils,
+                        cost,
+                        config.information.coalition_channel,
+                        legitimation,
+                        0.0,
+                    );
                     let at_belief = attack_payoff(
                         spoils,
                         cost,
@@ -638,11 +642,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         let disruption_probability = (config.shocks.energy_disruption_probability
             * (1.0 + economy.recession_risk))
             .clamp(0.0, 1.0);
-        let energy_disruption = if rng.gen::<f64>() < disruption_probability {
-            1.0
-        } else {
-            0.0
-        };
+        let energy_disruption = if rng.gen::<f64>() < disruption_probability { 1.0 } else { 0.0 };
         if energy_disruption > 0.0 {
             for (index, exposure) in economy.energy.iter().enumerate() {
                 if index < n {
@@ -670,11 +670,7 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         for i in 0..n {
             for j in (i + 1)..n {
                 let total = power[i] + power[j];
-                let gap = if total > 0.0 {
-                    (power[i] - power[j]).abs() / total
-                } else {
-                    0.0
-                };
+                let gap = if total > 0.0 { (power[i] - power[j]).abs() / total } else { 0.0 };
 
                 // Interdependence is the economic layer's contribution to the game
                 // itself: a pair that trades heavily has more to lose from a
@@ -830,9 +826,8 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         // its name says: an annual rate, independent of how many blocs exist. See
         // the note in the dyad loop for what it used to do instead.
         for (bloc, share) in config.blocs.iter().zip(power.iter_mut()) {
-            let noise = Normal::new(0.0, bloc.volatility)
-                .map(|d| d.sample(&mut rng))
-                .unwrap_or(0.0);
+            let noise =
+                Normal::new(0.0, bloc.volatility).map(|d| d.sample(&mut rng)).unwrap_or(0.0);
             // Volatility enters multiplicatively so a bloc cannot be driven to a
             // negative share by a large draw.
             *share *= (1.0 + bloc.growth_bias + noise).max(0.0);
@@ -843,16 +838,8 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         economy.step_financial_conditions(tension, energy_disruption);
         renormalise(&mut power);
 
-        let year_coop_rate = if dyads > 0 {
-            year_cooperation / dyads as f64
-        } else {
-            1.0
-        };
-        let year_loss_rate = if dyads > 0 {
-            year_loss / dyads as f64
-        } else {
-            0.0
-        };
+        let year_coop_rate = if dyads > 0 { year_cooperation / dyads as f64 } else { 1.0 };
+        let year_loss_rate = if dyads > 0 { year_loss / dyads as f64 } else { 0.0 };
 
         // A "conflict trap" year is one where the system is both tense and
         // uncooperative. Requiring both avoids counting a tense-but-cooperating
@@ -876,21 +863,10 @@ pub fn simulate_run(config: &Config, seed: u64) -> (RunOutcome, Vec<YearRecord>)
         });
     }
 
-    let mean_cooperation = if dyad_years > 0 {
-        total_cooperation / dyad_years as f64
-    } else {
-        1.0
-    };
-    let mean_efficiency_loss = if dyad_years > 0 {
-        total_loss / dyad_years as f64
-    } else {
-        0.0
-    };
-    let trap_fraction = if config.horizon > 0 {
-        trap_years as f64 / config.horizon as f64
-    } else {
-        0.0
-    };
+    let mean_cooperation = if dyad_years > 0 { total_cooperation / dyad_years as f64 } else { 1.0 };
+    let mean_efficiency_loss = if dyad_years > 0 { total_loss / dyad_years as f64 } else { 0.0 };
+    let trap_fraction =
+        if config.horizon > 0 { trap_years as f64 / config.horizon as f64 } else { 0.0 };
 
     let final_shares = power.clone();
     let mut ranked = power.clone();
@@ -1028,9 +1004,7 @@ impl Ensemble {
         for run in 0..config.runs {
             // Distinct, reproducible seeds derived from the configured base, so two
             // parameter settings can be compared against the same shock draws.
-            let seed = config
-                .seed
-                .wrapping_add(run as u64 * 2_654_435_761);
+            let seed = config.seed.wrapping_add(run as u64 * 2_654_435_761);
             let (outcome, records) = simulate_run(config, seed);
 
             let mut run_shares = Vec::with_capacity(horizon);
@@ -1085,35 +1059,20 @@ impl Ensemble {
     /// Fraction of runs ending in each polarity.
     pub fn polarity_distribution(&self) -> Vec<(Polarity, f64)> {
         let total = self.outcomes.len().max(1) as f64;
-        [
-            Polarity::Unipolar,
-            Polarity::Bipolar,
-            Polarity::Balanced,
-            Polarity::Fragmented,
-        ]
-        .iter()
-        .map(|p| {
-            let count = self
-                .outcomes
-                .iter()
-                .filter(|o| o.final_polarity == *p)
-                .count();
-            (*p, count as f64 / total)
-        })
-        .collect()
+        [Polarity::Unipolar, Polarity::Bipolar, Polarity::Balanced, Polarity::Fragmented]
+            .iter()
+            .map(|p| {
+                let count = self.outcomes.iter().filter(|o| o.final_polarity == *p).count();
+                (*p, count as f64 / total)
+            })
+            .collect()
     }
 
     /// Probability each bloc ends dominant, in bloc order.
     pub fn dominance_probabilities(&self, n: usize) -> Vec<f64> {
         let total = self.outcomes.len().max(1) as f64;
         (0..n)
-            .map(|i| {
-                self.outcomes
-                    .iter()
-                    .filter(|o| o.dominant == Some(i))
-                    .count() as f64
-                    / total
-            })
+            .map(|i| self.outcomes.iter().filter(|o| o.dominant == Some(i)).count() as f64 / total)
             .collect()
     }
 
@@ -1156,11 +1115,7 @@ mod tests {
     use super::*;
 
     fn small_config() -> Config {
-        Config {
-            horizon: 10,
-            runs: 12,
-            ..Config::default()
-        }
+        Config { horizon: 10, runs: 12, ..Config::default() }
     }
 
     /// The same seed must produce the same run, or the ensemble is not
@@ -1197,11 +1152,7 @@ mod tests {
         let (_, records) = simulate_run(&config, 7);
         for record in &records {
             let total: f64 = record.shares.iter().sum();
-            assert!(
-                (total - 1.0).abs() < 1e-9,
-                "year {}: shares sum to {total}",
-                record.year
-            );
+            assert!((total - 1.0).abs() < 1e-9, "year {}: shares sum to {total}", record.year);
             for share in &record.shares {
                 assert!(
                     share.is_finite() && *share >= 0.0,
@@ -1242,10 +1193,7 @@ mod tests {
         assert_eq!(classify_polarity(vec![0.35, 0.32, 0.20, 0.13]), Polarity::Bipolar);
         assert_eq!(classify_polarity(vec![0.30, 0.28, 0.25, 0.17]), Polarity::Balanced);
         // Three comparable poles, the smallest of them just above the convention.
-        assert_eq!(
-            classify_polarity(vec![0.35, 0.24, 0.11, 0.10, 0.10, 0.10]),
-            Polarity::Balanced
-        );
+        assert_eq!(classify_polarity(vec![0.35, 0.24, 0.11, 0.10, 0.10, 0.10]), Polarity::Balanced);
         // The same shape with the third pole exactly *at* the convention, not above
         // it: `third > 0.10` is strict, so this falls through to fragmented.
         assert_eq!(
@@ -1334,21 +1282,13 @@ mod tests {
     /// A zero-horizon or zero-run configuration must not panic or divide by zero.
     #[test]
     fn degenerate_configurations_are_handled() {
-        let zero_horizon = Config {
-            horizon: 0,
-            runs: 3,
-            ..Config::default()
-        };
+        let zero_horizon = Config { horizon: 0, runs: 3, ..Config::default() };
         let ensemble = Ensemble::run(&zero_horizon);
         assert_eq!(ensemble.horizon, 0);
         let (mean, lo, hi) = ensemble.summarize(|o| o.mean_cooperation);
         assert!(mean.is_finite() && lo.is_finite() && hi.is_finite());
 
-        let zero_runs = Config {
-            horizon: 3,
-            runs: 0,
-            ..Config::default()
-        };
+        let zero_runs = Config { horizon: 3, runs: 0, ..Config::default() };
         let ensemble = Ensemble::run(&zero_runs);
         assert!(ensemble.outcomes.is_empty());
         // Summarizing nothing must be finite, not NaN.
@@ -1448,11 +1388,7 @@ mod tests {
     /// notices, which is the concrete form of the editability claim.
     #[test]
     fn editing_a_bloc_changes_the_outcome() {
-        let baseline = Config {
-            horizon: 50,
-            runs: 20,
-            ..Config::default()
-        };
+        let baseline = Config { horizon: 50, runs: 20, ..Config::default() };
         let mut tilted = baseline.clone();
         let edited = tilted.blocs.len() - 1;
         // The bias is an annual rate, so "decisive over 50 years" means a large annual
@@ -1504,11 +1440,7 @@ mod tests {
         let growth = 0.05;
 
         let rate_in = |extra: usize| -> f64 {
-            let mut config = Config {
-                horizon: 1,
-                runs: 1,
-                ..Config::default()
-            };
+            let mut config = Config { horizon: 1, runs: 1, ..Config::default() };
             for bloc in config.blocs.iter_mut() {
                 bloc.volatility = 0.0;
                 bloc.growth_bias = 0.0;
@@ -1521,9 +1453,7 @@ mod tests {
             for k in 0..extra {
                 // A zero-share, zero-volatility, zero-bias bloc: it adds dyads and
                 // nothing else, which is the smallest possible change in bloc count.
-                config
-                    .blocs
-                    .push(PowerBloc::new(&format!("Filler{k}"), 0.0, 0.0, 0.0, 1.0));
+                config.blocs.push(PowerBloc::new(&format!("Filler{k}"), 0.0, 0.0, 0.0, 1.0));
             }
             config.economy = Economy::for_blocs(&config.blocs);
             let (outcome, _) = simulate_run(&config, 3);
@@ -1595,11 +1525,7 @@ mod tests {
             !config.information.enabled,
             "the layer must default off, or the published figures change meaning"
         );
-        config = Config {
-            runs: 8,
-            seed: 12345,
-            ..config
-        };
+        config = Config { runs: 8, seed: 12345, ..config };
         let ensemble = Ensemble::run(&config);
         assert!(
             ensemble.outcomes.iter().all(|o| o.information.is_none()),
@@ -1619,10 +1545,7 @@ mod tests {
     /// is indistinguishable from one that does not exist.
     #[test]
     fn enabling_the_layer_changes_war_onset_and_reports_its_own_state() {
-        let mut config = Config {
-            runs: 24,
-            ..Config::default()
-        };
+        let mut config = Config { runs: 24, ..Config::default() };
         let baseline = Ensemble::run(&config);
 
         let n = config.blocs.len();
@@ -1647,16 +1570,8 @@ mod tests {
         );
         let _ = reported;
         assert_ne!(
-            baseline
-                .outcomes
-                .iter()
-                .map(|o| o.shock_counts.2)
-                .sum::<u32>(),
-            layered
-                .outcomes
-                .iter()
-                .map(|o| o.shock_counts.2)
-                .sum::<u32>(),
+            baseline.outcomes.iter().map(|o| o.shock_counts.2).sum::<u32>(),
+            layered.outcomes.iter().map(|o| o.shock_counts.2).sum::<u32>(),
             "endogenous onset must produce a different war count than the assumed rate"
         );
     }

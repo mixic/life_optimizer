@@ -88,11 +88,7 @@ impl Default for TeamParameters {
 impl TeamParameters {
     /// The default: no team parameters supplied, so the externality is not quantified.
     pub fn not_modelled() -> Self {
-        TeamParameters {
-            colleagues: 0,
-            redistribution: 1.0,
-            externality_weight: 0.0,
-        }
+        TeamParameters { colleagues: 0, redistribution: 1.0, externality_weight: 0.0 }
     }
 
     /// A team of `colleagues` absorbing a share `redistribution` of the reduction.
@@ -122,11 +118,8 @@ impl TeamParameters {
     pub fn evaluate(&self, work_percentage: f64, full_time_hours: f64) -> TeamExternality {
         let reduction = (1.0 - work_percentage.clamp(0.0, 1.0)).max(0.0);
         let moved = reduction * full_time_hours.max(0.0) * self.redistribution.clamp(0.0, 1.0);
-        let per_colleague = if self.colleagues > 0 {
-            moved / f64::from(self.colleagues)
-        } else {
-            0.0
-        };
+        let per_colleague =
+            if self.colleagues > 0 { moved / f64::from(self.colleagues) } else { 0.0 };
         let severity = if reduction <= 0.0 {
             Severity::NoReduction
         } else if !self.is_modelled() {

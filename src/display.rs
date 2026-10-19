@@ -18,7 +18,7 @@
 use crate::optimizer::WorkScenario;
 use crate::tax::TaxSchedule;
 use colored::*;
-use tabled::{Table, Tabled, settings::Style};
+use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Tabled)]
 struct ScenarioRow {
@@ -70,22 +70,37 @@ pub fn print_optimal_result_for(
         println!("{}", "   Showing the closest option, not a recommendation.".yellow());
     } else {
         println!("\n{}", "⚠  NO OPTION MEETS THE REQUIRED OUTPUT".bold().yellow());
-        println!("{}", "   Financially affordable, but the employer's goals are not deliverable.".yellow());
+        println!(
+            "{}",
+            "   Financially affordable, but the employer's goals are not deliverable.".yellow()
+        );
     }
     println!("{}", "=".repeat(60));
-    
+
     println!("\n{}", "Work Configuration:".bold());
-    println!("  Work Percentage: {}", format!("{:.0}%", scenario.work_percentage * 100.0).cyan().bold());
+    println!(
+        "  Work Percentage: {}",
+        format!("{:.0}%", scenario.work_percentage * 100.0).cyan().bold()
+    );
     println!("  Gross Income:    {} CHF/year", format!("{:.0}", scenario.gross_income).cyan());
     println!("  After-Tax:       {} CHF/year", format!("{:.0}", scenario.after_tax_income).cyan());
-    println!("  Monthly Net:     {} CHF/month", format!("{:.0}", scenario.monthly_after_tax).cyan().bold());
-    println!("  Tax Rate:        {:.1}%{}", scenario.tax_only_rate * 100.0,
+    println!(
+        "  Monthly Net:     {} CHF/month",
+        format!("{:.0}", scenario.monthly_after_tax).cyan().bold()
+    );
+    println!(
+        "  Tax Rate:        {:.1}%{}",
+        scenario.tax_only_rate * 100.0,
         match tax_basis {
             Some(basis) => format!(" ({basis})"),
             None => String::new(),
-        });
+        }
+    );
     println!("  Social Security: 12.9% (AHV/IV/EO/ALV/BVG)");
-    println!("  Total Deduction: {}", format!("{:.1}%", scenario.effective_tax_rate * 100.0).yellow());
+    println!(
+        "  Total Deduction: {}",
+        format!("{:.1}%", scenario.effective_tax_rate * 100.0).yellow()
+    );
 
     println!("\n{}", "Time Allocation:".bold());
     println!("  Work Hours:      {:.1} hours/week", scenario.work_hours_per_week);
@@ -100,10 +115,14 @@ pub fn print_optimal_result_for(
         println!("  Status:          {} ✗", "BELOW REQUIREMENTS".red().bold());
         println!("  Monthly Deficit: {} CHF", format!("{:.0}", scenario.surplus_deficit).red());
     }
-    println!("  {}", format!(
+    println!(
+        "  {}",
+        format!(
         "  (tested against the mandatory floor of CHF {:.0}/month, not the full lifestyle basket)",
         scenario.mandatory_monthly
-    ).dimmed());
+    )
+        .dimmed()
+    );
 
     // ── Employer-side achievement capacity (§5.2) ────────────────────────────
     if let Some(a) = scenario.achievement {
@@ -128,22 +147,36 @@ pub fn print_optimal_result_for(
         println!("  Required (G):    {:.2}", a.required_output);
         println!("  Robustness:      {}", a.robustness.label());
         if a.satisfied {
-            println!("  Status:          {} (margin {:+.2})",
-                "MEETS REQUIRED OUTPUT ✓".green().bold(), a.margin);
+            println!(
+                "  Status:          {} (margin {:+.2})",
+                "MEETS REQUIRED OUTPUT ✓".green().bold(),
+                a.margin
+            );
         } else if a.blocks_recommendation || !feasible_found {
             // Either the mode refuses an undelivered schedule, or the search found
             // nothing that delivers — in which case the schedule shown is a
             // least-bad fallback, not an offer, and must not be labelled as one.
-            println!("  Status:          {} (shortfall {:.2})",
-                "BELOW REQUIRED OUTPUT ✗".red().bold(), -a.margin);
-            println!("  {}", "  Note: a reduced work percentage is not credible here — the".dimmed());
+            println!(
+                "  Status:          {} (shortfall {:.2})",
+                "BELOW REQUIRED OUTPUT ✗".red().bold(),
+                -a.margin
+            );
+            println!(
+                "  {}",
+                "  Note: a reduced work percentage is not credible here — the".dimmed()
+            );
             println!("  {}", "  organisation's goals would not be delivered.".dimmed());
         } else {
             // Risk-weighted enforcement: offered, with its shortfall priced.
-            println!("  Status:          {} ({:.0}% short)",
+            println!(
+                "  Status:          {} ({:.0}% short)",
                 "OFFERED BUT NOT DELIVERED".yellow().bold(),
-                a.relative_shortfall() * 100.0);
-            println!("  {}", "  This mode prices the shortfall as replacement risk instead of".dimmed());
+                a.relative_shortfall() * 100.0
+            );
+            println!(
+                "  {}",
+                "  This mode prices the shortfall as replacement risk instead of".dimmed()
+            );
             println!("  {}", "  ruling the schedule out; see the risk line below.".dimmed());
         }
 
@@ -157,8 +190,7 @@ pub fn print_optimal_result_for(
             );
             println!(
                 "  {}",
-                "  (work the contract does not mention. At that outcome the load is a"
-                    .dimmed()
+                "  (work the contract does not mention. At that outcome the load is a".dimmed()
             );
             println!(
                 "  {})",
@@ -182,7 +214,10 @@ pub fn print_optimal_result_for(
                 "  Average workload:{:>4.1}%   over the years to retirement, including",
                 a.amortised_work_percentage * 100.0
             );
-            println!("  {}", "                   the evaluation period worked at full time".dimmed());
+            println!(
+                "  {}",
+                "                   the evaluation period worked at full time".dimmed()
+            );
         }
     }
 
@@ -225,13 +260,37 @@ pub fn print_optimal_result_for(
 pub fn print_consumption_breakdown(scenario: &WorkScenario) {
     let t = &scenario.consumption_tiers;
     println!("\n{}", "Consumption by Elasticity Tier:".bold());
-    println!("  {:<38} {:>10}", "Inelastic (non-reducible)", format!("CHF {:.0}", t.inelastic).cyan());
-    println!("  {:<38} {:>10}", "Quasi-inelastic (locked in)", format!("CHF {:.0}", t.quasi_inelastic).cyan());
-    println!("  {:<38} {:>10}", "Elastic (sparing-eligible)", format!("CHF {:.0}", t.elastic).cyan());
-    println!("  {:<38} {:>10}", "Committed outflows (savings, vacation)", format!("CHF {:.0}", t.committed_outflows).cyan());
+    println!(
+        "  {:<38} {:>10}",
+        "Inelastic (non-reducible)",
+        format!("CHF {:.0}", t.inelastic).cyan()
+    );
+    println!(
+        "  {:<38} {:>10}",
+        "Quasi-inelastic (locked in)",
+        format!("CHF {:.0}", t.quasi_inelastic).cyan()
+    );
+    println!(
+        "  {:<38} {:>10}",
+        "Elastic (sparing-eligible)",
+        format!("CHF {:.0}", t.elastic).cyan()
+    );
+    println!(
+        "  {:<38} {:>10}",
+        "Committed outflows (savings, vacation)",
+        format!("CHF {:.0}", t.committed_outflows).cyan()
+    );
     println!("  {}", "─".repeat(49));
-    println!("  {:<38} {:>10}", "Mandatory floor".bold(), format!("CHF {:.0}", scenario.mandatory_monthly).bold());
-    println!("  {:<38} {:>10}", "Full lifestyle basket".bold(), format!("CHF {:.0}", scenario.target_monthly).bold());
+    println!(
+        "  {:<38} {:>10}",
+        "Mandatory floor".bold(),
+        format!("CHF {:.0}", scenario.mandatory_monthly).bold()
+    );
+    println!(
+        "  {:<38} {:>10}",
+        "Full lifestyle basket".bold(),
+        format!("CHF {:.0}", scenario.target_monthly).bold()
+    );
 
     // `S_t = Y_t - T_t - C_t` (CRITICS_CURRENT_WORK.md §2.1): what is left for
     // saving and investing. Reported even when negative, because a negative saving
@@ -246,21 +305,34 @@ pub fn print_consumption_breakdown(scenario: &WorkScenario) {
 
     if t.applied_multiplier < 1.0 {
         let saved = t.unadjusted_discretionary() * (1.0 - t.applied_multiplier);
-        println!("\n  {}", format!(
-            "Sparing multiplier {:.3} applied to discretionary spending.",
-            t.applied_multiplier
-        ).green());
+        println!(
+            "\n  {}",
+            format!(
+                "Sparing multiplier {:.3} applied to discretionary spending.",
+                t.applied_multiplier
+            )
+            .green()
+        );
         if saved > 0.5 {
-            println!("  {}", format!(
-                "This reduces monthly discretionary cost by CHF {:.0}.", saved
-            ).green());
+            println!(
+                "  {}",
+                format!("This reduces monthly discretionary cost by CHF {:.0}.", saved).green()
+            );
         }
     } else if t.applied_multiplier > 1.0 {
-        println!("\n  {}", format!(
-            "Lifestyle/utilisation multiplier {:.3} raises effective discretionary cost.",
-            t.applied_multiplier
-        ).yellow());
-        println!("  {}", "  Low utilisation inflates the real cost of what you buy, even at a discount.".dimmed());
+        println!(
+            "\n  {}",
+            format!(
+                "Lifestyle/utilisation multiplier {:.3} raises effective discretionary cost.",
+                t.applied_multiplier
+            )
+            .yellow()
+        );
+        println!(
+            "  {}",
+            "  Low utilisation inflates the real cost of what you buy, even at a discount."
+                .dimmed()
+        );
     }
 
     // The insight the tier split exists to surface.
@@ -268,10 +340,14 @@ pub fn print_consumption_breakdown(scenario: &WorkScenario) {
     if total > 0.0 {
         let inelastic_share = (t.inelastic + t.quasi_inelastic) / total * 100.0;
         if inelastic_share >= 75.0 {
-            println!("  {}", format!(
+            println!(
+                "  {}",
+                format!(
                 "Note: {:.0}% of your spending is non-reducible — sparing cannot move this much.",
                 inelastic_share
-            ).yellow());
+            )
+                .yellow()
+            );
         }
     }
 }
@@ -293,7 +369,10 @@ pub fn print_tax_deduction_breakdown(tax_schedule: &TaxSchedule, gross_income: f
     // the items above, it feeds no tax calculation, and sitting between "total
     // deductible" and "taxable income" it read as part of that arithmetic — which
     // it is not, since taxable income is gross minus `deductible_total` alone.
-    println!("  Taxable income after deductions: CHF {:.0}", tax_schedule.taxable_income_after_estimated_deductions(gross_income));
+    println!(
+        "  Taxable income after deductions: CHF {:.0}",
+        tax_schedule.taxable_income_after_estimated_deductions(gross_income)
+    );
     println!(
         "  {}",
         "  Estimate only — these components are hand-entered, not sourced. The \
@@ -323,10 +402,7 @@ pub fn print_team_externality(scenario: &WorkScenario) {
     println!("  {}", "Colleagues:".bold());
     match team.severity {
         Severity::NoReduction => {
-            println!(
-                "    {}",
-                "no work moved onto colleagues (full-time schedule)".dimmed()
-            );
+            println!("    {}", "no work moved onto colleagues (full-time schedule)".dimmed());
         }
         Severity::NotModelled => {
             let bar = "!".repeat(72).red().bold();
@@ -337,9 +413,7 @@ pub fn print_team_externality(scenario: &WorkScenario) {
                 "THE EFFECT ON COLLEAGUES IS NOT MODELLED".red().bold()
             );
             println!("    {bar}");
-            println!(
-                "    A reduced schedule usually moves work onto colleagues. This result does"
-            );
+            println!("    A reduced schedule usually moves work onto colleagues. This result does");
             println!(
                 "    not account for that, so it cannot tell you whether the reduction is fair"
             );
@@ -359,9 +433,7 @@ pub fn print_team_externality(scenario: &WorkScenario) {
                 "--team-size <n>".bold(),
                 "--redistribution <0..1>".bold()
             );
-            println!(
-                "    to see how many hours a week would land on each colleague. See"
-            );
+            println!("    to see how many hours a week would land on each colleague. See");
             println!("    TEAM_DEPENDENCIES.md for why this is not a private transaction.");
         }
         severity => {
@@ -445,7 +517,7 @@ pub fn print_comparison_table_for(scenarios: &[WorkScenario], tax_basis: Option<
     let mut table = Table::new(rows);
     table.with(Style::modern());
     println!("\n{}", table);
-    
+
     // Add explanation
     let tax_line = match tax_basis {
         Some(basis) => format!("  • Kantons-, Gemeinde- und Kirchensteuer ({basis})"),
@@ -456,7 +528,6 @@ pub fn print_comparison_table_for(scenarios: &[WorkScenario], tax_basis: Option<
     println!("{tax_line}");
     println!("  • Social Security: AHV/IV/EO (5.3%) + ALV (1.1%) + BVG (~6.5%) = ~12.9%");
     println!("\nExample: 33% total = ~20% Steuer + ~13% Sozialversicherung");
-
 }
 
 pub fn print_recommendations(scenario: &WorkScenario, age: u32) {
@@ -471,11 +542,17 @@ pub fn print_recommendations(scenario: &WorkScenario, age: u32) {
         println!("  ✓ Best for career advancement");
         println!("  ⚠ Limited time for family and personal pursuits");
         println!("  ⚠ Higher stress and burnout risk");
-        
+
         if age < 35 {
-            println!("\n  {} At your age, full-time work can build a strong financial foundation.", "💼".yellow());
+            println!(
+                "\n  {} At your age, full-time work can build a strong financial foundation.",
+                "💼".yellow()
+            );
         } else if age > 45 {
-            println!("\n  {} Consider reducing hours as you approach retirement for better health.", "🏥".yellow());
+            println!(
+                "\n  {} Consider reducing hours as you approach retirement for better health.",
+                "🏥".yellow()
+            );
         }
     } else if work_pct >= 0.75 {
         println!("\n{}", "Part-time work (80%):".bold());
@@ -491,7 +568,7 @@ pub fn print_recommendations(scenario: &WorkScenario, age: u32) {
         println!("  ✓ Lowest stress");
         println!("  ⚠ Reduced income - ensure you meet basic needs");
         println!("  ⚠ Lower pension contributions");
-        
+
         if !scenario.meets_requirements {
             println!("\n  {} WARNING: This may not cover your requirements!", "⚠️".red());
             println!("  Consider: dual income, reducing expenses, or increasing work percentage.");
@@ -501,7 +578,10 @@ pub fn print_recommendations(scenario: &WorkScenario, age: u32) {
     // Tax optimization tip
     if scenario.effective_tax_rate > 0.25 {
         println!("\n{}", "💰 Tax Optimization Tips:".bold());
-        println!("  • Your effective tax rate is {:.1}% - consider:", scenario.effective_tax_rate * 100.0);
+        println!(
+            "  • Your effective tax rate is {:.1}% - consider:",
+            scenario.effective_tax_rate * 100.0
+        );
         println!("    - Pillar 3a contributions (CHF 7,056/year deductible)");
         println!("    - Pillar 3b if self-employed");
         println!("    - Childcare costs are partially deductible");
@@ -543,7 +623,7 @@ pub fn print_lifetime_strategy(strategy: &[(u32, f64)]) {
     for (i, &(age, pct)) in strategy.iter().enumerate() {
         if pct != current_pct || i == strategy.len() - 1 {
             let end_age = if i == strategy.len() - 1 { age } else { strategy[i - 1].0 };
-            
+
             let period = if current_start == end_age {
                 format!("Age {}", current_start)
             } else {
@@ -567,15 +647,15 @@ pub fn print_lifetime_strategy(strategy: &[(u32, f64)]) {
     }
 
     println!("\n{}", "Key Insights:".bold());
-    
+
     // Calculate average work percentage
     let avg_pct: f64 = strategy.iter().map(|(_, pct)| pct).sum::<f64>() / strategy.len() as f64;
     println!("  • Average work percentage: {:.0}%", avg_pct * 100.0);
-    
+
     // Find transitions
     let mut transitions = 0;
     for i in 1..strategy.len() {
-        if strategy[i].1 != strategy[i-1].1 {
+        if strategy[i].1 != strategy[i - 1].1 {
             transitions += 1;
         }
     }
@@ -603,14 +683,8 @@ pub fn print_lifetime_strategy(strategy: &[(u32, f64)]) {
 /// second question, and the sensitivity line says whether the verdict survives it.
 pub fn print_needs_report(report: &crate::retirement_needs::NeedsReport) {
     println!("\n{}", "Retirement needs, as an input rather than an assumption:".bold());
-    println!(
-        "  You are evaluated at {}",
-        report.chosen.basis.describe(report.net_monthly_income)
-    );
-    println!(
-        "  Projected income:  CHF {:.0}/month (BVG + AHV, real)",
-        report.projected_monthly
-    );
+    println!("  You are evaluated at {}", report.chosen.basis.describe(report.net_monthly_income));
+    println!("  Projected income:  CHF {:.0}/month (BVG + AHV, real)", report.projected_monthly);
     println!(
         "  {} BREAK-EVEN: this plan supports up to CHF {:.0}/month.{}",
         "->".cyan().bold(),
@@ -622,16 +696,9 @@ pub fn print_needs_report(report: &crate::retirement_needs::NeedsReport) {
         }
     );
     println!();
-    println!(
-        "  {:>8} {:>14} {:>10} {:>11}",
-        "of that", "needs/month", "coverage", "verdict"
-    );
+    println!("  {:>8} {:>14} {:>10} {:>11}", "of that", "needs/month", "coverage", "verdict");
     for point in &report.range {
-        let marker = if point.monthly == report.chosen.monthly {
-            " <=="
-        } else {
-            ""
-        };
+        let marker = if point.monthly == report.chosen.monthly { " <==" } else { "" };
         println!(
             "  {:>8} {:>14.0} {:>9.0}% {:>11}{marker}",
             format!("{:.0}%", point.share * 100.0),
@@ -665,10 +732,7 @@ pub fn print_needs_report(report: &crate::retirement_needs::NeedsReport) {
 /// survives the assumptions it was computed under -- so the weights are printed, each is moved,
 /// and the report says whether the answer held.
 pub fn print_robustness_report(report: &crate::robustness::RobustnessReport) {
-    println!(
-        "\n{}",
-        "Robustness: does the answer survive its own assumptions?".bold()
-    );
+    println!("\n{}", "Robustness: does the answer survive its own assumptions?".bold());
     println!(
         "  Weights in use (declared, not measured):  consumption {:.2}  leisure {:.2}  family \
          {:.2}  health {:.2}  security {:.2}",
@@ -679,10 +743,7 @@ pub fn print_robustness_report(report: &crate::robustness::RobustnessReport) {
         report.weights.security
     );
     println!();
-    println!(
-        "  {:>12} {:>9} {:>10} {:>9}",
-        "input moved", "by", "optimal", "shift"
-    );
+    println!("  {:>12} {:>9} {:>10} {:>9}", "input moved", "by", "optimal", "shift");
     for perturbation in &report.perturbations {
         let optimal = match perturbation.optimal {
             Some(value) => format!("{:.0}%", value * 100.0),
@@ -736,17 +797,12 @@ pub fn print_decision_margin(scenarios: &[WorkScenario], chosen: &WorkScenario) 
         return;
     }
     offered.sort_by(|a, b| {
-        b.utility_score
-            .partial_cmp(&a.utility_score)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        b.utility_score.partial_cmp(&a.utility_score).unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let best = offered[0].utility_score;
     println!("\n{}", "Is the leader distinguishable from the runner-up?".bold());
-    println!(
-        "  {:>8} {:>10} {:>10} {:>10}",
-        "work", "utility", "margin", "verdict"
-    );
+    println!("  {:>8} {:>10} {:>10} {:>10}", "work", "utility", "margin", "verdict");
     for scenario in offered.iter().take(3) {
         let margin = best - scenario.utility_score;
         // A margin is judged relative to the leading score, because the utility scale is

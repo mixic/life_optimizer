@@ -32,12 +32,7 @@ const CAPITAL: f64 = 500_000.0;
 /// The projection must reproduce the anchor table in `FutureWork.md` §10.3.
 #[test]
 fn projection_matches_documented_table() {
-    let table = [
-        (2024, 0.0680),
-        (2030, 0.0658),
-        (2040, 0.0622),
-        (2050, 0.0586),
-    ];
+    let table = [(2024, 0.0680), (2030, 0.0658), (2040, 0.0622), (2050, 0.0586)];
     for (year, expected) in table {
         let actual = project_conversion_rate(year);
         assert!(
@@ -65,10 +60,7 @@ fn deferral_scales_the_base_rate() {
     let at_70 = effective_conversion_rate(ConversionRateScenario::Statutory, 70, 2024);
     let at_62 = effective_conversion_rate(ConversionRateScenario::Statutory, 62, 2024);
 
-    assert!(
-        (at_65 - STATUTORY_CONVERSION_RATE).abs() < 1e-9,
-        "age 65 is the anchor"
-    );
+    assert!((at_65 - STATUTORY_CONVERSION_RATE).abs() < 1e-9, "age 65 is the anchor");
     assert!(at_70 > at_65, "deferring to 70 must raise the rate");
     assert!(at_62 < at_65, "retiring at 62 must lower the rate");
 
@@ -102,10 +94,7 @@ fn range_is_consistent_and_ordered() {
 
     assert!(range.custom.is_none(), "no custom rate was supplied");
     assert!(range.range.0 <= range.range.1, "range must be ordered");
-    assert!(
-        (range.range.1 - range.statutory).abs() < 1e-9,
-        "statutory is the high case"
-    );
+    assert!((range.range.1 - range.statutory).abs() < 1e-9, "statutory is the high case");
 
     // The statutory rate does flatter the outcome; this is the gap the display
     // exists to make visible.
@@ -139,10 +128,7 @@ fn custom_rate_above_statutory_extends_range_upward() {
     let range = calculate_pension_range(CAPITAL, 2024, ConversionRateScenario::Custom(0.075));
     let custom_monthly = CAPITAL * 0.075 / 12.0;
 
-    assert!(
-        (range.range.1 - custom_monthly).abs() < 1e-9,
-        "7.5% is the new high case"
-    );
+    assert!((range.range.1 - custom_monthly).abs() < 1e-9, "7.5% is the new high case");
     // And the statutory comparison goes the other way: the person does better.
     assert!(range.difference_from_statutory(custom_monthly) < 0.0);
 }
@@ -166,10 +152,7 @@ fn optimizer_and_simulator_agree_on_conversion_rate() {
 #[test]
 fn retirement_year_anchors_to_today() {
     assert_eq!(retirement_year_from(65, 65), retirement_year_from(40, 40));
-    assert_eq!(
-        retirement_year_from(40, 65) - retirement_year_from(40, 40),
-        25
-    );
+    assert_eq!(retirement_year_from(40, 65) - retirement_year_from(40, 40), 25);
 }
 
 /// The scenario labels are user-facing; an unset label would be a display bug.
@@ -184,21 +167,9 @@ fn scenario_labels_are_non_empty_and_show_the_rate() {
     for label in &labels {
         assert!(!label.trim().is_empty(), "label must not be empty");
     }
-    assert!(
-        labels[0].contains("6.8"),
-        "statutory label should name its rate: {}",
-        labels[0]
-    );
-    assert!(
-        labels[1].contains("5.5"),
-        "typical label should name its rate: {}",
-        labels[1]
-    );
-    assert!(
-        labels[3].contains("4.2"),
-        "custom label should name its rate: {}",
-        labels[3]
-    );
+    assert!(labels[0].contains("6.8"), "statutory label should name its rate: {}", labels[0]);
+    assert!(labels[1].contains("5.5"), "typical label should name its rate: {}", labels[1]);
+    assert!(labels[3].contains("4.2"), "custom label should name its rate: {}", labels[3]);
 }
 
 /// A pension range must be derivable from a simulated capital, which is what

@@ -28,11 +28,7 @@ use crate::simulation::{Config, Ensemble};
 /// A horizontal bar, for showing a distribution without a charting dependency.
 fn bar(fraction: f64, width: usize) -> String {
     let filled = (fraction.clamp(0.0, 1.0) * width as f64).round() as usize;
-    format!(
-        "{}{}",
-        "#".repeat(filled),
-        ".".repeat(width.saturating_sub(filled))
-    )
+    format!("{}{}", "#".repeat(filled), ".".repeat(width.saturating_sub(filled)))
 }
 
 /// Describe a cooperation trajectory from an early and a late value.
@@ -117,10 +113,7 @@ fn print_economy(config: &Config, ensemble: &Ensemble) {
     println!();
     println!("  MONETARY AND ENERGY EXPOSURE AT THE START");
     println!("  -----------------------------------------");
-    println!(
-        "  {:<16} {:>10}  {:>13}  {:>12}",
-        "bloc", "reserves", "energy import", "exports"
-    );
+    println!("  {:<16} {:>10}  {:>13}  {:>12}", "bloc", "reserves", "energy import", "exports");
     for (index, bloc) in config.blocs.iter().enumerate() {
         let reserves = economy.reserve_shares.get(index).copied().unwrap_or(0.0);
         let exposure = economy.energy.get(index);
@@ -294,12 +287,7 @@ fn print_dominance(config: &Config, ensemble: &Ensemble) {
         println!("  (no bloc achieves a clear lead in any run)");
     }
     let none = ensemble.no_clear_leader_probability();
-    println!(
-        "  {:<14} {:>5.1}%  {}",
-        "no clear leader",
-        none * 100.0,
-        bar(none, 28)
-    );
+    println!("  {:<14} {:>5.1}%  {}", "no clear leader", none * 100.0, bar(none, 28));
     println!();
     println!("  A bloc counts as dominant only above 45% of system power, so this");
     println!("  is consistent with the polarity result rather than contradicting it.");
@@ -377,10 +365,7 @@ fn print_decades(config: &Config, ensemble: &Ensemble) {
     println!();
     println!("  DECADE-BY-DECADE READ");
     println!("  ---------------------");
-    println!(
-        "  {:<8} {:>8} {:>10} {:<28}",
-        "decade", "coop", "tension", "leading bloc"
-    );
+    println!("  {:<8} {:>8} {:>10} {:<28}", "decade", "coop", "tension", "leading bloc");
     let mut year = 9usize;
     while year < ensemble.horizon {
         let coop = ensemble.cooperation_by_year[year];
@@ -398,22 +383,12 @@ fn print_decades(config: &Config, ensemble: &Ensemble) {
                 )
             })
             .unwrap_or_else(|| "?".to_string());
-        println!(
-            "  yr {:<5} {:>8.2} {:>10.2} {:<28}",
-            year + 1,
-            coop,
-            tension,
-            leader
-        );
+        println!("  yr {:<5} {:>8.2} {:>10.2} {:<28}", year + 1, coop, tension, leader);
         year += 10;
     }
 
     // Summarise the decade trend so the table does not have to be read by eye.
-    let early = if ensemble.horizon > 3 {
-        ensemble.cooperation_by_year[2]
-    } else {
-        0.0
-    };
+    let early = if ensemble.horizon > 3 { ensemble.cooperation_by_year[2] } else { 0.0 };
     let late = ensemble.cooperation_by_year.last().copied().unwrap_or(0.0);
     println!();
     println!("  Over the horizon: {}.", trajectory_verdict(early, late));
@@ -439,11 +414,7 @@ fn summarize_ai(config: &Config, ensemble: &Ensemble) -> AiSummary {
     let (trap, _, _) = ensemble.summarize(|o| o.trap_fraction);
     let (loss, _, _) = ensemble.summarize(|o| o.mean_efficiency_loss);
     let (observed, reference) = ensemble.pension_summary(&config.pension);
-    let per_bloc = ensemble
-        .mean_shares_by_year
-        .last()
-        .cloned()
-        .unwrap_or_default();
+    let per_bloc = ensemble.mean_shares_by_year.last().cloned().unwrap_or_default();
     let (top_share, leading) = per_bloc
         .iter()
         .enumerate()
@@ -473,12 +444,7 @@ fn summarize_ai(config: &Config, ensemble: &Ensemble) -> AiSummary {
 
 /// Mean final share of the bloc at `index`, across runs.
 fn mean_final_share(ensemble: &Ensemble, index: usize) -> f64 {
-    ensemble
-        .mean_shares_by_year
-        .last()
-        .and_then(|shares| shares.get(index))
-        .copied()
-        .unwrap_or(0.0)
+    ensemble.mean_shares_by_year.last().and_then(|shares| shares.get(index)).copied().unwrap_or(0.0)
 }
 
 /// Report the three AI worlds side by side, and answer the question each of the two
@@ -611,11 +577,7 @@ fn print_ai_hypotheses() {
     println!("  gains from AI, and declines to pick one. This mode builds the two that are");
     println!("  structurally different, plus the control that both are measured against:");
     println!();
-    for role in [
-        AiRole::SixthPower,
-        AiRole::WieldedInstrument,
-        AiRole::Absent,
-    ] {
+    for role in [AiRole::SixthPower, AiRole::WieldedInstrument, AiRole::Absent] {
         println!("    {:<22} {}", role.label(), role.intent());
     }
     println!();
@@ -638,10 +600,7 @@ fn print_ai_provenance(params: &[AiParams]) {
     let mut rows: Vec<(&'static str, crate::economy::Provenance)> = Vec::new();
     for layer in params {
         for (what, provenance) in layer.provenance_table() {
-            if !rows
-                .iter()
-                .any(|(_, existing)| existing.detail() == provenance.detail())
-            {
+            if !rows.iter().any(|(_, existing)| existing.detail() == provenance.detail()) {
                 rows.push((what, provenance));
             }
         }
@@ -717,11 +676,7 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
     };
     let start = config.blocs[actor].power_share;
     let end = mean_final_share(ensemble, actor);
-    let dominance = ensemble
-        .dominance_probabilities(n)
-        .get(actor)
-        .copied()
-        .unwrap_or(0.0);
+    let dominance = ensemble.dominance_probabilities(n).get(actor).copied().unwrap_or(0.0);
     let fate = actor_fate(start, end, dominance);
 
     println!();
@@ -751,11 +706,7 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
         .filter(|index| *index != actor)
         .map(|index| economy.monetary_leverage(index, actor))
         .fold(0.0_f64, f64::max);
-    let exposure = economy
-        .energy
-        .get(actor)
-        .map(|e| e.disruption_exposure())
-        .unwrap_or(0.0);
+    let exposure = economy.energy.get(actor).map(|e| e.disruption_exposure()).unwrap_or(0.0);
 
     println!();
     println!("  WHY, STRUCTURALLY");
@@ -785,11 +736,7 @@ fn print_ai_player(params: &AiParams, config: &Config, ensemble: &Ensemble, summ
         summary.trap * 100.0,
         summary.loss
     );
-    println!(
-        "  leading bloc {} at {:.1}%.",
-        summary.leading,
-        summary.top_share * 100.0
-    );
+    println!("  leading bloc {} at {:.1}%.", summary.leading, summary.top_share * 100.0);
 
     println!();
     println!("  ALL ACTORS AT HORIZON");
@@ -889,11 +836,7 @@ fn print_ai_tool(
         summary.trap * 100.0,
         summary.loss
     );
-    println!(
-        "  leading bloc {} at {:.1}%.",
-        summary.leading,
-        summary.top_share * 100.0
-    );
+    println!("  leading bloc {} at {:.1}%.", summary.leading, summary.top_share * 100.0);
 }
 
 /// The closing statement: which claim is worth carrying away, and which is not.

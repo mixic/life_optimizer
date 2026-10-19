@@ -69,9 +69,7 @@
 //!   point: subtracting it too would lower the base, raising the deduction and
 //!   lowering the base again.
 
-use crate::estv_deductions_data::{
-    rules_for, scales_for, DeductionRule, DeductionScale, RuleKind,
-};
+use crate::estv_deductions_data::{rules_for, scales_for, DeductionRule, DeductionScale, RuleKind};
 
 /// The facts a deduction category can depend on.
 ///
@@ -451,10 +449,7 @@ pub fn classify(name: &str) -> Option<RuleCategory> {
         ("Schwellwert", RuleCategory::MeansTested),
     ];
 
-    RULES
-        .iter()
-        .find(|(prefix, _)| name.starts_with(prefix))
-        .map(|(_, category)| *category)
+    RULES.iter().find(|(prefix, _)| name.starts_with(prefix)).map(|(_, category)| *category)
 }
 
 /// One applied deduction, kept itemised so a figure can be traced to its rule.
@@ -587,18 +582,12 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
 
     for rule in rules_for(canton_code) {
         if rule.kind != RuleKind::Deduction {
-            skipped.push(SkippedDeduction {
-                name: rule.name,
-                reason: SkipReason::NotADeduction,
-            });
+            skipped.push(SkippedDeduction { name: rule.name, reason: SkipReason::NotADeduction });
             continue;
         }
 
         let Some(category) = classify(rule.name) else {
-            skipped.push(SkippedDeduction {
-                name: rule.name,
-                reason: SkipReason::Unclassified,
-            });
+            skipped.push(SkippedDeduction { name: rule.name, reason: SkipReason::Unclassified });
             continue;
         };
 
@@ -608,10 +597,7 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
             } else {
                 SkipReason::FactsNotSupplied
             };
-            skipped.push(SkippedDeduction {
-                name: rule.name,
-                reason,
-            });
+            skipped.push(SkippedDeduction { name: rule.name, reason });
             continue;
         }
 
@@ -641,11 +627,7 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
                     name: slot.1.name,
                     reason: SkipReason::FactsNotSupplied,
                 });
-                slot.1 = AppliedDeduction {
-                    name: rule.name,
-                    category,
-                    amount,
-                };
+                slot.1 = AppliedDeduction { name: rule.name, category, amount };
             } else {
                 skipped.push(SkippedDeduction {
                     name: rule.name,
@@ -654,23 +636,13 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
             }
             continue;
         }
-        chosen.push((
-            family,
-            AppliedDeduction {
-                name: rule.name,
-                category,
-                amount,
-            },
-        ));
+        chosen.push((family, AppliedDeduction { name: rule.name, category, amount }));
     }
 
     let mut applied: Vec<AppliedDeduction> = chosen.into_iter().map(|(_, d)| d).collect();
     // Deterministic order, so a diff of two assessments is readable.
     applied.sort_by(|a, b| {
-        a.category
-            .as_str()
-            .cmp(b.category.as_str())
-            .then_with(|| a.name.cmp(b.name))
+        a.category.as_str().cmp(b.category.as_str()).then_with(|| a.name.cmp(b.name))
     });
 
     // The means-tested scales are keyed on `Reineinkommen` — NET income — not on
@@ -720,10 +692,7 @@ pub fn assess(canton_code: &str, household: &Household) -> DeductionAssessment {
     }
 
     DeductionAssessment {
-        jurisdiction: rules_for(canton_code)
-            .first()
-            .map(|r| r.canton_code)
-            .unwrap_or(""),
+        jurisdiction: rules_for(canton_code).first().map(|r| r.canton_code).unwrap_or(""),
         gross_income: household.gross_income,
         applied,
         skipped,
@@ -777,11 +746,7 @@ fn amount_for(rule: &DeductionRule, category: RuleCategory, household: &Househol
             // is the same shape as pillar 3a.
             match household.insurance_premiums {
                 Some(declared) => {
-                    let ceiling = if rule.maximum > 0.0 {
-                        rule.maximum
-                    } else {
-                        rule.amount
-                    };
+                    let ceiling = if rule.maximum > 0.0 { rule.maximum } else { rule.amount };
                     declared.max(rule.minimum).min(ceiling).max(0.0)
                 }
                 None => 0.0,
@@ -791,11 +756,7 @@ fn amount_for(rule: &DeductionRule, category: RuleCategory, household: &Househol
             let declared = household.pillar3a_contribution.unwrap_or(0.0);
             // The rule states the maximum; deduct the lesser of it and what was
             // actually paid.
-            let ceiling = if rule.maximum > 0.0 {
-                rule.maximum
-            } else {
-                rule.amount
-            };
+            let ceiling = if rule.maximum > 0.0 { rule.maximum } else { rule.amount };
             declared.min(ceiling).max(0.0)
         }
         RuleCategory::SecondEarner => {
@@ -931,14 +892,11 @@ pub fn means_tested_scale_for(
     household: &Household,
     scale_base: f64,
 ) -> Option<&'static DeductionScale> {
-    scales_for(canton_code)
-        .into_iter()
-        .filter(|s| scale_applies(s, household))
-        .max_by(|a, b| {
-            a.amount_at(scale_base)
-                .partial_cmp(&b.amount_at(scale_base))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
+    scales_for(canton_code).into_iter().filter(|s| scale_applies(s, household)).max_by(|a, b| {
+        a.amount_at(scale_base)
+            .partial_cmp(&b.amount_at(scale_base))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })
 }
 
 /// The scale for a household that declares no other deductions.

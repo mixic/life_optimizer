@@ -99,10 +99,7 @@ impl Certificate {
 
     /// The count of propositions that hold.
     pub fn held(&self) -> usize {
-        self.propositions
-            .iter()
-            .filter(|proposition| proposition.holds)
-            .count()
+        self.propositions.iter().filter(|proposition| proposition.holds).count()
     }
 
     /// The sentence that must be printed with any verdict, so a certificate cannot be quoted as
@@ -324,8 +321,7 @@ fn absorbable_monotone(wf: &WorkflowParameters, params: &capacity::ModelParamete
 fn breach_exists(wf: &WorkflowParameters, params: &capacity::ModelParameters) -> Proposition {
     let lean_path = trajectory_for(params, wf, 0.05);
     let learning_path = trajectory_for(params, wf, 0.25);
-    let lean_breach =
-        workflow::first_year_outside(&lean_path.0, workflow::Requirement::Stability);
+    let lean_breach = workflow::first_year_outside(&lean_path.0, workflow::Requirement::Stability);
     let learning_breach =
         workflow::first_year_outside(&learning_path.0, workflow::Requirement::Stability);
     let delay = match (lean_breach, learning_breach) {
@@ -334,7 +330,8 @@ fn breach_exists(wf: &WorkflowParameters, params: &capacity::ModelParameters) ->
     };
     Proposition {
         id: "P6",
-        claim: "Tracking takes the workflow out of its envelope within the horizon, and a learning \
+        claim:
+            "Tracking takes the workflow out of its envelope within the horizon, and a learning \
                 buffer delays the loss without preventing it",
         method: Method::Existence,
         holds: lean_breach.is_some() && learning_breach.is_some() && delay >= 2,
@@ -358,7 +355,10 @@ fn breach_exists(wf: &WorkflowParameters, params: &capacity::ModelParameters) ->
 /// **P7 — the failure is silent in throughput.** Between adoption and the breach, the workflow
 /// admits the same volume every year while the escaped-defect rate rises. So the deterioration is
 /// invisible in the metric the organisation watches and visible only in the one it does not.
-fn silence_of_throughput(wf: &WorkflowParameters, params: &capacity::ModelParameters) -> Proposition {
+fn silence_of_throughput(
+    wf: &WorkflowParameters,
+    params: &capacity::ModelParameters,
+) -> Proposition {
     let (path, capacities) = trajectory_for(params, wf, 0.05);
     let first_breach = workflow::first_year_outside(&path, workflow::Requirement::Stability)
         .unwrap_or(path.len() as u32);
@@ -367,13 +367,9 @@ fn silence_of_throughput(wf: &WorkflowParameters, params: &capacity::ModelParame
     let escape_opening = opening.map(|point| point.escape).unwrap_or(f64::NAN);
     let escape_breach = at_breach.map(|point| point.escape).unwrap_or(f64::NAN);
     // Throughput under a push policy is the generated volume, which does not depend on capacity.
-    let throughput_opening = workflow::evaluate(
-        wf,
-        Policy::Push,
-        capacities.first().copied().unwrap_or(1.0),
-        params,
-    )
-    .admitted_per_day;
+    let throughput_opening =
+        workflow::evaluate(wf, Policy::Push, capacities.first().copied().unwrap_or(1.0), params)
+            .admitted_per_day;
     let throughput_breach = workflow::evaluate(
         wf,
         Policy::Push,
@@ -409,11 +405,7 @@ fn no_rank_order(wf: &WorkflowParameters, params: &capacity::ModelParameters) ->
     .collect();
     let acceptance = direction::acceptance(&outcomes, 8);
     let winners = acceptance.shares.iter().filter(|share| **share > 0.0).count();
-    let largest = acceptance
-        .shares
-        .iter()
-        .copied()
-        .fold(0.0_f64, f64::max);
+    let largest = acceptance.shares.iter().copied().fold(0.0_f64, f64::max);
     Proposition {
         id: "P8",
         claim: "No configuration wins under every weighting: at least two win somewhere, and none \
@@ -427,7 +419,11 @@ fn no_rank_order(wf: &WorkflowParameters, params: &capacity::ModelParameters) ->
             acceptance.weightings,
             largest * 100.0,
             (0..outcomes.len())
-                .map(|index| format!("{} {:.0}%", ["lean", "buffered", "learning"][index], acceptance.shares[index] * 100.0))
+                .map(|index| format!(
+                    "{} {:.0}%",
+                    ["lean", "buffered", "learning"][index],
+                    acceptance.shares[index] * 100.0
+                ))
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
@@ -478,10 +474,7 @@ fn simulation_agrees(wf: &WorkflowParameters, params: &capacity::ModelParameters
 
 /// The autonomy years a person spends above the floor.
 fn autonomy_years(states: &[capacity::State]) -> f64 {
-    states
-        .iter()
-        .filter(|state| state.autonomy >= AUTONOMY_FLOOR)
-        .count() as f64
+    states.iter().filter(|state| state.autonomy >= AUTONOMY_FLOOR).count() as f64
 }
 
 /// The workflow envelope path and the capacity path for a given training share.

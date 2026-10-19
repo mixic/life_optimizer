@@ -236,11 +236,7 @@ impl Canton {
 
     /// All codes, for error messages.
     pub fn all_codes() -> String {
-        ALL_CANTONS
-            .iter()
-            .map(|c| c.code())
-            .collect::<Vec<_>>()
-            .join(", ")
+        ALL_CANTONS.iter().map(|c| c.code()).collect::<Vec<_>>().join(", ")
     }
 }
 
@@ -365,9 +361,7 @@ fn is_priced_any_source(canton: Canton) -> bool {
     let data = canton_tax_data(canton);
     let scale_available = data.base_scale.is_some()
         || imported_scale(canton).is_some_and(|s| {
-            s.flat_rate_percent.is_some()
-                || s.is_formula()
-                || s.single.iter().any(|b| b.rate > 0.0)
+            s.flat_rate_percent.is_some() || s.is_formula() || s.single.iter().any(|b| b.rate > 0.0)
         });
     data.steuerfuss.is_some() && scale_available
 }
@@ -659,11 +653,9 @@ pub fn cantonal_tax_from_formulas(
 ) -> Result<f64, String> {
     let base = crate::federal_tax::formula_tax(segments, taxable_income);
     if base.is_nan() {
-        return Err(
-            "a tariff formula could not be evaluated; refusing to report a tax \
+        return Err("a tariff formula could not be evaluated; refusing to report a tax \
              rather than reporting a partial one"
-                .to_string(),
-        );
+            .to_string());
     }
     apply_steuerfuss(base, cantonal_fuss, municipal_fuss, include_municipal)
 }
@@ -751,10 +743,7 @@ pub fn cantonal_tax(
     // Marital status selects the bracket table; the splitting factor is a
     // separate axis and is only ever non-`None` for a shared scale.
     let (scale, splitting) = match imported_scale(canton) {
-        Some(imported) => (
-            imported.brackets(married),
-            imported.splitting_factor(married),
-        ),
+        Some(imported) => (imported.brackets(married), imported.splitting_factor(married)),
         None => (
             data.base_scale.ok_or_else(|| CantonTaxError::NotSourced {
                 canton,
@@ -867,11 +856,7 @@ mod tests {
     /// for the wrong reason. Deriving the set means adding data never breaks
     /// these assertions.
     fn unpriceable_cantons() -> Vec<Canton> {
-        ALL_CANTONS
-            .iter()
-            .copied()
-            .filter(|c| !is_priceable(*c))
-            .collect()
+        ALL_CANTONS.iter().copied().filter(|c| !is_priceable(*c)).collect()
     }
 
     /// An unsourced canton must fail loudly. This is the central safety property
@@ -916,18 +901,14 @@ mod tests {
     #[test]
     fn error_message_is_actionable() {
         let unpriced = unpriceable_cantons();
-        let Some(&canton) = unpriced.iter().find(|c| {
-            canton_tax_data(**c).steuerfuss.is_some()
-        }) else {
+        let Some(&canton) = unpriced.iter().find(|c| canton_tax_data(**c).steuerfuss.is_some())
+        else {
             return; // no suitable canton loaded; nothing to assert
         };
 
         let err = cantonal_tax(canton, 100_000.0, false, false).unwrap_err();
         let message = err.to_string();
-        assert!(
-            message.contains(canton.code()),
-            "should name the canton: {message}"
-        );
+        assert!(message.contains(canton.code()), "should name the canton: {message}");
         assert!(
             message.contains("will not substitute"),
             "should state the no-fallback policy: {message}"
@@ -1002,10 +983,7 @@ mod tests {
         let mut expected = STEUERFUSS_SOURCE_EXCEPTIONS.to_vec();
         expected.sort_unstable();
 
-        assert_eq!(
-            actual, expected,
-            "the set of cantons without a cantonal Steuerfuss changed"
-        );
+        assert_eq!(actual, expected, "the set of cantons without a cantonal Steuerfuss changed");
     }
 
     /// For a canton with no export yet, only the base scale should remain
@@ -1067,10 +1045,7 @@ mod tests {
             imported_scale(canton).is_some(),
             "but its scale has been imported, so this is the half-data case"
         );
-        assert!(
-            !is_priceable(canton),
-            "a scale without a multiplier cannot produce a figure"
-        );
+        assert!(!is_priceable(canton), "a scale without a multiplier cannot produce a figure");
 
         let result = cantonal_tax(canton, 100_000.0, false, false);
         assert!(result.is_err(), "a half-sourced canton must not be priced");
@@ -1169,8 +1144,7 @@ mod tests {
     #[test]
     fn cantonal_tax_is_linear_in_the_steuerfuss() {
         let taxable = 80_000.0;
-        let base =
-            crate::federal_tax::tax_with_scale(BERN_BASE_SCALE_PLACEHOLDER, taxable);
+        let base = crate::federal_tax::tax_with_scale(BERN_BASE_SCALE_PLACEHOLDER, taxable);
 
         // Apply the arithmetic the public function uses, at two multipliers.
         let at_100 = base * 100.0 / 100.0;
@@ -1191,27 +1165,24 @@ mod tests {
         let income = 100_000.0;
 
         // Cantonal only: 100,000 x 0.98.
-        let cantonal_only =
-            cantonal_tax_from_scale(&flat, income, 0.98, Some(1.19), false, None)
-                .expect("valid factors");
+        let cantonal_only = cantonal_tax_from_scale(&flat, income, 0.98, Some(1.19), false, None)
+            .expect("valid factors");
         assert!(
             (cantonal_only - 98_000.0).abs() < 1e-9,
             "expected 100000 x 0.98 = 98000, got {cantonal_only}"
         );
 
         // Cantonal + municipal: 100,000 x (0.98 + 1.19) = 217,000.
-        let with_municipal =
-            cantonal_tax_from_scale(&flat, income, 0.98, Some(1.19), true, None)
-                .expect("valid factors");
+        let with_municipal = cantonal_tax_from_scale(&flat, income, 0.98, Some(1.19), true, None)
+            .expect("valid factors");
         assert!(
             (with_municipal - 217_000.0).abs() < 1e-9,
             "expected 100000 x 2.17 = 217000, got {with_municipal}"
         );
 
         // A high-tax canton: Bern's 2.975 factor on the same base.
-        let bern_like =
-            cantonal_tax_from_scale(&flat, income, 2.975, Some(1.54), true, None)
-                .expect("valid factors");
+        let bern_like = cantonal_tax_from_scale(&flat, income, 2.975, Some(1.54), true, None)
+            .expect("valid factors");
         assert!(
             (bern_like - income * (2.975 + 1.54)).abs() < 1e-9,
             "Bern-like total should be income x 4.515, got {bern_like}"
@@ -1288,8 +1259,7 @@ mod tests {
         let flat = [FederalBracket { threshold: 0.0, rate: 1.0 }];
         let income = 50_000.0;
 
-        let cantonal =
-            cantonal_tax_from_scale(&flat, income, 1.0, None, false, None).unwrap();
+        let cantonal = cantonal_tax_from_scale(&flat, income, 1.0, None, false, None).unwrap();
         let federal = crate::federal_tax::federal_tax(income, false);
 
         // The public `total_tax` cannot be used here because no canton has a
@@ -1327,8 +1297,8 @@ mod tests {
         // Single taxpayer: no splitting, so the full income meets the scale.
         //   bands up to 100,000 accumulate to a simple tax of 6,938
         //   6,938 x 1.99 (1.03 cantonal + 0.96 Aarau) = 13,806.62
-        let single = cantonal_tax(Canton::Aargau, taxable, false, true)
-            .expect("Aargau is now priceable");
+        let single =
+            cantonal_tax(Canton::Aargau, taxable, false, true).expect("Aargau is now priceable");
         assert!(
             (single - 13_806.62).abs() < 0.5,
             "Aargau single at CHF {taxable}: expected 13806.62, got {single:.2}"
@@ -1343,8 +1313,8 @@ mod tests {
         // the scale is progressive, so taxing two halves at 50,000 costs less
         // than taxing one whole at 100,000. That gap is the whole point of
         // splitting, and the assertion below depends on it being real.
-        let married = cantonal_tax(Canton::Aargau, taxable, true, true)
-            .expect("Aargau is now priceable");
+        let married =
+            cantonal_tax(Canton::Aargau, taxable, true, true).expect("Aargau is now priceable");
         assert!(
             (married - 9_488.32).abs() < 0.5,
             "Aargau married at CHF {taxable}: expected 9488.32, got {married:.2}"
@@ -1379,10 +1349,7 @@ mod tests {
         let ur = cantonal_tax(Canton::Uri, income, false, true)
             .expect("Uri should be priceable from the flat rate");
         let expected_ur = income * 0.071 * (1.00 + 0.95);
-        assert!(
-            (ur - expected_ur).abs() < 1.0,
-            "UR: expected {expected_ur:.2}, got {ur:.2}"
-        );
+        assert!((ur - expected_ur).abs() < 1.0, "UR: expected {expected_ur:.2}, got {ur:.2}");
 
         // A flat rate is proportional, so the effective cantonal rate must not
         // change with income. That is what distinguishes these cantons.
@@ -1397,10 +1364,7 @@ mod tests {
         // flat path worth testing separately.
         let zh_low = cantonal_tax(Canton::Zurich, 50_000.0, false, true).unwrap();
         let zh_high = cantonal_tax(Canton::Zurich, 200_000.0, false, true).unwrap();
-        assert!(
-            (zh_high / 200_000.0) > (zh_low / 50_000.0),
-            "a band canton should be progressive"
-        );
+        assert!((zh_high / 200_000.0) > (zh_low / 50_000.0), "a band canton should be progressive");
     }
 
     /// The Steuerfuss vintage must match the scale vintage.
@@ -1423,7 +1387,8 @@ mod tests {
                     continue;
                 }
                 assert_eq!(
-                    year, SELF_ASSESSMENT_YEAR,
+                    year,
+                    SELF_ASSESSMENT_YEAR,
                     "{}: Steuerfuss is from {year}, scales are from {SELF_ASSESSMENT_YEAR}",
                     canton.code()
                 );
@@ -1463,11 +1428,7 @@ mod tests {
         for canton in [Canton::Obwalden, Canton::Uri] {
             let scale = imported_scale(canton)
                 .unwrap_or_else(|| panic!("{} should have an imported scale", canton.code()));
-            assert!(
-                scale.is_flat_rate(),
-                "{}: should be flagged flat-rate",
-                canton.code()
-            );
+            assert!(scale.is_flat_rate(), "{}: should be flagged flat-rate", canton.code());
             assert!(
                 scale.flat_rate_percent.is_some(),
                 "{}: should carry the percentage",
@@ -1509,11 +1470,7 @@ mod tests {
                     .unwrap_or_else(|e| panic!("{} married={married}: {e}", canton.code()));
                 let rate = tax / taxable;
 
-                assert!(
-                    tax > 0.0,
-                    "{} married={married}: tax should be positive",
-                    canton.code()
-                );
+                assert!(tax > 0.0, "{} married={married}: tax should be positive", canton.code());
                 assert!(
                     (0.01..0.45).contains(&rate),
                     "{} married={married}: effective cantonal rate {:.1}% is implausible",
@@ -1555,8 +1512,8 @@ mod tests {
     /// legally-fixed multiplier, and a figure.
     #[test]
     fn basel_landschaft_prices_from_a_formula_tariff() {
-        let scale = imported_scale(Canton::BaselLandschaft)
-            .expect("BL's Tarife export must be imported");
+        let scale =
+            imported_scale(Canton::BaselLandschaft).expect("BL's Tarife export must be imported");
         assert!(
             scale.is_formula(),
             "BL publishes formulas; the band table is empty by construction"
@@ -1565,11 +1522,7 @@ mod tests {
             !scale.brackets(false).iter().any(|b| b.rate > 0.0),
             "a formula canton must not also carry a band schedule"
         );
-        assert_eq!(
-            scale.formulas(false).len(),
-            4,
-            "BL publishes four single segments"
-        );
+        assert_eq!(scale.formulas(false).len(), 4, "BL publishes four single segments");
         assert_eq!(
             scale.formulas(true).len(),
             5,
@@ -1609,15 +1562,15 @@ mod tests {
         );
 
         // End to end: 1.65 x the simple tax, and marriage costs no more.
-        let single = cantonal_tax(Canton::BaselLandschaft, 100_000.0, false, true)
-            .expect("BL is priceable");
+        let single =
+            cantonal_tax(Canton::BaselLandschaft, 100_000.0, false, true).expect("BL is priceable");
         assert!(
             (single - simple * 1.65).abs() < 0.5,
             "expected {} at 100k, got {single}",
             simple * 1.65
         );
-        let married = cantonal_tax(Canton::BaselLandschaft, 100_000.0, true, true)
-            .expect("BL is priceable");
+        let married =
+            cantonal_tax(Canton::BaselLandschaft, 100_000.0, true, true).expect("BL is priceable");
         assert!(
             married <= single + 0.5,
             "BL's married tariff must not cost more: {married} vs {single}"
@@ -1658,13 +1611,9 @@ mod tests {
     /// exports does not break the suite.
     #[test]
     fn cantons_without_imported_scales_still_refuse() {
-        for canton in [
-            Canton::Ticino,
-            Canton::Vaud,
-            Canton::Jura,
-            Canton::Neuchatel,
-            Canton::Thurgau,
-        ] {
+        for canton in
+            [Canton::Ticino, Canton::Vaud, Canton::Jura, Canton::Neuchatel, Canton::Thurgau]
+        {
             if is_priceable(canton) {
                 continue; // an export arrived; nothing to assert
             }

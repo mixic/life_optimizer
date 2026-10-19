@@ -86,13 +86,7 @@ pub fn envelope_at(
     let base = wf.base_service();
     let target_wait = wf.deadline_days - base;
     let rho_max_for_deadline = if target_wait > 0.0 {
-        queue::utilisation_for_delay(
-            target_wait,
-            wf.servers,
-            wf.arrival_cv,
-            wf.service_cv,
-            base,
-        )
+        queue::utilisation_for_delay(target_wait, wf.servers, wf.arrival_cv, wf.service_cv, base)
     } else {
         None
     };
@@ -189,10 +183,7 @@ pub fn deadline_sensitivity(
         .map(|deadline| {
             let mut probe = wf.clone();
             probe.deadline_days = *deadline;
-            (
-                *deadline,
-                critical_absorption_capacity(&probe, capacity_params),
-            )
+            (*deadline, critical_absorption_capacity(&probe, capacity_params))
         })
         .collect()
 }

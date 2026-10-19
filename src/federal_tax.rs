@@ -109,8 +109,6 @@ pub const FEDERAL_BRACKETS_SINGLE: &[FederalBracket] =
 pub const FEDERAL_BRACKETS_MARRIED: &[FederalBracket] =
     crate::federal_tariff_data::FEDERAL_MARRIED_BRACKETS;
 
-
-
 /// Select the applicable federal tariff.
 pub fn federal_brackets(married: bool) -> &'static [FederalBracket] {
     if married {
@@ -293,11 +291,15 @@ mod formula_eval {
             } else if c.is_ascii_digit() || c == '.' {
                 let start = i;
                 while i < chars.len()
-                    && (chars[i].is_ascii_digit() || chars[i] == '.' || chars[i] == '\'' || chars[i] == ',')
+                    && (chars[i].is_ascii_digit()
+                        || chars[i] == '.'
+                        || chars[i] == '\''
+                        || chars[i] == ',')
                 {
                     i += 1;
                 }
-                let number: String = chars[start..i].iter().filter(|ch| **ch != '\'' && **ch != ',').collect();
+                let number: String =
+                    chars[start..i].iter().filter(|ch| **ch != '\'' && **ch != ',').collect();
                 tokens.push(number);
             } else if chars[i..].starts_with(&['$', 'w', 'e', 'r', 't', '$']) {
                 tokens.push("$wert$".to_string());
@@ -459,10 +461,7 @@ pub fn federal_marginal_rate(taxable_income: f64, married: bool) -> f64 {
 
 /// Highest bracket rate in the tariff, for sanity checks and display.
 pub fn federal_top_rate(married: bool) -> f64 {
-    federal_brackets(married)
-        .last()
-        .map(|b| b.rate)
-        .unwrap_or(0.0)
+    federal_brackets(married).last().map(|b| b.rate).unwrap_or(0.0)
 }
 
 /// Brackets where the marginal rate *decreases* from the previous bracket.
@@ -532,18 +531,12 @@ mod tests {
         // At 16,731 the first segment applies: the law's own continuity is
         // visible in that 0.49% x 16,731 = 81.98.
         let first = eval_formula(segments[0].expression, 16_731.0).unwrap();
-        assert!(
-            (first - 81.9819).abs() < 0.001,
-            "BL at 16731: expected 81.9819, got {first}"
-        );
+        assert!((first - 81.9819).abs() < 0.001, "BL at 16731: expected 81.9819, got {first}");
         // The linear top segment is exactly reproducible by hand:
         //   235687.5410 + 0.1862 * (2000000 - 1282692)
         let top = eval_formula(segments[3].expression, 2_000_000.0).unwrap();
         let expected = 235_687.541_0 + 0.186_2 * (2_000_000.0 - 1_282_692.0);
-        assert!(
-            (top - expected).abs() < 0.001,
-            "BL top segment: expected {expected}, got {top}"
-        );
+        assert!((top - expected).abs() < 0.001, "BL top segment: expected {expected}, got {top}");
         assert!(top > first);
     }
 
@@ -586,11 +579,7 @@ mod tests {
     #[test]
     fn basel_landschaft_segments_are_continuous_at_their_thresholds() {
         let segments = &crate::estv_scales_data::BL_SINGLE_FORMULAS;
-        assert!(
-            segments.len() >= 4,
-            "BL publishes four single segments, got {}",
-            segments.len()
-        );
+        assert!(segments.len() >= 4, "BL publishes four single segments, got {}", segments.len());
 
         for pair in segments.windows(2) {
             let (first, second) = (&pair[0], &pair[1]);
@@ -673,8 +662,16 @@ mod tests {
     #[test]
     fn tax_increases_with_income() {
         let incomes = [
-            16_000.0, 34_000.0, 50_000.0, 80_000.0, 120_000.0, 200_000.0, 500_000.0,
-            800_000.0, 1_500_000.0, 3_000_000.0,
+            16_000.0,
+            34_000.0,
+            50_000.0,
+            80_000.0,
+            120_000.0,
+            200_000.0,
+            500_000.0,
+            800_000.0,
+            1_500_000.0,
+            3_000_000.0,
         ];
         let mut previous_tax = 0.0;
         for income in incomes {
@@ -703,15 +700,12 @@ mod tests {
     /// would otherwise pass unnoticed.
     #[test]
     fn single_grid_thresholds_are_the_published_ones() {
-        let thresholds: Vec<f64> = FEDERAL_BRACKETS_SINGLE
-            .iter()
-            .map(|b| b.threshold)
-            .collect();
+        let thresholds: Vec<f64> = FEDERAL_BRACKETS_SINGLE.iter().map(|b| b.threshold).collect();
         assert_eq!(
             thresholds,
             vec![
-                0.0, 15_200.0, 33_200.0, 43_500.0, 58_000.0, 76_100.0, 82_000.0,
-                108_800.0, 141_500.0, 184_900.0, 793_300.0, 793_400.0
+                0.0, 15_200.0, 33_200.0, 43_500.0, 58_000.0, 76_100.0, 82_000.0, 108_800.0,
+                141_500.0, 184_900.0, 793_300.0, 793_400.0
             ]
         );
     }
@@ -720,10 +714,7 @@ mod tests {
     /// taxpayer, against 7.39% in the table this replaced.
     #[test]
     fn peak_marginal_rate() {
-        let peak_single = FEDERAL_BRACKETS_SINGLE
-            .iter()
-            .map(|b| b.rate)
-            .fold(f64::MIN, f64::max);
+        let peak_single = FEDERAL_BRACKETS_SINGLE.iter().map(|b| b.rate).fold(f64::MIN, f64::max);
         assert!(
             (peak_single - 0.132).abs() < 1e-9,
             "single peak band should be 13.2%, got {peak_single}"
@@ -736,10 +727,7 @@ mod tests {
         let at = 793_400.0;
         let below = federal_tax(at - 1.0, false);
         let above = federal_tax(at + 1_000_000.0, false);
-        assert!(
-            above > below,
-            "tax must still rise across the top-band reduction"
-        );
+        assert!(above > below, "tax must still rise across the top-band reduction");
     }
 
     /// The single reduction in the grid is the deliberate top band, and

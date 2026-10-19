@@ -26,13 +26,7 @@ fn option(
     autonomy_years: f64,
     backlog: f64,
 ) -> Outcome {
-    Outcome {
-        throughput,
-        cycle_time,
-        escaped_defects,
-        autonomy_years,
-        backlog,
-    }
+    Outcome { throughput, cycle_time, escaped_defects, autonomy_years, backlog }
 }
 
 /// Two configurations of the same workflow, in the shape the model produces: one that ships a
@@ -50,13 +44,11 @@ fn competing_options() -> Vec<Outcome> {
 /// can rescue a dominated option the aggregation is broken.
 #[test]
 fn a_dominated_option_never_wins() {
-    let options = vec![
-        option(10.0, 8.0, 6.0, 4.0, 8.0),
-        option(20.0, 4.0, 3.0, 9.0, 2.0),
-    ];
+    let options = vec![option(10.0, 8.0, 6.0, 4.0, 8.0), option(20.0, 4.0, 3.0, 9.0, 2.0)];
     let result = acceptance(&options, 8);
     assert_eq!(
-        result.shares[0], 0.0,
+        result.shares[0],
+        0.0,
         "the dominated option won {:.0}% of the weightings",
         result.shares[0] * 100.0
     );
@@ -87,7 +79,8 @@ fn a_single_criterion_weighting_ranks_by_that_criterion() {
         values[criterion] = 1.0;
         let winner = rank(&options, &Weights::new(values))[0];
         assert_eq!(
-            winner, *expected_winner,
+            winner,
+            *expected_winner,
             "under a weighting on {} alone the winner was {winner}, not {expected_winner}",
             criterion_name(criterion)
         );
@@ -115,11 +108,7 @@ fn the_shares_are_shares() {
     let result = acceptance(&options, 6);
     assert!(result.weightings > 100, "the grid is too coarse: {}", result.weightings);
     let total: f64 = result.shares.iter().sum();
-    assert!(
-        (total - 1.0).abs() < 1e-12,
-        "the shares sum to {total}, not one: {:?}",
-        result.shares
-    );
+    assert!((total - 1.0).abs() < 1e-12, "the shares sum to {total}, not one: {:?}", result.shares);
     assert!(result.shares.iter().all(|share| *share >= 0.0));
 }
 
@@ -131,10 +120,7 @@ fn the_grid_is_the_simplex() {
     assert_eq!(grid.len(), 70);
     for weights in &grid {
         let total: f64 = (0..CRITERIA).map(|index| weights.get(index)).sum();
-        assert!(
-            (total - 1.0).abs() < 1e-12,
-            "a weight vector sums to {total}, not one"
-        );
+        assert!((total - 1.0).abs() < 1e-12, "a weight vector sums to {total}, not one");
         assert!((0..CRITERIA).all(|index| weights.get(index) >= 0.0));
     }
     // A normalised vector is normalised whatever it was built from.

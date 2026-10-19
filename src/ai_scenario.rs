@@ -81,10 +81,7 @@ impl Scenario {
                 "required output index",
                 "declared: what an employer asks for is a choice, not a measurement",
             ),
-            (
-                "compression sensitivity",
-                "declared: no published estimate exists for it",
-            ),
+            ("compression sensitivity", "declared: no published estimate exists for it"),
         ]
     }
 }
@@ -93,7 +90,8 @@ impl Scenario {
 pub const SCENARIOS: [Scenario; 3] = [
     Scenario {
         name: "sceptical",
-        description: "AI delivers less than most published estimates, and the gain does not survive review",
+        description:
+            "AI delivers less than most published estimates, and the gain does not survive review",
         productivity_gain: 0.10,
         productivity_gain_high: 0.20,
         quality_retention: 0.60,
@@ -129,10 +127,7 @@ pub const SCENARIOS: [Scenario; 3] = [
 /// model under the user: the caller reports it and refuses.
 pub fn by_name(name: &str) -> Option<Scenario> {
     let wanted = name.trim().to_ascii_lowercase();
-    SCENARIOS
-        .iter()
-        .find(|scenario| scenario.name == wanted)
-        .copied()
+    SCENARIOS.iter().find(|scenario| scenario.name == wanted).copied()
 }
 
 /// Every scenario name, for help text and error messages.

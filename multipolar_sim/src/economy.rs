@@ -70,10 +70,7 @@ use crate::blocks::PowerBloc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Provenance {
     /// Published and citable, at the named source and vintage.
-    Sourced {
-        source: &'static str,
-        vintage: &'static str,
-    },
+    Sourced { source: &'static str, vintage: &'static str },
     /// Invented: chosen to be plausible in sign and rough magnitude, not calibrated.
     Illustrative { rationale: &'static str },
 }
@@ -374,16 +371,8 @@ impl Economy {
         // Dependence on third parties still makes both parties prefer a stable
         // system, but it is a weaker link than trading with each other, so it enters
         // at a reduced weight.
-        let via_exposure = self
-            .energy
-            .get(a)
-            .map(|e| e.disruption_exposure())
-            .unwrap_or(0.0)
-            + self
-                .energy
-                .get(b)
-                .map(|e| e.disruption_exposure())
-                .unwrap_or(0.0);
+        let via_exposure = self.energy.get(a).map(|e| e.disruption_exposure()).unwrap_or(0.0)
+            + self.energy.get(b).map(|e| e.disruption_exposure()).unwrap_or(0.0);
         (direct + 0.25 * via_exposure / 2.0).clamp(0.0, 1.0)
     }
 
@@ -511,12 +500,7 @@ mod tests {
     #[test]
     fn monetary_leverage_is_directional_and_bounded() {
         let (blocs, economy) = economy();
-        let at = |name: &str| {
-            blocs
-                .iter()
-                .position(|b| b.name == name)
-                .expect("default bloc")
-        };
+        let at = |name: &str| blocs.iter().position(|b| b.name == name).expect("default bloc");
 
         // The transatlantic asymmetry the split made expressible: the United States
         // issues the currency Europe's reserves are mostly held in, and not the
@@ -584,12 +568,7 @@ mod tests {
         let (blocs, economy) = economy();
         let name = |index: usize| blocs[index].name.as_str();
         let total_from = |index: usize| -> f64 {
-            economy
-                .flows
-                .iter()
-                .filter(|f| f.from == index)
-                .map(|f| f.share)
-                .sum()
+            economy.flows.iter().filter(|f| f.from == index).map(|f| f.share).sum()
         };
 
         let eurasian = blocs.iter().position(|b| b.name == "Eurasian").unwrap();
@@ -606,10 +585,7 @@ mod tests {
             to_asia > 0.7,
             "about 80% of Russian oil exports go to China and India, got {to_asia}"
         );
-        assert!(
-            total_from(eurasian) <= 1.0 + 1e-9,
-            "a bloc cannot export more than it exports"
-        );
+        assert!(total_from(eurasian) <= 1.0 + 1e-9, "a bloc cannot export more than it exports");
         let _ = name;
 
         // And the attribution the splits were for: each anchor must leave the bloc that
@@ -617,10 +593,7 @@ mod tests {
         let africa = blocs.iter().position(|b| b.name == "Africa").unwrap();
         let gulf = blocs.iter().position(|b| b.name == "Gulf").unwrap();
         let europe = blocs.iter().position(|b| b.name == "Europe").unwrap();
-        let us = blocs
-            .iter()
-            .position(|b| b.name == "United States")
-            .unwrap();
+        let us = blocs.iter().position(|b| b.name == "United States").unwrap();
         let residual = blocs.iter().position(|b| b.name == "Non-Aligned").unwrap();
 
         assert!(
@@ -629,10 +602,7 @@ mod tests {
              residual it used to be filed under"
         );
         assert!(
-            economy
-                .flows
-                .iter()
-                .any(|f| f.from == africa && f.to == europe),
+            economy.flows.iter().any(|f| f.from == africa && f.to == europe),
             "the Algerian flow is directed at Europe, which imports the gas"
         );
         // The transatlantic flow the old aggregate could not express: the United
@@ -652,10 +622,7 @@ mod tests {
             .filter(|f| f.from == gulf && (f.to == sinic || f.to == indo))
             .map(|f| f.share)
             .sum();
-        assert!(
-            gulf_to_asia > 0.4,
-            "the Gulf supplies both Asian importers, got {gulf_to_asia}"
-        );
+        assert!(gulf_to_asia > 0.4, "the Gulf supplies both Asian importers, got {gulf_to_asia}");
         assert_eq!(
             total_from(residual),
             0.0,
@@ -708,15 +675,9 @@ mod tests {
             rows.len()
         );
         for (what, provenance) in rows {
-            assert!(
-                !what.trim().is_empty(),
-                "a provenance row must name what it describes"
-            );
+            assert!(!what.trim().is_empty(), "a provenance row must name what it describes");
             let detail = provenance.detail();
-            assert!(
-                detail.len() > 30,
-                "{what} has a provenance that says nothing: {detail:?}"
-            );
+            assert!(detail.len() > 30, "{what} has a provenance that says nothing: {detail:?}");
             // A sourced claim must name a source *and* a vintage; otherwise it is
             // not checkable.
             if let Provenance::Sourced { source, vintage } = provenance {

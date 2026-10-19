@@ -181,10 +181,7 @@ impl Default for ConsumptionProfileConfig {
 
 impl ConsumptionProfileConfig {
     pub fn new(profile: ConsumptionProfile) -> Self {
-        Self {
-            profile,
-            ..Self::default()
-        }
+        Self { profile, ..Self::default() }
     }
 
     pub fn with_sparing_ratio(mut self, ratio: f64) -> Self {

@@ -49,11 +49,8 @@ fn perturbing_a_weight_preserves_the_sum() {
     for (index, name) in CRITERIA.iter().enumerate() {
         for factor in FACTORS {
             let moved = perturb_weights(&base, index, factor);
-            let total = moved.consumption
-                + moved.leisure
-                + moved.family
-                + moved.health
-                + moved.security;
+            let total =
+                moved.consumption + moved.leisure + moved.family + moved.health + moved.security;
             assert!(
                 close(total, 1.0),
                 "moving {name} by x{factor} left the weights summing to {total}"
@@ -133,7 +130,9 @@ fn the_baseline_is_the_answer_the_search_gives() {
     match (expected, report.base) {
         (Some(expected), Some(base)) => assert!(close(expected, base)),
         (None, None) => {}
-        (expected, base) => panic!("the block reports {base:?} where the search gives {expected:?}"),
+        (expected, base) => {
+            panic!("the block reports {base:?} where the search gives {expected:?}")
+        }
     }
 }
 

@@ -51,10 +51,7 @@ fn autonomy_is_zero_if_any_factor_is_zero() {
 /// adds efficiency to the other, and the training share decides which reaches the person.
 #[test]
 fn assistance_removes_production_reps_and_adds_learning_efficiency() {
-    let channels = Channels {
-        substitution: 0.8,
-        scaffolding: 1.4,
-    };
+    let channels = Channels { substitution: 0.8, scaffolding: 1.4 };
     // Producing with assistance yields fewer reps, monotonically.
     assert!(channels.production_practice(0.0) > channels.production_practice(0.5));
     assert!(channels.production_practice(0.5) > channels.production_practice(1.0));
@@ -64,13 +61,8 @@ fn assistance_removes_production_reps_and_adds_learning_efficiency() {
     assert!((channels.learning_practice(0.0) - 1.0).abs() < 1e-12);
 
     // The break-even share must be where the two exactly cancel at full assistance.
-    let t = channels
-        .break_even_learning_share()
-        .expect("channels are nonzero");
-    assert!(
-        (t - 0.8 / (0.8 + 1.4)).abs() < 1e-12,
-        "break-even share is {t}"
-    );
+    let t = channels.break_even_learning_share().expect("channels are nonzero");
+    assert!((t - 0.8 / (0.8 + 1.4)).abs() < 1e-12, "break-even share is {t}");
     let blended =
         (1.0 - t) * channels.production_practice(1.0) + t * channels.learning_practice(1.0);
     assert!(
@@ -83,22 +75,16 @@ fn assistance_removes_production_reps_and_adds_learning_efficiency() {
     // decay, only that assisted practice equals unassisted practice. Whether the build
     // clears decay at all is a separate question, answered by `deskilling_threshold`.
     let params = ModelParameters::default();
-    let low = capacity_change(1.0, 0.5, t * 0.5, &params)
-        - capacity_change(0.0, 0.5, t * 0.5, &params);
+    let low =
+        capacity_change(1.0, 0.5, t * 0.5, &params) - capacity_change(0.0, 0.5, t * 0.5, &params);
     assert!(low < 0.0, "assistance built more capacity below break-even");
     let high_share = (t + 0.4).min(1.0);
     let high = capacity_change(1.0, 0.5, high_share, &params)
         - capacity_change(0.0, 0.5, high_share, &params);
-    assert!(
-        high > 0.0,
-        "assistance built less capacity above break-even"
-    );
+    assert!(high > 0.0, "assistance built less capacity above break-even");
     // And the sign must flip exactly at the break-even share, not near it.
     let at = capacity_change(1.0, 0.5, t, &params) - capacity_change(0.0, 0.5, t, &params);
-    assert!(
-        at.abs() < 1e-12,
-        "the blend is not flat at break-even: {at}"
-    );
+    assert!(at.abs() < 1e-12, "the blend is not flat at break-even: {at}");
 }
 
 /// The deskilling threshold must agree with the dynamics it was derived from.
@@ -144,10 +130,7 @@ fn expectations_rise_to_a_ceiling_and_then_stop() {
     let mut previous = 0.0_f64;
     for year in 0..60 {
         let value = expectation_at(year, &params);
-        assert!(
-            value >= previous - 1e-12,
-            "expectations fell at year {year}"
-        );
+        assert!(value >= previous - 1e-12, "expectations fell at year {year}");
         assert!(
             value <= params.expectation_ceiling + 1e-12,
             "expectations passed the ceiling at year {year}: {value}"
@@ -243,14 +226,8 @@ fn the_runway_buys_years_of_autonomy_rather_than_a_different_endpoint() {
 fn the_residual_defect_rate_has_a_floor_that_effort_cannot_remove() {
     let params = ModelParameters::default();
     let floor = residual_defect_floor(&params);
-    assert!(close(
-        floor,
-        params.shared_blind_spot * (1.0 - params.machine_detection)
-    ));
-    assert!(
-        floor > 0.0,
-        "the floor should be positive for a correlated tester"
-    );
+    assert!(close(floor, params.shared_blind_spot * (1.0 - params.machine_detection)));
+    assert!(floor > 0.0, "the floor should be positive for a correlated tester");
     // As capacity vanishes, the rate approaches the floor plus the undetected remainder of
     // the independent share — never below the floor itself.
     let at_zero = residual_defect_rate(0.0, &params);
@@ -334,14 +311,8 @@ fn the_equilibrium_capacity_is_a_fixed_point() {
         // And it is stable: a perturbation decays back toward it.
         let up = capacity_change(assistance, (h + 0.02).min(1.0), t, &params);
         let down = capacity_change(assistance, (h - 0.02).max(0.0), t, &params);
-        assert!(
-            up < 0.0 || h + 0.02 >= 1.0,
-            "the fixed point should be stable from above"
-        );
-        assert!(
-            down > 0.0 || h - 0.02 <= 0.0,
-            "the fixed point should be stable from below"
-        );
+        assert!(up < 0.0 || h + 0.02 >= 1.0, "the fixed point should be stable from above");
+        assert!(down > 0.0 || h - 0.02 <= 0.0, "the fixed point should be stable from below");
     }
 }
 
@@ -362,10 +333,7 @@ fn tracking_the_tempo_costs_more_capacity_than_holding_assistance_still() {
     // And the trajectory's assistance must actually have risen, or the comparison is empty.
     let first = tracked.first().expect("non-empty").assistance;
     let last = tracked.last().expect("non-empty").assistance;
-    assert!(
-        last > first,
-        "tracked assistance did not rise: {first} to {last}"
-    );
+    assert!(last > first, "tracked assistance did not rise: {first} to {last}");
 }
 
 /// The runway must matter, and in the direction claimed: a longer lag before expectations
@@ -416,13 +384,7 @@ fn the_optimal_assistance_trades_speed_against_capacity() {
         let mut means = Vec::new();
         for step in 0..=10 {
             let level = f64::from(step) / 10.0;
-            let path = simulate(
-                0.7,
-                0.4,
-                &params,
-                Strategy::Fixed(level),
-                params.human_share,
-            );
+            let path = simulate(0.7, 0.4, &params, Strategy::Fixed(level), params.human_share);
             let mean: f64 =
                 path.iter().map(|s| s.effective_output).sum::<f64>() / path.len() as f64;
             means.push(mean);

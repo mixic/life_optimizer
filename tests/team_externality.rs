@@ -26,9 +26,7 @@
 use life_optimizer::optimizer::{LifeOptimizer, OptimizerConfig};
 use life_optimizer::requirements::{LifeStage, PersonalRequirements, PreferenceWeights};
 use life_optimizer::tax::TaxSchedule;
-use life_optimizer::team::{
-    Severity, TeamParameters, MATERIAL_HOURS, SEVERE_HOURS,
-};
+use life_optimizer::team::{Severity, TeamParameters, MATERIAL_HOURS, SEVERE_HOURS};
 
 fn close(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-9
@@ -41,10 +39,7 @@ fn close(a: f64, b: f64) -> bool {
 fn a_reduction_without_team_parameters_is_reported_as_unmodelled() {
     let externality = TeamParameters::not_modelled().evaluate(0.8, 42.0);
     assert_eq!(externality.severity, Severity::NotModelled);
-    assert!(
-        externality.requires_warning(),
-        "an unmodelled externality must produce a warning"
-    );
+    assert!(externality.requires_warning(), "an unmodelled externality must produce a warning");
     assert!(
         externality.summary().contains("NOT MODELLED"),
         "the summary must say the effect is unmodelled, got {:?}",
@@ -64,10 +59,7 @@ fn a_reduction_without_team_parameters_is_reported_as_unmodelled() {
 /// A full-time schedule moves nothing onto anyone, and says so without a warning.
 #[test]
 fn a_full_time_schedule_has_no_externality() {
-    for parameters in [
-        TeamParameters::not_modelled(),
-        TeamParameters::with_team(6, 1.0),
-    ] {
+    for parameters in [TeamParameters::not_modelled(), TeamParameters::with_team(6, 1.0)] {
         let externality = parameters.evaluate(1.0, 42.0);
         assert_eq!(externality.severity, Severity::NoReduction);
         assert!(!externality.requires_warning());
@@ -136,9 +128,7 @@ fn the_penalty_is_zero_unless_the_user_prices_it() {
     // But the hours are still reported, so the user can price them if they wish.
     assert!(unpriced.hours_moved_per_week > 0.0);
 
-    let priced = TeamParameters::with_team(3, 1.0)
-        .weighed(0.5)
-        .evaluate(0.8, 42.0);
+    let priced = TeamParameters::with_team(3, 1.0).weighed(0.5).evaluate(0.8, 42.0);
     assert!(close(priced.weighed_penalty, 0.5 * 8.4));
     assert!(close(priced.externality_weight, 0.5));
 }

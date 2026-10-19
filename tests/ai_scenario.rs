@@ -54,11 +54,7 @@ fn the_scenarios_are_ordered_from_sceptical_to_optimistic() {
 fn the_gains_sit_inside_the_published_range() {
     // AI_AS_CATALYST.md records a spread from 19% slower to 56% faster.
     for scenario in SCENARIOS {
-        assert!(
-            scenario.productivity_gain >= 0.0,
-            "{} asserts a negative gain",
-            scenario.name
-        );
+        assert!(scenario.productivity_gain >= 0.0, "{} asserts a negative gain", scenario.name);
         assert!(
             scenario.productivity_gain_high <= 0.56,
             "{} asserts {:.0}% at its optimistic end, beyond the published range",
@@ -75,14 +71,8 @@ fn every_name_resolves_however_it_is_typed() {
     for scenario in SCENARIOS {
         assert!(is_known(scenario.name));
         assert_eq!(by_name(scenario.name).map(|s| s.name), Some(scenario.name));
-        assert_eq!(
-            by_name(&scenario.name.to_uppercase()).map(|s| s.name),
-            Some(scenario.name)
-        );
-        assert_eq!(
-            by_name(&format!("  {}  ", scenario.name)).map(|s| s.name),
-            Some(scenario.name)
-        );
+        assert_eq!(by_name(&scenario.name.to_uppercase()).map(|s| s.name), Some(scenario.name));
+        assert_eq!(by_name(&format!("  {}  ", scenario.name)).map(|s| s.name), Some(scenario.name));
     }
     assert_eq!(names().len(), 3);
 }

@@ -42,12 +42,7 @@ fn optimizer_for_children(
     salary: f64,
     children: u32,
 ) -> LifeOptimizer {
-    LifeOptimizer::new(optimizer_config_children(
-        age,
-        retirement_age,
-        salary,
-        children,
-    ))
+    LifeOptimizer::new(optimizer_config_children(age, retirement_age, salary, children))
 }
 
 fn search(optimizer: &LifeOptimizer, candidates: &[f64]) -> SearchOutcome {
@@ -69,17 +64,11 @@ fn past_retirement_age_does_not_panic() {
             "age {age}: security utility {} out of range",
             scenario.utility_breakdown.security_utility
         );
-        assert!(
-            scenario.utility_score.is_finite(),
-            "age {age}: non-finite utility"
-        );
+        assert!(scenario.utility_score.is_finite(), "age {age}: non-finite utility");
 
         // The full search must survive the same condition.
         let outcome = search(&optimizer, &CANDIDATES);
-        assert!(
-            outcome.scenario.utility_score.is_finite(),
-            "age {age}: non-finite search result"
-        );
+        assert!(outcome.scenario.utility_score.is_finite(), "age {age}: non-finite search result");
     }
 }
 
@@ -96,17 +85,11 @@ fn infeasible_search_reports_fallback_and_minimises_shortfall() {
     let optimizer = optimizer_for_children(35, 65, 50_000.0, 2);
     let outcome = search(&optimizer, &CANDIDATES);
 
-    assert!(
-        !outcome.feasible_found,
-        "50k with two children cannot cover the mandatory floor"
-    );
+    assert!(!outcome.feasible_found, "50k with two children cannot cover the mandatory floor");
     assert!(!outcome.scenario.meets_requirements);
 
-    let smallest_shortfall = outcome
-        .all_scenarios
-        .iter()
-        .map(|s| s.surplus_deficit)
-        .fold(f64::NEG_INFINITY, f64::max);
+    let smallest_shortfall =
+        outcome.all_scenarios.iter().map(|s| s.surplus_deficit).fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (outcome.scenario.surplus_deficit - smallest_shortfall).abs() < 1e-9,
         "fallback should be the least-bad option: got {}, best is {}",
@@ -117,11 +100,8 @@ fn infeasible_search_reports_fallback_and_minimises_shortfall() {
     // The fallback must not be the utility-maximising candidate, which is the
     // specific behaviour that produced misleading advice. This scenario is
     // chosen because the two criteria genuinely diverge here.
-    let utility_best = outcome
-        .all_scenarios
-        .iter()
-        .map(|s| s.utility_score)
-        .fold(f64::NEG_INFINITY, f64::max);
+    let utility_best =
+        outcome.all_scenarios.iter().map(|s| s.utility_score).fold(f64::NEG_INFINITY, f64::max);
     assert!(
         (outcome.scenario.utility_score - utility_best).abs() > 1e-9,
         "this scenario is meant to demonstrate the two criteria diverging"
@@ -221,10 +201,7 @@ fn all_candidates_are_evaluated() {
     assert_eq!(outcome.all_scenarios.len(), CANDIDATES.len());
     for candidate in CANDIDATES {
         assert!(
-            outcome
-                .all_scenarios
-                .iter()
-                .any(|s| (s.work_percentage - candidate).abs() < 1e-12),
+            outcome.all_scenarios.iter().any(|s| (s.work_percentage - candidate).abs() < 1e-12),
             "candidate {candidate} was not evaluated"
         );
     }
@@ -238,10 +215,7 @@ fn conversion_scenario_influences_security_utility() {
     let security = |scenario: ConversionRateScenario| {
         let mut config = optimizer_config(45, 65, 140_000.0);
         config.conversion_scenario = scenario;
-        LifeOptimizer::new(config)
-            .evaluate_scenario(1.0)
-            .utility_breakdown
-            .security_utility
+        LifeOptimizer::new(config).evaluate_scenario(1.0).utility_breakdown.security_utility
     };
 
     let low = security(ConversionRateScenario::Custom(0.030));

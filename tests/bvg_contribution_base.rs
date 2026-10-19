@@ -44,10 +44,7 @@ fn contributions_are_levied_on_the_coordinated_salary() {
 
     // A salary between the entry threshold and the upper limit is insured in full.
     let mid = 50_000.0;
-    assert!(close(
-        coordinated_salary(mid),
-        mid - BVG_COORDINATION_DEDUCTION
-    ));
+    assert!(close(coordinated_salary(mid), mid - BVG_COORDINATION_DEDUCTION));
 }
 
 /// Below the entry threshold there is no BVG obligation, so the contribution base is zero rather

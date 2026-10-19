@@ -45,9 +45,9 @@
 
 use life_optimizer::early_retirement::{
     contribution_ledger, draw_paths, evaluate_strategy, greedy_withdrawals, optimise_withdrawals,
-    plan_withdrawals, project, required_withdrawals, retirement_availability,
-    AllocationOutcome, BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household,
-    PathDraw, Provenance, RetirementAvailability, RetirementParameters, TaxBand, TaxTreatment,
+    plan_withdrawals, project, required_withdrawals, retirement_availability, AllocationOutcome,
+    BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, PathDraw, Provenance,
+    RetirementAvailability, RetirementParameters, TaxBand, TaxTreatment,
 };
 use life_optimizer::tax::TaxSchedule;
 
@@ -68,34 +68,17 @@ fn capital_schedule() -> BandedTax {
     BandedTax {
         allowance: 0.0,
         bands: vec![
-            TaxBand {
-                width: 50_000.0,
-                marginal_rate: 0.0065,
-            },
-            TaxBand {
-                width: 150_000.0,
-                marginal_rate: 0.0120,
-            },
-            TaxBand {
-                width: 300_000.0,
-                marginal_rate: 0.0200,
-            },
-            TaxBand {
-                width: 500_000.0,
-                marginal_rate: 0.0300,
-            },
+            TaxBand { width: 50_000.0, marginal_rate: 0.0065 },
+            TaxBand { width: 150_000.0, marginal_rate: 0.0120 },
+            TaxBand { width: 300_000.0, marginal_rate: 0.0200 },
+            TaxBand { width: 500_000.0, marginal_rate: 0.0300 },
         ],
-        provenance: Provenance::Declared {
-            rationale: "test fixture",
-        },
+        provenance: Provenance::Declared { rationale: "test fixture" },
     }
 }
 
 fn need() -> ConsumptionNeed {
-    ConsumptionNeed {
-        mandatory_annual: 40_000.0,
-        lifestyle_annual: 55_000.0,
-    }
+    ConsumptionNeed { mandatory_annual: 40_000.0, lifestyle_annual: 55_000.0 }
 }
 
 // ---------------------------------------------------------------------------
@@ -125,10 +108,7 @@ fn the_projection_is_finite_and_non_negative_across_the_age_matrix() {
             ("bridge_ahv_contributions_min", e.bridge_ahv_contributions_min),
             ("bridge_ahv_contributions_max", e.bridge_ahv_contributions_max),
         ] {
-            assert!(
-                value.is_finite() && value >= 0.0,
-                "age {age}: {name} is {value}"
-            );
+            assert!(value.is_finite() && value >= 0.0, "age {age}: {name} is {value}");
         }
         assert!(e.retirement_age == age);
         assert_eq!(e.years_to_retirement, age.saturating_sub(household.current_age));
@@ -322,13 +302,7 @@ fn retiring_at_63_receives_ahv_from_63_and_not_from_65() {
     assert!(e.ahv_early_reduction > 0.0, "the reduction still applies");
 
     // Five years, so the horizon covers ages 63 to 67 and straddles the reference age.
-    let paths = vec![
-        PathDraw {
-            real_return: 0.0,
-            years_lived: 5,
-        };
-        1
-    ];
+    let paths = vec![PathDraw { real_return: 0.0, years_lived: 5 }; 1];
     let profile = evaluate_strategy(
         63,
         1.0,
@@ -356,10 +330,7 @@ fn retiring_at_63_receives_ahv_from_63_and_not_from_65() {
 fn an_unfundable_requirement_is_reported_and_never_overspends() {
     let bridge = vec![10_000.0_f64; 10];
     let (plan, surplus) = plan_withdrawals(50_000.0, &bridge, 60_000.0, &capital_schedule());
-    assert!(
-        surplus < 0.0,
-        "a 50,000 pot cannot fund ten years of a 50,000 annual gap"
-    );
+    assert!(surplus < 0.0, "a 50,000 pot cannot fund ten years of a 50,000 annual gap");
     let total: f64 = plan.capital_withdrawn.iter().sum();
     assert!(
         (total - 50_000.0).abs() < 1e-6,
@@ -418,10 +389,7 @@ fn the_linear_program_and_the_water_fill_agree_on_tax() {
             greedy.total_tax
         );
         let placed: f64 = lp.capital_withdrawn.iter().sum();
-        assert!(
-            (placed - capital).abs() < 1e-6,
-            "capital {capital}: the LP placed {placed}"
-        );
+        assert!((placed - capital).abs() < 1e-6, "capital {capital}: the LP placed {placed}");
     }
 }
 
@@ -453,11 +421,7 @@ fn water_filling_equalises_the_marginal_rate_without_concentrating() {
         "marginal rates range {lowest} to {highest}, more than one band apart"
     );
 
-    let largest = plan
-        .capital_withdrawn
-        .iter()
-        .cloned()
-        .fold(0.0_f64, f64::max);
+    let largest = plan.capital_withdrawn.iter().cloned().fold(0.0_f64, f64::max);
     assert!(
         largest < capital * 0.5,
         "one year took {largest} of {capital}, so the allocation concentrated"
@@ -582,24 +546,10 @@ fn annuitising_more_does_not_raise_risk_or_leave_more_unconsumed() {
     let e = project(&household, &params, 63, 1.0);
     let s = capital_schedule();
     let paths = draw_paths(2_000, 32, 0.015, 0.08, 95, 63, 11);
-    let all_capital = evaluate_strategy(
-        63,
-        0.0,
-        &e,
-        &need(),
-        &TaxTreatment::new(s.clone(), 0.0),
-        &paths,
-        32,
-    );
-    let all_annuity = evaluate_strategy(
-        63,
-        1.0,
-        &e,
-        &need(),
-        &TaxTreatment::new(s.clone(), 0.0),
-        &paths,
-        32,
-    );
+    let all_capital =
+        evaluate_strategy(63, 0.0, &e, &need(), &TaxTreatment::new(s.clone(), 0.0), &paths, 32);
+    let all_annuity =
+        evaluate_strategy(63, 1.0, &e, &need(), &TaxTreatment::new(s.clone(), 0.0), &paths, 32);
     assert!(
         all_annuity.probability_of_shortfall <= all_capital.probability_of_shortfall,
         "annuitising raised the shortfall probability: {} against {}",
@@ -632,10 +582,7 @@ fn the_same_seed_draws_the_same_paths() {
 fn the_household_variations_hold_across_the_age_matrix() {
     let params = RetirementParameters::default();
     let single = Household::default();
-    let married = Household {
-        married: true,
-        ..Household::default()
-    };
+    let married = Household { married: true, ..Household::default() };
     for age in AGE_MATRIX {
         let one = project(&single, &params, age, 1.0);
         let two = project(&married, &params, age, 1.0);
@@ -666,10 +613,7 @@ fn the_household_variations_hold_across_the_age_matrix() {
 #[test]
 fn a_salary_under_the_entry_threshold_accrues_nothing_but_still_earns_interest() {
     let params = RetirementParameters::default();
-    let low = Household {
-        full_time_salary: 20_000.0,
-        ..Household::default()
-    };
+    let low = Household { full_time_salary: 20_000.0, ..Household::default() };
     let full = Household::default();
     for age in AGE_MATRIX {
         let e = project(&low, &params, age, 1.0);
@@ -679,8 +623,7 @@ fn a_salary_under_the_entry_threshold_accrues_nothing_but_still_earns_interest()
             "age {age}: a salary under the entry threshold accumulated as much as one above it"
         );
         let years = age.saturating_sub(low.current_age);
-        let closed_form =
-            low.bvg_capital_now * (1.0 + params.bvg_min_interest).powi(years as i32);
+        let closed_form = low.bvg_capital_now * (1.0 + params.bvg_min_interest).powi(years as i32);
         assert!(
             (e.bvg_capital - closed_form).abs() < 1e-6,
             "age {age}: capital {} is not interest-only on the opening balance ({closed_form})",
@@ -700,23 +643,10 @@ fn the_projection_stays_in_shape_across_the_full_case_matrix() {
     let params = RetirementParameters::default();
     let households = [
         Household::default(),
-        Household {
-            married: true,
-            ..Household::default()
-        },
-        Household {
-            married: true,
-            children: 2,
-            ..Household::default()
-        },
-        Household {
-            full_time_salary: 60_000.0,
-            ..Household::default()
-        },
-        Household {
-            full_time_salary: 400_000.0,
-            ..Household::default()
-        },
+        Household { married: true, ..Household::default() },
+        Household { married: true, children: 2, ..Household::default() },
+        Household { full_time_salary: 60_000.0, ..Household::default() },
+        Household { full_time_salary: 400_000.0, ..Household::default() },
         Household {
             current_age: 55,
             contribution_years: 35,
@@ -724,11 +654,7 @@ fn the_projection_stays_in_shape_across_the_full_case_matrix() {
             pillar3a_capital_now: 150_000.0,
             ..Household::default()
         },
-        Household {
-            current_age: 62,
-            contribution_years: 42,
-            ..Household::default()
-        },
+        Household { current_age: 62, contribution_years: 42, ..Household::default() },
     ];
     for household in &households {
         for age in AGE_MATRIX {
@@ -819,10 +745,7 @@ fn every_parameter_has_a_stated_origin() {
     let mut varies = 0;
     for (name, provenance) in &table {
         assert!(!name.is_empty());
-        assert!(
-            !provenance.detail().is_empty(),
-            "{name} has no stated basis"
-        );
+        assert!(!provenance.detail().is_empty(), "{name} has no stated basis");
         match provenance.label() {
             "sourced" => sourced += 1,
             "varies" => varies += 1,
@@ -846,8 +769,13 @@ fn the_education_ledger_reports_the_multiple_of_the_states_outlay() {
     let schedule = TaxSchedule::bern_city_default(false, 0);
     let (state_cost, _) = Degree::Master.declared_state_cost();
     assert!(state_cost > 0.0);
-    let ledger =
-        contribution_ledger(ContributionPrinciple::AbilityToPay, state_cost, 120_000.0, 35, &schedule);
+    let ledger = contribution_ledger(
+        ContributionPrinciple::AbilityToPay,
+        state_cost,
+        120_000.0,
+        35,
+        &schedule,
+    );
     assert_eq!(ledger.principle_surcharge, 0.0);
     assert!(ledger.lifetime_income_tax > 0.0);
     assert!(
@@ -855,10 +783,9 @@ fn the_education_ledger_reports_the_multiple_of_the_states_outlay() {
         "a high earner's lifetime tax is {} times the declared outlay",
         ledger.tax_multiple_of_state_cost
     );
-    assert!((ledger.tax_multiple_of_state_cost
-        - ledger.lifetime_income_tax / state_cost)
-        .abs()
-        < 1e-9);
+    assert!(
+        (ledger.tax_multiple_of_state_cost - ledger.lifetime_income_tax / state_cost).abs() < 1e-9
+    );
 }
 
 /// All four contribution principles must be priceable, and the flat one must be regressive
@@ -872,10 +799,7 @@ fn all_four_principles_are_priced_and_the_flat_one_is_regressive_in_effect() {
     let (state_cost, _) = Degree::Master.declared_state_cost();
     let principles = [
         ContributionPrinciple::AbilityToPay,
-        ContributionPrinciple::EducationCostRecovery {
-            state_cost,
-            recovery_years: 35,
-        },
+        ContributionPrinciple::EducationCostRecovery { state_cost, recovery_years: 35 },
         ContributionPrinciple::BenefitReceived { premium_share: 0.10 },
         ContributionPrinciple::Flat { annual: 3_000.0 },
     ];

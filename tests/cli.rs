@@ -26,10 +26,7 @@ use std::process::{Command, Output};
 const BIN: &str = env!("CARGO_BIN_EXE_life-optimizer");
 
 fn run(args: &[&str]) -> Output {
-    Command::new(BIN)
-        .args(args)
-        .output()
-        .expect("failed to execute life-optimizer binary")
+    Command::new(BIN).args(args).output().expect("failed to execute life-optimizer binary")
 }
 
 fn stdout(output: &Output) -> String {
@@ -108,54 +105,29 @@ fn pension_with_custom_conversion_rate_shows_the_custom_row() {
         "0.055",
     ]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
 
-    assert!(
-        out.contains("MONTHLY PENSION BY CONVERSION RATE"),
-        "missing section header"
-    );
+    assert!(out.contains("MONTHLY PENSION BY CONVERSION RATE"), "missing section header");
     assert!(out.contains("Your pension fund"), "missing custom-rate row");
     assert!(out.contains("Realistic range"), "missing range line");
     // The disclaimer telling the user the figure depends on their fund.
-    assert!(
-        out.contains("--conversion-rate"),
-        "output should point the user at the flag"
-    );
+    assert!(out.contains("--conversion-rate"), "output should point the user at the flag");
 }
 
 /// Without the flag, all three reference scenarios must still be shown, so the
 /// uncertainty is visible even when the user has not supplied their own rate.
 #[test]
 fn pension_without_custom_rate_shows_all_three_scenarios() {
-    let output = run(&[
-        "pension",
-        "--salary",
-        "100000",
-        "--age",
-        "40",
-        "--work-pct",
-        "0.8",
-    ]);
+    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
 
     assert!(out.contains("Statutory minimum"), "missing statutory row");
     assert!(out.contains("Typical Swiss fund"), "missing typical row");
     assert!(out.contains("Projected for"), "missing projection row");
-    assert!(
-        !out.contains("Your pension fund"),
-        "custom row must not appear when unset"
-    );
+    assert!(!out.contains("Your pension fund"), "custom row must not appear when unset");
 }
 
 /// A rate above the statutory minimum must be reported as better, not worse.
@@ -200,11 +172,7 @@ fn infeasible_household_does_not_claim_an_optimal_solution() {
         "2",
     ]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
 
     assert!(
@@ -215,10 +183,7 @@ fn infeasible_household_does_not_claim_an_optimal_solution() {
         out.contains("NO AFFORDABLE OPTION"),
         "should state plainly that no option is affordable: {out}"
     );
-    assert!(
-        out.contains("closest option"),
-        "should describe the fallback honestly"
-    );
+    assert!(out.contains("closest option"), "should describe the fallback honestly");
 }
 
 /// A feasible household must still report an optimum.
@@ -236,20 +201,13 @@ fn feasible_household_reports_an_optimal_solution() {
         "0",
     ]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
     assert!(
         out.contains("OPTIMAL SOLUTION FOUND"),
         "an affordable household should get an optimum: {out}"
     );
-    assert!(
-        out.contains("MEETS ALL REQUIREMENTS"),
-        "should report feasibility"
-    );
+    assert!(out.contains("MEETS ALL REQUIREMENTS"), "should report feasibility");
 }
 
 // ─── General CLI health ─────────────────────────────────────────────────────
@@ -261,15 +219,7 @@ fn all_subcommands_run_successfully() {
         vec!["optimize", "--salary", "120000", "--age", "38"],
         vec!["compare", "--salary", "100000", "--age", "40"],
         vec!["lifetime", "--salary", "100000", "--age", "30"],
-        vec![
-            "pension",
-            "--salary",
-            "100000",
-            "--age",
-            "40",
-            "--work-pct",
-            "0.8",
-        ],
+        vec!["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"],
     ];
 
     for args in cases {
@@ -309,18 +259,8 @@ fn help_lists_subcommands_and_conversion_rate_flag() {
 /// An unknown flag must fail rather than be silently ignored.
 #[test]
 fn unknown_flag_is_rejected() {
-    let output = run(&[
-        "optimize",
-        "--salary",
-        "100000",
-        "--age",
-        "40",
-        "--not-a-flag",
-    ]);
-    assert!(
-        !output.status.success(),
-        "an unknown flag must not exit successfully"
-    );
+    let output = run(&["optimize", "--salary", "100000", "--age", "40", "--not-a-flag"]);
+    assert!(!output.status.success(), "an unknown flag must not exit successfully");
 }
 
 // ─── Pension fund profiles and stochastic rate uncertainty (§10.5) ──────────
@@ -341,39 +281,19 @@ fn pension_fund_profile_is_used_and_flagged_for_verification() {
         "publica",
     ]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
-    assert!(
-        out.contains("Using pension fund profile"),
-        "should echo the profile: {out}"
-    );
+    assert!(out.contains("Using pension fund profile"), "should echo the profile: {out}");
     assert!(out.contains("Publica"), "should name the fund");
-    assert!(
-        out.contains("Verify"),
-        "must remind the user to verify the rate"
-    );
-    assert!(
-        out.contains("Your pension fund"),
-        "should appear as the custom row"
-    );
+    assert!(out.contains("Verify"), "must remind the user to verify the rate");
+    assert!(out.contains("Your pension fund"), "should appear as the custom row");
 }
 
 /// An unknown fund id must fail with the valid options listed.
 #[test]
 fn unknown_pension_fund_is_rejected() {
-    let output = run(&[
-        "pension",
-        "--salary",
-        "100000",
-        "--age",
-        "40",
-        "--pension-fund",
-        "not-a-fund",
-    ]);
+    let output =
+        run(&["pension", "--salary", "100000", "--age", "40", "--pension-fund", "not-a-fund"]);
 
     assert_eq!(output.status.code(), Some(2), "should exit 2");
     let err = stderr(&output);
@@ -399,69 +319,33 @@ fn explicit_conversion_rate_overrides_fund_profile() {
         "0.045",
     ]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
     assert!(
         !out.contains("Using pension fund profile"),
         "an explicit rate should bypass the profile: {out}"
     );
-    assert!(
-        out.contains("4.50%"),
-        "the explicit rate should be used: {out}"
-    );
+    assert!(out.contains("4.50%"), "the explicit rate should be used: {out}");
 }
 
 /// The stochastic section must appear on a normal run, with CVaR reported
 /// alongside the percentiles.
 #[test]
 fn stochastic_rate_uncertainty_is_reported() {
-    let output = run(&[
-        "pension",
-        "--salary",
-        "100000",
-        "--age",
-        "40",
-        "--work-pct",
-        "0.8",
-    ]);
+    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
 
-    assert!(
-        output.status.success(),
-        "command failed: {}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
-    assert!(
-        out.contains("CONVERSION-RATE UNCERTAINTY"),
-        "missing stochastic section: {out}"
-    );
-    assert!(
-        out.contains("CVaR"),
-        "downside risk must be reported explicitly"
-    );
-    assert!(
-        out.contains("Probability of falling below"),
-        "missing shortfall probability"
-    );
+    assert!(out.contains("CONVERSION-RATE UNCERTAINTY"), "missing stochastic section: {out}");
+    assert!(out.contains("CVaR"), "downside risk must be reported explicitly");
+    assert!(out.contains("Probability of falling below"), "missing shortfall probability");
 }
 
 /// The BVG-only pension table must be labelled as such, so a reader cannot
 /// mistake it for total retirement income.
 #[test]
 fn bvg_only_pension_table_is_labelled() {
-    let output = run(&[
-        "pension",
-        "--salary",
-        "100000",
-        "--age",
-        "40",
-        "--work-pct",
-        "0.8",
-    ]);
+    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
     let out = stdout(&output);
     assert!(
         out.contains("BVG (occupational) annuity only"),

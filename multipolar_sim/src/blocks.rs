@@ -485,10 +485,7 @@ mod tests {
     /// the inescapable-dilemma defect.
     #[test]
     fn without_conflict_wear_the_dilemma_is_inescapable() {
-        let params = GameParams {
-            conflict_wear: 0.0,
-            ..GameParams::default()
-        };
+        let params = GameParams { conflict_wear: 0.0, ..GameParams::default() };
 
         for step in 0..=60 {
             let tension = step as f64 * 0.1;
@@ -543,11 +540,7 @@ mod tests {
         // A split must partition, not enlarge. Each pair of successors has to add up to
         // the bloc it replaced, or the split has quietly moved power.
         let share_of = |names: &[&str]| -> f64 {
-            blocs
-                .iter()
-                .filter(|b| names.contains(&b.name.as_str()))
-                .map(|b| b.power_share)
-                .sum()
+            blocs.iter().filter(|b| names.contains(&b.name.as_str())).map(|b| b.power_share).sum()
         };
         let aligned = share_of(&["Africa", "Gulf", "Non-Aligned"]);
         assert!(
@@ -566,16 +559,9 @@ mod tests {
              reserve shares"
         );
         let total: f64 = blocs.iter().map(|b| b.power_share).sum();
-        assert!(
-            (total - 1.0).abs() < 1e-9,
-            "shares must sum to 1, got {total}"
-        );
+        assert!((total - 1.0).abs() < 1e-9, "shares must sum to 1, got {total}");
         for bloc in &blocs {
-            assert!(
-                bloc.power_share > 0.0,
-                "{} has a non-positive share",
-                bloc.name
-            );
+            assert!(bloc.power_share > 0.0, "{} has a non-positive share", bloc.name);
             assert!(bloc.volatility >= 0.0, "{} has negative volatility", bloc.name);
         }
     }
@@ -589,10 +575,7 @@ mod tests {
             for tension in [0.0, 0.5, 1.0, 5.0, 50.0] {
                 let p = params.payoffs(gap, tension);
                 for value in [p.cc, p.cd, p.dc, p.dd] {
-                    assert!(
-                        value.is_finite(),
-                        "gap {gap} tension {tension} produced {value}"
-                    );
+                    assert!(value.is_finite(), "gap {gap} tension {tension} produced {value}");
                 }
             }
         }

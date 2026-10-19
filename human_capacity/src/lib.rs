@@ -62,10 +62,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Provenance {
     /// Published and citable, at the named source and vintage.
-    Sourced {
-        source: &'static str,
-        vintage: &'static str,
-    },
+    Sourced { source: &'static str, vintage: &'static str },
     /// Invented: plausible in sign and rough magnitude, not calibrated.
     Declared { rationale: &'static str },
 }
@@ -204,10 +201,7 @@ impl Default for ModelParameters {
             horizon_years: 30,
             initial_assistance: 0.2,
             throughput_gain: 1.5,
-            channels: Channels {
-                substitution: 0.8,
-                scaffolding: 1.4,
-            },
+            channels: Channels { substitution: 0.8, scaffolding: 1.4 },
             capacity_build: 0.35,
             capacity_decay: 0.06,
             quality_floor: 0.25,
@@ -530,13 +524,7 @@ pub fn best_fixed_assistance(
     let mut best = (0.0_f64, f64::NEG_INFINITY);
     for step in 0..=100 {
         let level = f64::from(step) / 100.0;
-        let path = simulate(
-            capacity_0,
-            self_model_0,
-            params,
-            Strategy::Fixed(level),
-            human_share,
-        );
+        let path = simulate(capacity_0, self_model_0, params, Strategy::Fixed(level), human_share);
         if path.is_empty() {
             continue;
         }
@@ -672,24 +660,15 @@ pub fn summarise(trajectories: &[Vec<State>], autonomy_floor: f64) -> CohortSumm
     }
     let last = |path: &Vec<State>| path.last().copied();
     let mut finals: Vec<State> = trajectories.iter().filter_map(last).collect();
-    finals.sort_by(|a, b| {
-        a.capacity
-            .partial_cmp(&b.capacity)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    finals.sort_by(|a, b| a.capacity.partial_cmp(&b.capacity).unwrap_or(std::cmp::Ordering::Equal));
     let n = finals.len().max(1);
     let mean = |f: &dyn Fn(&State) -> f64| finals.iter().map(f).sum::<f64>() / n as f64;
 
-    let led = finals
-        .iter()
-        .filter(|s| s.autonomy < autonomy_floor)
-        .count();
+    let led = finals.iter().filter(|s| s.autonomy < autonomy_floor).count();
     let lost_years: Vec<f64> = trajectories
         .iter()
         .filter_map(|path| {
-            path.iter()
-                .find(|s| s.autonomy < autonomy_floor)
-                .map(|s| f64::from(s.year))
+            path.iter().find(|s| s.autonomy < autonomy_floor).map(|s| f64::from(s.year))
         })
         .collect();
 
@@ -706,9 +685,7 @@ pub fn summarise(trajectories: &[Vec<State>], autonomy_floor: f64) -> CohortSumm
             .filter_map(|path| {
                 path.iter()
                     .map(|s| s.effective_output)
-                    .fold(None, |acc: Option<f64>, v| {
-                        Some(acc.map_or(v, |a: f64| a.max(v)))
-                    })
+                    .fold(None, |acc: Option<f64>, v| Some(acc.map_or(v, |a: f64| a.max(v))))
             })
             .fold(0.0_f64, f64::max),
         mean_residual_defect_rate: mean(&|s| s.residual_defect_rate),
@@ -720,11 +697,7 @@ pub fn summarise(trajectories: &[Vec<State>], autonomy_floor: f64) -> CohortSumm
         },
         mean_autonomous_years: trajectories
             .iter()
-            .map(|path| {
-                path.iter()
-                    .filter(|state| state.autonomy >= autonomy_floor)
-                    .count() as f64
-            })
+            .map(|path| path.iter().filter(|state| state.autonomy >= autonomy_floor).count() as f64)
             .sum::<f64>()
             / n as f64,
     }
@@ -759,12 +732,7 @@ pub fn draw_cohort(persons: usize, params: &ModelParameters, seed: u64) -> Vec<P
             // autonomous. Drawn multiplicatively so the spread stays proportional at any level.
             let expectation_ceiling =
                 (params.expectation_ceiling * (1.0 + rng.gen_range(-spread..spread))).max(1.0);
-            Person {
-                capacity_0,
-                self_model_0,
-                human_share,
-                expectation_ceiling,
-            }
+            Person { capacity_0, self_model_0, human_share, expectation_ceiling }
         })
         .collect()
 }
@@ -780,13 +748,7 @@ pub fn run_cohort(
         .map(|person| {
             let mut theirs = params.clone();
             theirs.expectation_ceiling = person.expectation_ceiling;
-            simulate(
-                person.capacity_0,
-                person.self_model_0,
-                &theirs,
-                strategy,
-                person.human_share,
-            )
+            simulate(person.capacity_0, person.self_model_0, &theirs, strategy, person.human_share)
         })
         .collect()
 }
@@ -857,30 +819,15 @@ pub mod export {
         let mut files = Vec::new();
         for (name, body) in [
             ("psyche_trajectories.csv", trajectories_csv(params, cohort)),
-            (
-                "psyche_cohort.csv",
-                cohort_csv(params, cohort, autonomy_floor),
-            ),
-            (
-                "psyche_runway.csv",
-                runway_csv(params, cohort, autonomy_floor),
-            ),
-            (
-                "psyche_tempo.csv",
-                tempo_csv(params, cohort, autonomy_floor),
-            ),
+            ("psyche_cohort.csv", cohort_csv(params, cohort, autonomy_floor)),
+            ("psyche_runway.csv", runway_csv(params, cohort, autonomy_floor)),
+            ("psyche_tempo.csv", tempo_csv(params, cohort, autonomy_floor)),
             ("psyche_thresholds.csv", thresholds_csv(params)),
             ("psyche_defects.csv", defects_csv(params)),
             ("psyche_coherence.csv", coherence_csv(params)),
-            (
-                "psyche_meta.csv",
-                meta_csv(params, cohort.len(), autonomy_floor, seed),
-            ),
+            ("psyche_meta.csv", meta_csv(params, cohort.len(), autonomy_floor, seed)),
             ("psyche_phase.csv", phase_csv(params)),
-            (
-                "psyche_provenance.txt",
-                provenance_txt(params, cohort.len(), autonomy_floor, seed),
-            ),
+            ("psyche_provenance.txt", provenance_txt(params, cohort.len(), autonomy_floor, seed)),
         ] {
             let path = dir.join(name);
             fs::write(&path, body)?;
@@ -972,10 +919,9 @@ pub mod export {
             "person,arm,final_capacity,final_autonomy,final_effective_output,\
              final_defect_rate,led,expectation_ceiling\n",
         );
-        for (arm, strategy) in [
-            ("tracking", Strategy::Tracking),
-            ("held", Strategy::Fixed(params.initial_assistance)),
-        ] {
+        for (arm, strategy) in
+            [("tracking", Strategy::Tracking), ("held", Strategy::Fixed(params.initial_assistance))]
+        {
             for (index, path) in run_cohort(cohort, params, strategy).iter().enumerate() {
                 if let Some(state) = path.last() {
                     let _ = writeln!(
@@ -1009,10 +955,8 @@ pub mod export {
         for lag in 0..=RUNWAY_YEARS {
             let mut probe = params.clone();
             probe.expectation_lag_years = lag;
-            let summary = summarise(
-                &run_cohort(cohort, &probe, Strategy::Tracking),
-                autonomy_floor,
-            );
+            let summary =
+                summarise(&run_cohort(cohort, &probe, Strategy::Tracking), autonomy_floor);
             let _ = writeln!(
                 out,
                 "{lag},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6}",
@@ -1038,10 +982,8 @@ pub mod export {
         for tempo in TEMPO_VALUES {
             let mut probe = params.clone();
             probe.tempo_growth = tempo;
-            let summary = summarise(
-                &run_cohort(cohort, &probe, Strategy::Tracking),
-                autonomy_floor,
-            );
+            let summary =
+                summarise(&run_cohort(cohort, &probe, Strategy::Tracking), autonomy_floor);
             let _ = writeln!(
                 out,
                 "{tempo:.4},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6},{:.6}",
@@ -1089,11 +1031,7 @@ pub mod export {
         let mut out = String::from("section,human_share,value\n");
         for step in 0..=100 {
             let share = f64::from(step) / 100.0;
-            let _ = writeln!(
-                out,
-                "curve,{share:.4},{:.6}",
-                emotional_coherence(share, params)
-            );
+            let _ = writeln!(out, "curve,{share:.4},{:.6}", emotional_coherence(share, params));
         }
         for target in COHERENCE_TARGETS {
             if let Some(share) = critical_human_share(target, params) {
@@ -1146,11 +1084,7 @@ pub mod export {
         let _ = writeln!(out, "persons,{persons}");
         let _ = writeln!(out, "seed,{seed}");
         let _ = writeln!(out, "tempo_growth,{:.6}", params.tempo_growth);
-        let _ = writeln!(
-            out,
-            "expectation_lag_years,{}",
-            params.expectation_lag_years
-        );
+        let _ = writeln!(out, "expectation_lag_years,{}", params.expectation_lag_years);
         let _ = writeln!(out, "expectation_ceiling,{:.6}", params.expectation_ceiling);
         out
     }
@@ -1192,12 +1126,8 @@ pub mod export {
         let _ = writeln!(out);
         let _ = writeln!(out, "DECLARED PARAMETERS");
         for (name, provenance) in params.provenance_table() {
-            let _ = writeln!(
-                out,
-                "  {name:<28} {} ({})",
-                value_of(name, params),
-                provenance.label()
-            );
+            let _ =
+                writeln!(out, "  {name:<28} {} ({})", value_of(name, params), provenance.label());
         }
         let _ = writeln!(out);
         let _ = writeln!(

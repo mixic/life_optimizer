@@ -54,16 +54,16 @@ pub struct TaxDeductionBreakdown {
 pub struct TaxSchedule {
     pub canton_name: String,
     pub municipality_name: String,
-    pub married: bool,                          // Track marital status
-    pub children: u32,                          // Track children count
-    pub family_tax_mode: bool,                  // Married parents can use enhanced family deductions
+    pub married: bool,         // Track marital status
+    pub children: u32,         // Track children count
+    pub family_tax_mode: bool, // Married parents can use enhanced family deductions
     // Lookup tables based on official data
-    pub tax_table_single: Vec<(f64, f64)>,      // (income, tax_rate)
+    pub tax_table_single: Vec<(f64, f64)>, // (income, tax_rate)
     pub tax_table_married_no_kids: Vec<(f64, f64)>, // (income, tax_rate) - married 0 kids
     pub tax_table_married_2kids: Vec<(f64, f64)>, // (income, tax_rate) - married 2+ kids
-    pub social_security_rate: f64,     // AHV/IV/EO
-    pub unemployment_rate: f64,        // ALV
-    pub pension_rate: f64,             // BVG
+    pub social_security_rate: f64,         // AHV/IV/EO
+    pub unemployment_rate: f64,            // ALV
+    pub pension_rate: f64,                 // BVG
 }
 
 impl TaxSchedule {
@@ -138,8 +138,8 @@ impl TaxSchedule {
             tax_table_single,
             tax_table_married_no_kids,
             tax_table_married_2kids,
-            social_security_rate: 0.053,  // AHV/IV/EO: 5.3% employee share
-            unemployment_rate: 0.011,     // ALV: 1.1% employee share
+            social_security_rate: 0.053, // AHV/IV/EO: 5.3% employee share
+            unemployment_rate: 0.011,    // ALV: 1.1% employee share
             pension_rate: if children >= 2 { 0.060 } else { 0.065 }, // BVG ~6-6.5%
         }
     }
@@ -153,10 +153,7 @@ impl TaxSchedule {
     /// This rate should be the TOTAL rate (tax + social security)
     pub fn custom_rate(custom_total_rate: f64) -> Self {
         // Create a dummy schedule that returns the custom rate for any income
-        let dummy_table = vec![
-            (0.0, custom_total_rate),
-            (1_000_000.0, custom_total_rate),
-        ];
+        let dummy_table = vec![(0.0, custom_total_rate), (1_000_000.0, custom_total_rate)];
 
         Self {
             canton_name: "Custom".to_string(),
@@ -167,9 +164,9 @@ impl TaxSchedule {
             tax_table_single: dummy_table.clone(),
             tax_table_married_no_kids: dummy_table.clone(),
             tax_table_married_2kids: dummy_table.clone(),
-            social_security_rate: 0.0,  // Already included in custom rate
-            unemployment_rate: 0.0,      // Already included in custom rate
-            pension_rate: 0.0,           // Already included in custom rate
+            social_security_rate: 0.0, // Already included in custom rate
+            unemployment_rate: 0.0,    // Already included in custom rate
+            pension_rate: 0.0,         // Already included in custom rate
         }
     }
 
@@ -223,8 +220,7 @@ impl TaxSchedule {
         // treats its combined cantonal/communal/church figures.
         let mut table: Vec<(f64, f64)> = Vec::with_capacity(points.len());
         for &taxable in &points {
-            let tax = crate::cantons::cantonal_tax(canton, taxable, married, true)
-                .unwrap_or(0.0);
+            let tax = crate::cantons::cantonal_tax(canton, taxable, married, true).unwrap_or(0.0);
             let rate = if taxable > 0.0 { tax / taxable } else { 0.0 };
             table.push((taxable, rate));
         }
@@ -311,13 +307,18 @@ impl TaxSchedule {
 
         let family_specific = if self.children > 0 {
             let base = (self.children as f64 * 2_800.0).min(8_000.0);
-            if self.family_tax_mode && self.married { (base * 1.5).min(12_000.0) } else { base }
+            if self.family_tax_mode && self.married {
+                (base * 1.5).min(12_000.0)
+            } else {
+                base
+            }
         } else {
             0.0
         };
 
-        let deductible_total = (childcare + commuting + work_equipment + health_insurance + rent + family_specific)
-            .min(gross_income * 0.35);
+        let deductible_total =
+            (childcare + commuting + work_equipment + health_insurance + rent + family_specific)
+                .min(gross_income * 0.35);
 
         TaxDeductionBreakdown {
             childcare,
@@ -371,9 +372,8 @@ impl TaxSchedule {
         let taxable_income = self.taxable_income_after_estimated_deductions(gross_income);
         let tax = self.tax_rate_on_taxable(taxable_income) * taxable_income;
 
-        let social_security_total = self.social_security_rate
-            + self.unemployment_rate
-            + self.pension_rate;
+        let social_security_total =
+            self.social_security_rate + self.unemployment_rate + self.pension_rate;
 
         tax / gross_income + social_security_total
     }
@@ -416,27 +416,27 @@ impl TaxSchedule {
             // Married with 0-1 children
             &self.tax_table_married_no_kids
         };
-        
+
         if income <= table[0].0 {
             return table[0].1;
         }
-        
+
         if income >= table[table.len() - 1].0 {
             return table[table.len() - 1].1;
         }
-        
+
         // Linear interpolation between table points
         for i in 1..table.len() {
             if income <= table[i].0 {
                 let (x0, y0) = table[i - 1];
                 let (x1, y1) = table[i];
-                
+
                 // Linear interpolation: y = y0 + (y1-y0)*(x-x0)/(x1-x0)
                 let rate = y0 + (y1 - y0) * (income - x0) / (x1 - x0);
                 return rate;
             }
         }
-        
+
         table[table.len() - 1].1
     }
 
@@ -467,20 +467,32 @@ mod tests {
         // first. Using the gross method here subtracted the deduction estimate a
         // second time, which is how the base inconsistency stayed hidden.
         let rate_40k = schedule.tax_rate_on_taxable(40_000.0);
-        assert!((rate_40k - 0.1008).abs() < 0.001, 
-                "40k tax should be 10.08%, got {:.2}%", rate_40k * 100.0);
-        
+        assert!(
+            (rate_40k - 0.1008).abs() < 0.001,
+            "40k tax should be 10.08%, got {:.2}%",
+            rate_40k * 100.0
+        );
+
         let rate_60k = schedule.tax_rate_on_taxable(60_000.0);
-        assert!((rate_60k - 0.1345).abs() < 0.001,
-                "60k tax should be 13.45%, got {:.2}%", rate_60k * 100.0);
-        
+        assert!(
+            (rate_60k - 0.1345).abs() < 0.001,
+            "60k tax should be 13.45%, got {:.2}%",
+            rate_60k * 100.0
+        );
+
         let rate_80k = schedule.tax_rate_on_taxable(80_000.0);
-        assert!((rate_80k - 0.1538).abs() < 0.001,
-                "80k tax should be 15.38%, got {:.2}%", rate_80k * 100.0);
-        
+        assert!(
+            (rate_80k - 0.1538).abs() < 0.001,
+            "80k tax should be 15.38%, got {:.2}%",
+            rate_80k * 100.0
+        );
+
         let rate_100k = schedule.tax_rate_on_taxable(100_000.0);
-        assert!((rate_100k - 0.1724).abs() < 0.001,
-                "100k tax should be 17.24%, got {:.2}%", rate_100k * 100.0);
+        assert!(
+            (rate_100k - 0.1724).abs() < 0.001,
+            "100k tax should be 17.24%, got {:.2}%",
+            rate_100k * 100.0
+        );
     }
 
     /// The effective rate decomposes into the tax share of gross plus payroll
@@ -502,9 +514,8 @@ mod tests {
         let total = schedule.effective_tax_rate(gross);
 
         // Payroll charges are a flat share of gross by construction.
-        let social_expected = schedule.social_security_rate
-            + schedule.unemployment_rate
-            + schedule.pension_rate;
+        let social_expected =
+            schedule.social_security_rate + schedule.unemployment_rate + schedule.pension_rate;
         assert!(
             (0.11..0.14).contains(&social_expected),
             "payroll charges should be roughly 11-14% of gross, got {:.1}%",
@@ -531,15 +542,18 @@ mod tests {
     #[test]
     fn test_interpolation() {
         let schedule = TaxSchedule::bern_city_default(false, 0);
-        
+
         // Between the published 80k and 90k points, on the taxable figure those
         // points refer to. See `test_exact_official_rates_single` for why this is
         // the taxable variant rather than `tax_only_rate`.
         let rate_85k = schedule.tax_rate_on_taxable(85_000.0);
-        
+
         // Should be between 15.38% and 16.26%
-        assert!(rate_85k > 0.1538 && rate_85k < 0.1626,
-                "85k rate should be between 15.38% and 16.26%, got {:.2}%", rate_85k * 100.0);
+        assert!(
+            rate_85k > 0.1538 && rate_85k < 0.1626,
+            "85k rate should be between 15.38% and 16.26%, got {:.2}%",
+            rate_85k * 100.0
+        );
     }
 
     /// The estimate's `rent` component is unsourced, and behaves unlike any
@@ -596,10 +610,9 @@ mod tests {
     /// becomes a real omission rather than a tidying-up.
     #[test]
     fn non_deductible_total_feeds_no_tax_figure() {
-        for schedule in [
-            TaxSchedule::bern_city_default(false, 0),
-            TaxSchedule::bern_city_default(true, 2),
-        ] {
+        for schedule in
+            [TaxSchedule::bern_city_default(false, 0), TaxSchedule::bern_city_default(true, 2)]
+        {
             for gross in [40_000.0, 60_000.0, 100_000.0, 250_000.0] {
                 let breakdown = schedule.deduction_breakdown(gross);
 
@@ -607,7 +620,7 @@ mod tests {
                 assert!(
                     (schedule.taxable_income_after_estimated_deductions(gross)
                         - (gross - breakdown.deductible_total).max(0.0))
-                        .abs()
+                    .abs()
                         < 1e-9,
                     "at gross {gross}: taxable income is not gross minus deductible_total"
                 );
@@ -635,10 +648,9 @@ mod tests {
     /// effective rate equals the tax-only rate.
     #[test]
     fn rate_accessors_agree_on_the_same_income() {
-        for schedule in [
-            TaxSchedule::bern_city_default(false, 0),
-            TaxSchedule::bern_city_default(true, 2),
-        ] {
+        for schedule in
+            [TaxSchedule::bern_city_default(false, 0), TaxSchedule::bern_city_default(true, 2)]
+        {
             for gross in [40_000.0, 60_000.0, 100_000.0, 140_000.0] {
                 let taxable = schedule.taxable_income_after_estimated_deductions(gross);
                 let via_gross = schedule.tax_only_rate(gross);
@@ -683,8 +695,10 @@ mod tests {
         assert!(deduction > 0.0, "Swiss work-related deductions should reduce taxable income");
 
         let taxable_income = schedule.taxable_income_after_estimated_deductions(gross);
-        assert!(taxable_income < gross,
-                "taxable income should be reduced by standard Swiss deductions");
+        assert!(
+            taxable_income < gross,
+            "taxable income should be reduced by standard Swiss deductions"
+        );
 
         let effective_rate = schedule.effective_tax_rate(gross);
         assert!(effective_rate < 0.33,
@@ -698,7 +712,9 @@ mod tests {
 
         let deduction = schedule.standard_deduction_estimate(gross);
         assert!(deduction > 0.0, "children should add Swiss family-related deductions");
-        assert!(deduction > schedule.standard_deduction_estimate(0.0),
-                "family deductions should increase with children");
+        assert!(
+            deduction > schedule.standard_deduction_estimate(0.0),
+            "family deductions should increase with children"
+        );
     }
 }

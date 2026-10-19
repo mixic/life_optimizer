@@ -128,8 +128,14 @@ fn a_verdict_that_holds_across_the_range_is_not_flagged() {
 #[test]
 fn an_explicit_basis_still_gets_a_range_around_it() {
     let report = NeedsReport::new(6_000.0, 8_000.0, Basis::ExplicitMonthly(6_000.0));
-    assert!(close(report.range[1].monthly, 6_000.0), "the middle of the range is the user's figure");
-    assert!(close(report.range[0].monthly, 4_800.0), "60% of the rule of thumb, applied to their figure");
+    assert!(
+        close(report.range[1].monthly, 6_000.0),
+        "the middle of the range is the user's figure"
+    );
+    assert!(
+        close(report.range[0].monthly, 4_800.0),
+        "60% of the rule of thumb, applied to their figure"
+    );
     assert!(close(report.range[2].monthly, 7_200.0));
 }
 

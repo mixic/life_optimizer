@@ -171,7 +171,8 @@ pub const AG_ABZUG_MEHRKOSTEN_DER_VERPFLEGUNG_OHNE_VERBILLIGUNG: DeductionRule =
 };
 
 /// `AG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const AG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -182,7 +183,8 @@ pub const AG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `AG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const AG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -281,15 +283,16 @@ pub const AG_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `AG`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const AG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "AG",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "AG",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AG`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const AG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -303,15 +306,16 @@ pub const AG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `AG`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const AG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AG",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AG",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AG`: Pauschalabzug übrige Berufskosten
 pub const AG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -325,15 +329,16 @@ pub const AG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `AG`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const AG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AG",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AG",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AG`: Zweitverdienerabzug
 pub const AG_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -347,15 +352,16 @@ pub const AG_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `AI`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const AI_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "AI",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 8000.0,
-};
+pub const AI_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "AI",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 8000.0,
+    };
 
 /// `AI`: Abzug Kinderdrittbetreuungskosten
 pub const AI_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -402,7 +408,8 @@ pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `AI`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AI",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -413,7 +420,8 @@ pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `AI`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AI",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -501,15 +509,16 @@ pub const AI_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `AI`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const AI_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "AI",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AI_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "AI",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AI`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const AI_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -523,15 +532,16 @@ pub const AI_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `AI`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const AI_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AI",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AI_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AI",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AI`: Pauschalabzug übrige Berufskosten
 pub const AI_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -545,15 +555,16 @@ pub const AI_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `AI`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const AI_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AI",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AI_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AI",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AI`: Zweitverdienerabzug
 pub const AI_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -622,7 +633,8 @@ pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `AR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -633,7 +645,8 @@ pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `AR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const AR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "AR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -754,15 +767,16 @@ pub const AR_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `AR`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const AR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "AR",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "AR",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AR`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const AR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -776,15 +790,16 @@ pub const AR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `AR`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const AR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AR",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AR",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AR`: Pauschalabzug übrige Berufskosten
 pub const AR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -798,15 +813,16 @@ pub const AR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `AR`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const AR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "AR",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const AR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "AR",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `AR`: Zweitverdienerabzug
 pub const AR_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -820,15 +836,16 @@ pub const AR_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `BE`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const BE_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "BE",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 6400.0,
-};
+pub const BE_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "BE",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 6400.0,
+    };
 
 /// `BE`: Abzug Kinderdrittbetreuungskosten
 pub const BE_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -875,7 +892,8 @@ pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `BE`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BE",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -886,7 +904,8 @@ pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `BE`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BE",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -996,15 +1015,16 @@ pub const BE_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `BE`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const BE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "BE",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "BE",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BE`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const BE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -1018,15 +1038,16 @@ pub const BE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `BE`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const BE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BE",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BE",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BE`: Pauschalabzug übrige Berufskosten
 pub const BE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -1040,15 +1061,16 @@ pub const BE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `BE`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const BE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BE",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BE",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BE`: Sozialabzug bescheidene Einkommen Kind
 pub const BE_SOZIALABZUG_BESCHEIDENE_EINKOMMEN_KIND: DeductionRule = DeductionRule {
@@ -1161,7 +1183,8 @@ pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `BL`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BL",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1172,7 +1195,8 @@ pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `BL`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BL",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1227,15 +1251,16 @@ pub const BL_ABZUG_F_R_FAHRKOSTEN_HAUPTERWERB: DeductionRule = DeductionRule {
 };
 
 /// `BL`: Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
-pub const BL_ABZUG_F_R_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule = DeductionRule {
-    canton_code: "BL",
-    name: "Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 40.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BL_ABZUG_F_R_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule =
+    DeductionRule {
+        canton_code: "BL",
+        name: "Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 40.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BL`: Kinderabzug, volljährige Kinder ausser Haus
 pub const BL_KINDERABZUG_VOLLJ_HRIGE_KINDER_AUSSER_HAUS: DeductionRule = DeductionRule {
@@ -1271,15 +1296,16 @@ pub const BL_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `BL`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const BL_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "BL",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BL_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "BL",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BL`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const BL_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -1293,15 +1319,16 @@ pub const BL_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `BL`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const BL_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BL",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BL_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BL",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BL`: Pauschalabzug übrige Berufskosten
 pub const BL_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -1315,15 +1342,16 @@ pub const BL_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `BL`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const BL_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BL",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 25.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BL_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BL",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 25.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BL`: Schwellwert für Abzug AHV-/IV-Rentner
 pub const BL_SCHWELLWERT_F_R_ABZUG_AHV_IV_RENTNER: DeductionRule = DeductionRule {
@@ -1337,15 +1365,16 @@ pub const BL_SCHWELLWERT_F_R_ABZUG_AHV_IV_RENTNER: DeductionRule = DeductionRule
 };
 
 /// `BL`: Schwellwert für Abzug ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
-pub const BL_SCHWELLWERT_F_R_ABZUG_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule = DeductionRule {
-    canton_code: "BL",
-    name: "Schwellwert für Abzug ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
-    kind: RuleKind::Threshold,
-    amount: 30240.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BL_SCHWELLWERT_F_R_ABZUG_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule =
+    DeductionRule {
+        canton_code: "BL",
+        name: "Schwellwert für Abzug ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
+        kind: RuleKind::Threshold,
+        amount: 30240.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BL`: Steuerermässigung pro Kind
 pub const BL_STEUERERM_SSIGUNG_PRO_KIND: DeductionRule = DeductionRule {
@@ -1403,7 +1432,8 @@ pub const BS_ABZUG_MEHRKOSTEN_DER_VERPFLEGUNG_OHNE_VERBILLIGUNG: DeductionRule =
 };
 
 /// `BS`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const BS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BS",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1414,7 +1444,8 @@ pub const BS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `BS`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const BS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "BS",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1469,15 +1500,16 @@ pub const BS_ABZUG_F_R_FAHRKOSTEN_HAUPTERWERB: DeductionRule = DeductionRule {
 };
 
 /// `BS`: Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind
-pub const BS_ABZUG_F_R_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule = DeductionRule {
-    canton_code: "BS",
-    name: "Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
-    kind: RuleKind::Deduction,
-    amount: 3500.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BS_ABZUG_F_R_LEDIGE_AHV_IV_RENTNER_ALLEINSTEHEND_OHNE_KIND: DeductionRule =
+    DeductionRule {
+        canton_code: "BS",
+        name: "Abzug für ledige AHV-/IV-Rentner, Alleinstehend ohne Kind",
+        kind: RuleKind::Deduction,
+        amount: 3500.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BS`: Abzug für ledige Steuerpflichtige
 pub const BS_ABZUG_F_R_LEDIGE_STEUERPFLICHTIGE: DeductionRule = DeductionRule {
@@ -1535,15 +1567,16 @@ pub const BS_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `BS`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const BS_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "BS",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BS_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "BS",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BS`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const BS_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -1557,15 +1590,16 @@ pub const BS_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `BS`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const BS_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BS",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BS_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BS",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BS`: Pauschalabzug übrige Berufskosten
 pub const BS_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -1579,15 +1613,16 @@ pub const BS_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `BS`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const BS_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "BS",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BS_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "BS",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `BS`: Verheiratetenabzug
 pub const BS_VERHEIRATETENABZUG: DeductionRule = DeductionRule {
@@ -1656,7 +1691,8 @@ pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = D
 };
 
 /// `Bund`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "Bund",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1667,7 +1703,8 @@ pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_
 };
 
 /// `Bund`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const BUND_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "Bund",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -1744,15 +1781,16 @@ pub const BUND_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deduct
 };
 
 /// `Bund`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const BUND_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "Bund",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const BUND_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "Bund",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `Bund`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const BUND_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -1766,7 +1804,8 @@ pub const BUND_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deducti
 };
 
 /// `Bund`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const BUND_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
+pub const BUND_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN:
+    DeductionRule = DeductionRule {
     canton_code: "Bund",
     name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
     kind: RuleKind::Deduction,
@@ -1788,7 +1827,8 @@ pub const BUND_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `Bund`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const BUND_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
+pub const BUND_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN:
+    DeductionRule = DeductionRule {
     canton_code: "Bund",
     name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
     kind: RuleKind::Deduction,
@@ -1997,15 +2037,16 @@ pub const FR_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `FR`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const FR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "FR",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const FR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "FR",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `FR`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const FR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -2019,15 +2060,16 @@ pub const FR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `FR`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const FR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "FR",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const FR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "FR",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `FR`: Pauschalabzug übrige Berufskosten
 pub const FR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -2041,15 +2083,16 @@ pub const FR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `FR`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const FR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "FR",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const FR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "FR",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `FR`: Zweitverdienerabzug
 pub const FR_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -2107,26 +2150,28 @@ pub const GE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `GE`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete
-pub const GE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE: DeductionRule = DeductionRule {
-    canton_code: "GE",
-    name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 3518.0,
-};
+pub const GE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE: DeductionRule =
+    DeductionRule {
+        canton_code: "GE",
+        name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 3518.0,
+    };
 
 /// `GE`: Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen
-pub const GE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_ALLEINSTEHENDE_PERSONEN: DeductionRule = DeductionRule {
-    canton_code: "GE",
-    name: "Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 2345.0,
-};
+pub const GE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_ALLEINSTEHENDE_PERSONEN: DeductionRule =
+    DeductionRule {
+        canton_code: "GE",
+        name: "Abzug Versicherungsprämien und Sparzinsen, alleinstehende Personen",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 2345.0,
+    };
 
 /// `GE`: Abzug für Fahrkosten Haupterwerb
 pub const GE_ABZUG_F_R_FAHRKOSTEN_HAUPTERWERB: DeductionRule = DeductionRule {
@@ -2140,7 +2185,8 @@ pub const GE_ABZUG_F_R_FAHRKOSTEN_HAUPTERWERB: DeductionRule = DeductionRule {
 };
 
 /// `GE`: Faktor PrivVers/Sparzinsen Verheiratete beide ohne Beiträge an die 2. und 3. Säule
-pub const GE_FAKTOR_PRIVVERS_SPARZINSEN_VERHEIRATETE_BEIDE_OHNE_BEITR_GE_AN_DIE_2_UND_3_S_ULE: DeductionRule = DeductionRule {
+pub const GE_FAKTOR_PRIVVERS_SPARZINSEN_VERHEIRATETE_BEIDE_OHNE_BEITR_GE_AN_DIE_2_UND_3_S_ULE:
+    DeductionRule = DeductionRule {
     canton_code: "GE",
     name: "Faktor PrivVers/Sparzinsen Verheiratete beide ohne Beiträge an die 2. und 3. Säule",
     kind: RuleKind::Other,
@@ -2239,15 +2285,16 @@ pub const GE_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `GE`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const GE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "GE",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "GE",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GE`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const GE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -2261,15 +2308,16 @@ pub const GE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `GE`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const GE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GE",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 15.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GE",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 15.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GE`: Pauschalabzug übrige Berufskosten
 pub const GE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -2283,15 +2331,16 @@ pub const GE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `GE`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const GE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GE",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 25.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GE",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 25.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GE`: Zweitverdienerabzug
 pub const GE_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -2305,15 +2354,16 @@ pub const GE_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `GL`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const GL_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "GL",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 7200.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GL_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "GL",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 7200.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GL`: Abzug Kinderdrittbetreuungskosten
 pub const GL_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -2371,7 +2421,8 @@ pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `GL`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "GL",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -2382,7 +2433,8 @@ pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `GL`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const GL_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "GL",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -2459,15 +2511,16 @@ pub const GL_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `GL`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const GL_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "GL",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GL_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "GL",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GL`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const GL_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -2481,15 +2534,16 @@ pub const GL_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `GL`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const GL_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GL",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GL_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GL",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GL`: Pauschalabzug übrige Berufskosten
 pub const GL_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -2503,15 +2557,16 @@ pub const GL_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `GL`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const GL_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GL",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GL_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GL",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GL`: Zweitverdienerabzug
 pub const GL_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -2525,15 +2580,16 @@ pub const GL_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `GR`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const GR_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "GR",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 19700.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GR_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "GR",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 19700.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GR`: Abzug Kinderdrittbetreuungskosten
 pub const GR_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -2591,7 +2647,8 @@ pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `GR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "GR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -2602,7 +2659,8 @@ pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `GR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const GR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "GR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -2690,15 +2748,16 @@ pub const GR_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `GR`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const GR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "GR",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "GR",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GR`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const GR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -2712,15 +2771,16 @@ pub const GR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `GR`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const GR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GR",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GR",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GR`: Pauschalabzug übrige Berufskosten
 pub const GR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -2734,15 +2794,16 @@ pub const GR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `GR`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const GR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "GR",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const GR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "GR",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `GR`: Zweitverdienerabzug
 pub const GR_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -2756,15 +2817,16 @@ pub const GR_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `JU`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const JU_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "JU",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 10600.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const JU_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "JU",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 10600.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `JU`: Abzug Kinderdrittbetreuungskosten
 pub const JU_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -2844,15 +2906,16 @@ pub const JU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_ALLEINSTEHENDE_PERSONEN_O
 };
 
 /// `JU`: Abzug Versicherungsprämien und Sparzinsen, minderj. Kind
-pub const JU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_MINDERJ_KIND: DeductionRule = DeductionRule {
-    canton_code: "JU",
-    name: "Abzug Versicherungsprämien und Sparzinsen, minderj. Kind",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 1020.0,
-};
+pub const JU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_MINDERJ_KIND: DeductionRule =
+    DeductionRule {
+        canton_code: "JU",
+        name: "Abzug Versicherungsprämien und Sparzinsen, minderj. Kind",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 1020.0,
+    };
 
 /// `JU`: Abzug Versicherungsprämien und Sparzinsen, vollj. Kind
 pub const JU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VOLLJ_KIND: DeductionRule = DeductionRule {
@@ -2954,15 +3017,16 @@ pub const JU_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `JU`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const JU_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "JU",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const JU_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "JU",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `JU`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const JU_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -2976,15 +3040,16 @@ pub const JU_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `JU`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const JU_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "JU",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const JU_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "JU",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `JU`: Pauschalabzug übrige Berufskosten
 pub const JU_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -2998,15 +3063,16 @@ pub const JU_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `JU`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const JU_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "JU",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const JU_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "JU",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `JU`: Verheiratetenabzug
 pub const JU_VERHEIRATETENABZUG: DeductionRule = DeductionRule {
@@ -3042,15 +3108,16 @@ pub const LU_ABZUG_EIGENBETREUUNG_DER_KINDER: DeductionRule = DeductionRule {
 };
 
 /// `LU`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const LU_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "LU",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 13200.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const LU_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "LU",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 13200.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `LU`: Abzug Kinderdrittbetreuungskosten
 pub const LU_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -3097,7 +3164,8 @@ pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `LU`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "LU",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3108,7 +3176,8 @@ pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `LU`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const LU_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "LU",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3218,15 +3287,16 @@ pub const LU_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `LU`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const LU_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "LU",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const LU_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "LU",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `LU`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const LU_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -3240,15 +3310,16 @@ pub const LU_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `LU`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const LU_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "LU",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const LU_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "LU",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `LU`: Pauschalabzug übrige Berufskosten
 pub const LU_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -3262,15 +3333,16 @@ pub const LU_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `LU`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const LU_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "LU",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const LU_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "LU",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `LU`: Sozialabzug bescheidene Einkommen
 pub const LU_SOZIALABZUG_BESCHEIDENE_EINKOMMEN: DeductionRule = DeductionRule {
@@ -3339,7 +3411,8 @@ pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `NE`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "NE",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3350,7 +3423,8 @@ pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `NE`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const NE_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "NE",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3449,15 +3523,16 @@ pub const NE_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `NE`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const NE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "NE",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const NE_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "NE",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `NE`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const NE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -3471,15 +3546,16 @@ pub const NE_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `NE`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const NE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "NE",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 7200.0,
-};
+pub const NE_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "NE",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 7200.0,
+    };
 
 /// `NE`: Pauschalabzug übrige Berufskosten
 pub const NE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -3493,15 +3569,16 @@ pub const NE_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `NE`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const NE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "NE",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 12000.0,
-};
+pub const NE_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "NE",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 12000.0,
+    };
 
 /// `NE`: Zweitverdienerabzug
 pub const NE_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -3614,7 +3691,8 @@ pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `NW`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "NW",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3625,7 +3703,8 @@ pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `NW`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const NW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "NW",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3724,15 +3803,16 @@ pub const NW_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `NW`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const NW_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "NW",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const NW_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "NW",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `NW`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const NW_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -3746,15 +3826,16 @@ pub const NW_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `NW`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const NW_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "NW",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const NW_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "NW",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `NW`: Pauschalabzug übrige Berufskosten
 pub const NW_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -3768,15 +3849,16 @@ pub const NW_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `NW`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const NW_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "NW",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const NW_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "NW",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `NW`: Zweitverdienerabzug
 pub const NW_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -3790,15 +3872,16 @@ pub const NW_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `OW`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const OW_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "OW",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 5100.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const OW_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "OW",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 5100.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `OW`: Abzug Kinderdrittbetreuungskosten
 pub const OW_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -3856,7 +3939,8 @@ pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `OW`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "OW",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3867,7 +3951,8 @@ pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `OW`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const OW_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "OW",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -3955,15 +4040,16 @@ pub const OW_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `OW`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const OW_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "OW",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const OW_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "OW",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `OW`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const OW_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -3977,15 +4063,16 @@ pub const OW_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `OW`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const OW_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "OW",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const OW_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "OW",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `OW`: Pauschalabzug übrige Berufskosten
 pub const OW_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -3999,15 +4086,16 @@ pub const OW_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `OW`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const OW_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "OW",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const OW_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "OW",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `OW`: Unterstützungsabzug für volljährige Kinder
 pub const OW_UNTERST_TZUNGSABZUG_F_R_VOLLJ_HRIGE_KINDER: DeductionRule = DeductionRule {
@@ -4120,7 +4208,8 @@ pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `SG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4131,7 +4220,8 @@ pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `SG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4241,15 +4331,16 @@ pub const SG_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `SG`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const SG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "SG",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "SG",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SG`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const SG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -4263,15 +4354,16 @@ pub const SG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `SG`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const SG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SG",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SG",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SG`: Pauschalabzug übrige Berufskosten
 pub const SG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -4285,15 +4377,16 @@ pub const SG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `SG`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const SG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SG",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SG",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SG`: Zweitverdienerabzug
 pub const SG_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -4362,7 +4455,8 @@ pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `SH`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SH",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4373,7 +4467,8 @@ pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `SH`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SH",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4461,15 +4556,16 @@ pub const SH_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `SH`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const SH_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "SH",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SH_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "SH",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SH`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const SH_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -4483,15 +4579,16 @@ pub const SH_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `SH`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const SH_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SH",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 15.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SH_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SH",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 15.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SH`: Pauschalabzug übrige Berufskosten
 pub const SH_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -4505,15 +4602,16 @@ pub const SH_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `SH`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const SH_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SH",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 25.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SH_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SH",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 25.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SH`: Zweitverdienerabzug
 pub const SH_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -4560,7 +4658,8 @@ pub const SO_ABZUG_MEHRKOSTEN_DER_VERPFLEGUNG_OHNE_VERBILLIGUNG: DeductionRule =
 };
 
 /// `SO`: Abzug Versicherungsprämien und Sparzinsen, Kind, mit Beiträgen Säule 2/3a
-pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SO",
     name: "Abzug Versicherungsprämien und Sparzinsen, Kind, mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4571,7 +4670,8 @@ pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_MIT_BEITR_GEN_S_ULE_
 };
 
 /// `SO`: Abzug Versicherungsprämien und Sparzinsen, Kind, ohne Beiträgen Säule 2/3a
-pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_OHNE_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_OHNE_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SO",
     name: "Abzug Versicherungsprämien und Sparzinsen, Kind, ohne Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4582,7 +4682,8 @@ pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND_OHNE_BEITR_GEN_S_ULE
 };
 
 /// `SO`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SO",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4593,7 +4694,8 @@ pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `SO`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SO_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SO",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4681,15 +4783,16 @@ pub const SO_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `SO`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const SO_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "SO",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SO_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "SO",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SO`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const SO_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -4703,15 +4806,16 @@ pub const SO_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `SO`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const SO_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SO",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SO_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SO",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SO`: Pauschalabzug übrige Berufskosten
 pub const SO_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -4725,15 +4829,16 @@ pub const SO_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `SO`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const SO_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SO",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SO_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SO",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SO`: Zweitverdienerabzug
 pub const SO_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -4802,7 +4907,8 @@ pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `SZ`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SZ",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4813,7 +4919,8 @@ pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `SZ`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const SZ_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "SZ",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -4967,26 +5074,28 @@ pub const SZ_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `SZ`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const SZ_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "SZ",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SZ_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "SZ",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SZ`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const SZ_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SZ",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SZ_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SZ",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SZ`: Pauschalabzug übrige Berufskosten
 pub const SZ_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -5000,15 +5109,16 @@ pub const SZ_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `SZ`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const SZ_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "SZ",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const SZ_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "SZ",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `SZ`: Verheiratetenabzug
 pub const SZ_VERHEIRATETENABZUG: DeductionRule = DeductionRule {
@@ -5088,7 +5198,8 @@ pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `TG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "TG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5099,7 +5210,8 @@ pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `TG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const TG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "TG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5209,15 +5321,16 @@ pub const TG_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `TG`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const TG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "TG",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "TG",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TG`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const TG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -5231,15 +5344,16 @@ pub const TG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `TG`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const TG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "TG",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "TG",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TG`: Pauschalabzug übrige Berufskosten
 pub const TG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -5253,15 +5367,16 @@ pub const TG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `TG`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const TG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "TG",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "TG",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TI`: Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt innerhalb des Kantons
 pub const TI_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_MIT_WOCHENAUFENTHALT_INNERHALB_DES_KANTONS: DeductionRule = DeductionRule {
@@ -5275,7 +5390,8 @@ pub const TI_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_MIT_WOCHENAUFEN
 };
 
 /// `TI`: Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt
-pub const TI_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_OHNE_WOCHENAUFENTHALT: DeductionRule = DeductionRule {
+pub const TI_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_OHNE_WOCHENAUFENTHALT:
+    DeductionRule = DeductionRule {
     canton_code: "TI",
     name: "Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt",
     kind: RuleKind::Deduction,
@@ -5352,7 +5468,8 @@ pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `TI`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "TI",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5363,7 +5480,8 @@ pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `TI`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const TI_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "TI",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5440,15 +5558,16 @@ pub const TI_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `TI`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const TI_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "TI",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TI_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "TI",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TI`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const TI_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -5462,15 +5581,16 @@ pub const TI_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `TI`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const TI_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "TI",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TI_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "TI",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TI`: Pauschalabzug übrige Berufskosten
 pub const TI_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -5484,15 +5604,16 @@ pub const TI_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `TI`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const TI_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "TI",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const TI_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "TI",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `TI`: Zweitverdienerabzug
 pub const TI_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -5506,7 +5627,8 @@ pub const TI_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
 };
 
 /// `UR`: Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt
-pub const UR_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_MIT_WOCHENAUFENTHALT: DeductionRule = DeductionRule {
+pub const UR_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_MIT_WOCHENAUFENTHALT:
+    DeductionRule = DeductionRule {
     canton_code: "UR",
     name: "Abzug Kinderausbildungskosten, auswärtige Ausbildung mit Wochenaufenthalt",
     kind: RuleKind::Deduction,
@@ -5517,7 +5639,8 @@ pub const UR_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_MIT_WOCHENAUFEN
 };
 
 /// `UR`: Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt
-pub const UR_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_OHNE_WOCHENAUFENTHALT: DeductionRule = DeductionRule {
+pub const UR_ABZUG_KINDERAUSBILDUNGSKOSTEN_AUSW_RTIGE_AUSBILDUNG_OHNE_WOCHENAUFENTHALT:
+    DeductionRule = DeductionRule {
     canton_code: "UR",
     name: "Abzug Kinderausbildungskosten, auswärtige Ausbildung ohne Wochenaufenthalt",
     kind: RuleKind::Deduction,
@@ -5583,7 +5706,8 @@ pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `UR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "UR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5594,7 +5718,8 @@ pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `UR`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const UR_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "UR",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -5715,15 +5840,16 @@ pub const UR_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `UR`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const UR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "UR",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const UR_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "UR",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `UR`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const UR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -5737,15 +5863,16 @@ pub const UR_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `UR`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const UR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "UR",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const UR_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "UR",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `UR`: Pauschalabzug übrige Berufskosten
 pub const UR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -5759,15 +5886,16 @@ pub const UR_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `UR`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const UR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "UR",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const UR_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "UR",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `UR`: Verheiratetenabzug
 pub const UR_VERHEIRATETENABZUG: DeductionRule = DeductionRule {
@@ -5979,15 +6107,16 @@ pub const VD_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `VD`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const VD_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "VD",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VD_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "VD",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VD`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const VD_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -6100,15 +6229,16 @@ pub const VD_SOZIALABZUG_BESCHEIDENE_EINKOMMEN_KIND: DeductionRule = DeductionRu
 };
 
 /// `VD`: Sozialabzug bescheidene Einkommen alleinerziehend mit Kind
-pub const VD_SOZIALABZUG_BESCHEIDENE_EINKOMMEN_ALLEINERZIEHEND_MIT_KIND: DeductionRule = DeductionRule {
-    canton_code: "VD",
-    name: "Sozialabzug bescheidene Einkommen alleinerziehend mit Kind",
-    kind: RuleKind::Deduction,
-    amount: 23700.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VD_SOZIALABZUG_BESCHEIDENE_EINKOMMEN_ALLEINERZIEHEND_MIT_KIND: DeductionRule =
+    DeductionRule {
+        canton_code: "VD",
+        name: "Sozialabzug bescheidene Einkommen alleinerziehend mit Kind",
+        kind: RuleKind::Deduction,
+        amount: 23700.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VD`: Sozialabzug bescheidene Einkommen ledig
 pub const VD_SOZIALABZUG_BESCHEIDENE_EINKOMMEN_LEDIG: DeductionRule = DeductionRule {
@@ -6166,15 +6296,16 @@ pub const VS_ABZUG_EIGENBETREUUNG_DER_KINDER: DeductionRule = DeductionRule {
 };
 
 /// `VS`: Abzug Kinderausbildungskosten für auswärtige Ausbildung
-pub const VS_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule = DeductionRule {
-    canton_code: "VS",
-    name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
-    kind: RuleKind::Deduction,
-    amount: 5220.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VS_ABZUG_KINDERAUSBILDUNGSKOSTEN_F_R_AUSW_RTIGE_AUSBILDUNG: DeductionRule =
+    DeductionRule {
+        canton_code: "VS",
+        name: "Abzug Kinderausbildungskosten für auswärtige Ausbildung",
+        kind: RuleKind::Deduction,
+        amount: 5220.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VS`: Abzug Kinderdrittbetreuungskosten
 pub const VS_ABZUG_KINDERDRITTBETREUUNGSKOSTEN: DeductionRule = DeductionRule {
@@ -6232,7 +6363,8 @@ pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `VS`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "VS",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6243,7 +6375,8 @@ pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `VS`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const VS_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "VS",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6342,15 +6475,16 @@ pub const VS_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `VS`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const VS_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "VS",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VS_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "VS",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VS`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const VS_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -6364,15 +6498,16 @@ pub const VS_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `VS`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const VS_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "VS",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VS_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "VS",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VS`: Pauschalabzug übrige Berufskosten
 pub const VS_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -6386,15 +6521,16 @@ pub const VS_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `VS`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const VS_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "VS",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const VS_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "VS",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `VS`: Zusätzlicher Kinderabzug ab 3 Kinder
 pub const VS_ZUS_TZLICHER_KINDERABZUG_AB_3_KINDER: DeductionRule = DeductionRule {
@@ -6485,7 +6621,8 @@ pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `ZG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "ZG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6496,7 +6633,8 @@ pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `ZG`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const ZG_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "ZG",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6617,15 +6755,16 @@ pub const ZG_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `ZG`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const ZG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "ZG",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZG_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "ZG",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZG`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const ZG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -6639,15 +6778,16 @@ pub const ZG_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `ZG`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const ZG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "ZG",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 10.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZG_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZG",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 10.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZG`: Pauschalabzug übrige Berufskosten
 pub const ZG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -6661,37 +6801,40 @@ pub const ZG_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `ZG`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const ZG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "ZG",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZG_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZG",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZG`: Sozialabzug bescheidenes Vermögen Rentner geringes Einkommen
-pub const ZG_SOZIALABZUG_BESCHEIDENES_VERM_GEN_RENTNER_GERINGES_EINKOMMEN: DeductionRule = DeductionRule {
-    canton_code: "ZG",
-    name: "Sozialabzug bescheidenes Vermögen Rentner geringes Einkommen",
-    kind: RuleKind::Deduction,
-    amount: 1700.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZG_SOZIALABZUG_BESCHEIDENES_VERM_GEN_RENTNER_GERINGES_EINKOMMEN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZG",
+        name: "Sozialabzug bescheidenes Vermögen Rentner geringes Einkommen",
+        kind: RuleKind::Deduction,
+        amount: 1700.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZG`: Sozialabzug bescheidenes Vermögen Rentner mittleres Einkommen
-pub const ZG_SOZIALABZUG_BESCHEIDENES_VERM_GEN_RENTNER_MITTLERES_EINKOMMEN: DeductionRule = DeductionRule {
-    canton_code: "ZG",
-    name: "Sozialabzug bescheidenes Vermögen Rentner mittleres Einkommen",
-    kind: RuleKind::Deduction,
-    amount: 3400.0,
-    percent: 0.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZG_SOZIALABZUG_BESCHEIDENES_VERM_GEN_RENTNER_MITTLERES_EINKOMMEN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZG",
+        name: "Sozialabzug bescheidenes Vermögen Rentner mittleres Einkommen",
+        kind: RuleKind::Deduction,
+        amount: 3400.0,
+        percent: 0.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZG`: Verheiratetenabzug
 pub const ZG_VERHEIRATETENABZUG: DeductionRule = DeductionRule {
@@ -6771,7 +6914,8 @@ pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_KIND: DeductionRule = Ded
 };
 
 /// `ZH`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a
-pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GEN_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "ZH",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete mit Beiträgen Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6782,7 +6926,8 @@ pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_MIT_BEITR_GE
 };
 
 /// `ZH`: Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a
-pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A: DeductionRule = DeductionRule {
+pub const ZH_ABZUG_VERSICHERUNGSPR_MIEN_UND_SPARZINSEN_VERHEIRATETE_OHNE_BEITR_GE_S_ULE_2_3A:
+    DeductionRule = DeductionRule {
     canton_code: "ZH",
     name: "Abzug Versicherungsprämien und Sparzinsen, Verheiratete ohne Beiträge Säule 2/3a",
     kind: RuleKind::Deduction,
@@ -6859,15 +7004,16 @@ pub const ZH_MAXIMALABZUG_S_ULE_3A_OHNE_VORSORGEL_SUNG: DeductionRule = Deductio
 };
 
 /// `ZH`: Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA
-pub const ZH_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule = DeductionRule {
-    canton_code: "ZH",
-    name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
-    kind: RuleKind::Other,
-    amount: 0.0,
-    percent: 350.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZH_MAXIMALER_TECHNISCHER_ZINSSATZ_EINMALEINLAGE_IN_CHF_FINMA: DeductionRule =
+    DeductionRule {
+        canton_code: "ZH",
+        name: "Maximaler technischer Zinssatz Einmaleinlage in CHF FINMA",
+        kind: RuleKind::Other,
+        amount: 0.0,
+        percent: 350.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZH`: Pauschalabzug Berufsauslagen Nebenerwerb
 pub const ZH_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = DeductionRule {
@@ -6881,15 +7027,16 @@ pub const ZH_PAUSCHALABZUG_BERUFSAUSLAGEN_NEBENERWERB: DeductionRule = Deduction
 };
 
 /// `ZH`: Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren
-pub const ZH_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "ZH",
-    name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZH_PAUSCHALABZUG_UNTERHALTSKOSTEN_LIEGENSCHAFTEN_MIT_ALTER_BIS_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZH",
+        name: "Pauschalabzug Unterhaltskosten Liegenschaften mit Alter bis 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZH`: Pauschalabzug übrige Berufskosten
 pub const ZH_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
@@ -6903,15 +7050,16 @@ pub const ZH_PAUSCHALABZUG_BRIGE_BERUFSKOSTEN: DeductionRule = DeductionRule {
 };
 
 /// `ZH`: Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren
-pub const ZH_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule = DeductionRule {
-    canton_code: "ZH",
-    name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
-    kind: RuleKind::Deduction,
-    amount: 0.0,
-    percent: 20.0,
-    minimum: 0.0,
-    maximum: 0.0,
-};
+pub const ZH_PAUSCHALE_UNTERHALTSKOSTEN_VON_LIEGENSCHAFTEN_MIT_ALTER_BER_10_JAHREN: DeductionRule =
+    DeductionRule {
+        canton_code: "ZH",
+        name: "Pauschale Unterhaltskosten von Liegenschaften mit Alter über 10 Jahren",
+        kind: RuleKind::Deduction,
+        amount: 0.0,
+        percent: 20.0,
+        minimum: 0.0,
+        maximum: 0.0,
+    };
 
 /// `ZH`: Zweitverdienerabzug
 pub const ZH_ZWEITVERDIENERABZUG: DeductionRule = DeductionRule {
@@ -7625,7 +7773,8 @@ pub const FR_SCALE_ABZUG_F_R_AHV_IV_RENTNER_OHNE_UNTERST_TZUNGSPFLICHT: &[ScaleP
 ];
 
 /// `FR`: Abzug für bescheidenes Einkommen, Alleinerziehende oder Verheiratete (27 steps)
-pub const FR_SCALE_ABZUG_F_R_BESCHEIDENES_EINKOMMEN_ALLEINERZIEHENDE_ODER_VERHEIRATETE: &[ScalePoint] = &[
+pub const FR_SCALE_ABZUG_F_R_BESCHEIDENES_EINKOMMEN_ALLEINERZIEHENDE_ODER_VERHEIRATETE:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 5100.0 },
     ScalePoint { threshold: 24301.0, amount: 4900.0 },
     ScalePoint { threshold: 25301.0, amount: 4700.0 },
@@ -7692,7 +7841,8 @@ pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_LEDIG_OHNE_KIND: &[ScalePoint] = &[
 ];
 
 /// `GE`: Abzug für AHV/IV-Rentner, Verheiratete, beide Partner Rentenbezüger (6 steps)
-pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ_GER: &[ScalePoint] = &[
+pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ_GER:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 12260.0 },
     ScalePoint { threshold: 61301.0, amount: 9808.0 },
     ScalePoint { threshold: 69510.0, amount: 7356.0 },
@@ -7702,7 +7852,8 @@ pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ
 ];
 
 /// `GE`: Abzug für AHV/IV-Rentner, Verheiratete, eine Person ist Rentenbezüger (6 steps)
-pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_EINE_PERSON_IST_RENTENBEZ_GER: &[ScalePoint] = &[
+pub const GE_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_EINE_PERSON_IST_RENTENBEZ_GER:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 10661.0 },
     ScalePoint { threshold: 61301.0, amount: 8529.0 },
     ScalePoint { threshold: 69510.0, amount: 6397.0 },
@@ -7734,7 +7885,8 @@ pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_LEDIGE: &[ScalePoint] = &[
 ];
 
 /// `JU`: Abzug für AHV/IV-Rentner, Verheiratete, beide Partner Rentenbezüger (21 steps)
-pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ_GER: &[ScalePoint] = &[
+pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ_GER:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 10300.0 },
     ScalePoint { threshold: 37200.0, amount: 9700.0 },
     ScalePoint { threshold: 38000.0, amount: 9200.0 },
@@ -7759,7 +7911,8 @@ pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_BEIDE_PARTNER_RENTENBEZ
 ];
 
 /// `JU`: Abzug für AHV/IV-Rentner, Verheiratete, eine Person ist Rentenbezüger (18 steps)
-pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_EINE_PERSON_IST_RENTENBEZ_GER: &[ScalePoint] = &[
+pub const JU_SCALE_ABZUG_F_R_AHV_IV_RENTNER_VERHEIRATETE_EINE_PERSON_IST_RENTENBEZ_GER:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 8900.0 },
     ScalePoint { threshold: 37200.0, amount: 8300.0 },
     ScalePoint { threshold: 38000.0, amount: 7800.0 },
@@ -7912,7 +8065,8 @@ pub const SH_SCALE_ABZUG_F_R_AHV_IV_RENTNER_LEDIGE: &[ScalePoint] = &[
 ];
 
 /// `SH`: Abzug für bescheidenes Einkommen, Alleinerziehende oder Verheiratete (48 steps)
-pub const SH_SCALE_ABZUG_F_R_BESCHEIDENES_EINKOMMEN_ALLEINERZIEHENDE_ODER_VERHEIRATETE: &[ScalePoint] = &[
+pub const SH_SCALE_ABZUG_F_R_BESCHEIDENES_EINKOMMEN_ALLEINERZIEHENDE_ODER_VERHEIRATETE:
+    &[ScalePoint] = &[
     ScalePoint { threshold: 0.0, amount: 7050.0 },
     ScalePoint { threshold: 25201.0, amount: 6900.0 },
     ScalePoint { threshold: 26001.0, amount: 6750.0 },
@@ -8228,16 +8382,10 @@ pub const DEDUCTION_SCALES: &[DeductionScale] = &[
 /// bound fail to compile, and the table is small enough that the
 /// allocation is irrelevant next to the clarity.
 pub fn rules_for(canton_code: &str) -> Vec<&'static DeductionRule> {
-    DEDUCTION_RULES
-        .iter()
-        .filter(|r| r.canton_code == canton_code)
-        .collect()
+    DEDUCTION_RULES.iter().filter(|r| r.canton_code == canton_code).collect()
 }
 
 /// The means-tested scales for one canton.
 pub fn scales_for(canton_code: &str) -> Vec<&'static DeductionScale> {
-    DEDUCTION_SCALES
-        .iter()
-        .filter(|s| s.canton_code == canton_code)
-        .collect()
+    DEDUCTION_SCALES.iter().filter(|s| s.canton_code == canton_code).collect()
 }

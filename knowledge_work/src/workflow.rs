@@ -258,13 +258,7 @@ pub fn evaluate(
     let rho = effective_utilisation(admitted, escape, wf).unwrap_or(f64::INFINITY);
     let stable = rho < 1.0 && rho.is_finite();
     let cycle_time_days = if stable {
-        crate::queue::cycle_time(
-            rho,
-            wf.servers,
-            wf.arrival_cv,
-            wf.service_cv,
-            wf.base_service(),
-        )
+        crate::queue::cycle_time(rho, wf.servers, wf.arrival_cv, wf.service_cv, wf.base_service())
     } else {
         f64::INFINITY
     };
@@ -399,10 +393,7 @@ pub fn trajectory(
     policy: Policy,
     capacity_params: &capacity::ModelParameters,
 ) -> Vec<Envelope> {
-    states
-        .iter()
-        .map(|state| evaluate(wf, policy, state.capacity, capacity_params))
-        .collect()
+    states.iter().map(|state| evaluate(wf, policy, state.capacity, capacity_params)).collect()
 }
 
 /// The first year in which the workflow leaves its envelope, if it ever does.
@@ -410,14 +401,8 @@ pub fn trajectory(
 /// Two ways to leave it, and they are not the same finding: losing the steady state (`rho ≥ 1`,
 /// which is unbounded lateness) or merely missing the commitment (`cycle time > deadline`).
 /// The predicate selects one, so a caller cannot silently get the weaker claim.
-pub fn first_year_outside(
-    trajectory: &[Envelope],
-    requirement: Requirement,
-) -> Option<u32> {
-    trajectory
-        .iter()
-        .position(|envelope| !requirement.holds(envelope))
-        .map(|index| index as u32)
+pub fn first_year_outside(trajectory: &[Envelope], requirement: Requirement) -> Option<u32> {
+    trajectory.iter().position(|envelope| !requirement.holds(envelope)).map(|index| index as u32)
 }
 
 /// Which commitment the question is about.

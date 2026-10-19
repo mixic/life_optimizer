@@ -87,10 +87,7 @@ impl Readings {
     /// A conflict may be "materialised" -- the equilibrium is the inferior cell -- which
     /// is the reading an observer with only the outcome can see.
     pub fn materialised(payoffs: &Payoffs) -> bool {
-        matches!(
-            solve(payoffs).equilibrium,
-            crate::game::Equilibrium::Dilemma
-        )
+        matches!(solve(payoffs).equilibrium, crate::game::Equilibrium::Dilemma)
     }
 }
 
@@ -120,11 +117,7 @@ impl Default for Leverage {
     fn default() -> Self {
         // `capture` is the model's most important unknown and has no measured
         // counterpart for any conflict; 0.35 is a placeholder, not an estimate.
-        Leverage {
-            capture: 0.35,
-            loss: 0.45,
-            operating_cost: 0.02,
-        }
+        Leverage { capture: 0.35, loss: 0.45, operating_cost: 0.02 }
     }
 }
 
@@ -171,10 +164,7 @@ pub struct GrievanceCost {
 
 impl Default for GrievanceCost {
     fn default() -> Self {
-        GrievanceCost {
-            natural_margin: 0.60,
-            curvature: 1.60,
-        }
+        GrievanceCost { natural_margin: 0.60, curvature: 1.60 }
     }
 }
 
@@ -196,8 +186,7 @@ impl GrievanceCost {
 
     /// `Pi(sigma) = g*Lambda/(sigma + epsilon) - c_m(sigma)`, the spoiler's objective.
     pub fn objective(&self, leverage: &Leverage, margin: f64) -> f64 {
-        leverage.harvest() / (margin.max(0.0) + leverage.operating_cost)
-            - self.cost(margin)
+        leverage.harvest() / (margin.max(0.0) + leverage.operating_cost) - self.cost(margin)
     }
 }
 
@@ -242,7 +231,8 @@ pub fn critical_operating_cost(cost: &GrievanceCost, leverage: &Leverage) -> f64
 /// the case where the dyad is simply not worth touching.
 pub fn grievance_optimum(cost: &GrievanceCost, leverage: &Leverage) -> Option<GrievanceOptimum> {
     // Nothing to gain anywhere on the interval means leave the dyad alone.
-    let best_possible = cost.objective(leverage, 0.0).max(cost.objective(leverage, cost.natural_margin));
+    let best_possible =
+        cost.objective(leverage, 0.0).max(cost.objective(leverage, cost.natural_margin));
     if best_possible <= 0.0 {
         return None;
     }
@@ -250,10 +240,7 @@ pub fn grievance_optimum(cost: &GrievanceCost, leverage: &Leverage) -> Option<Gr
     let epsilon = leverage.operating_cost;
     let critical = critical_operating_cost(cost, leverage);
     if epsilon <= critical {
-        return Some(GrievanceOptimum {
-            margin: 0.0,
-            at_edge: true,
-        });
+        return Some(GrievanceOptimum { margin: 0.0, at_edge: true });
     }
 
     // Interior: bisect the first-order condition, whose left side rises and right side
@@ -271,10 +258,7 @@ pub fn grievance_optimum(cost: &GrievanceCost, leverage: &Leverage) -> Option<Gr
             hi = mid;
         }
     }
-    Some(GrievanceOptimum {
-        margin: 0.5 * (lo + hi),
-        at_edge: false,
-    })
+    Some(GrievanceOptimum { margin: 0.5 * (lo + hi), at_edge: false })
 }
 
 /// The victims' deterrent, charged on the links between them.
@@ -385,11 +369,7 @@ impl Coalition {
             weights.push(piece);
             support.push(p);
         }
-        Coalition {
-            weights,
-            support,
-            quota: self.quota,
-        }
+        Coalition { weights, support, quota: self.quota }
     }
 
     /// Split member `index` into `parts` that **can never both support**.
@@ -732,24 +712,14 @@ mod tests {
     #[test]
     fn crossed_interests_violence_and_equilibrium_failure_are_independent() {
         // (i) Crossed interests, no conflict: a coordination game.
-        let coordination = Payoffs {
-            cc: 2.0,
-            cd: 0.0,
-            dc: 1.0,
-            dd: 0.0,
-        };
+        let coordination = Payoffs { cc: 2.0, cd: 0.0, dc: 1.0, dd: 0.0 };
         let r = readings(&coordination);
         assert!(r.crossed_interests, "there is a joint surplus here");
         assert!(!r.failure_of_equilibrium, "but cooperation IS an equilibrium");
         assert_eq!(classify(&coordination), ConflictState::Peace);
 
         // (ii) Conflict, no crossed interests: nothing to fight over.
-        let positional = Payoffs {
-            cc: 0.0,
-            cd: -1.0,
-            dc: 1.0,
-            dd: 0.0,
-        };
+        let positional = Payoffs { cc: 0.0, cd: -1.0, dc: 1.0, dd: 0.0 };
         let r = readings(&positional);
         assert!(!r.crossed_interests, "mutual cooperation is no better jointly");
         assert!(r.failure_of_equilibrium, "yet the cooperative cell is not an equilibrium");
@@ -758,12 +728,7 @@ mod tests {
         // (iii) Violence in a game where the cooperative cell IS an equilibrium. `(D,D)` is
         // also an equilibrium here, so a war can happen with no failure of equilibrium to
         // explain it -- pure mistrust, which is neither of the other two readings.
-        let mistrust = Payoffs {
-            cc: 2.0,
-            cd: 0.0,
-            dc: 1.0,
-            dd: 1.0,
-        };
+        let mistrust = Payoffs { cc: 2.0, cd: 0.0, dc: 1.0, dd: 1.0 };
         assert_eq!(
             classify(&mistrust),
             ConflictState::Peace,
@@ -818,14 +783,8 @@ mod tests {
     #[test]
     fn the_spoiler_is_brazen_when_cheap_and_subtle_when_dear() {
         let cost = GrievanceCost::default();
-        let cheap = Leverage {
-            operating_cost: 0.02,
-            ..Leverage::default()
-        };
-        let dear = Leverage {
-            operating_cost: 1.50,
-            ..Leverage::default()
-        };
+        let cheap = Leverage { operating_cost: 0.02, ..Leverage::default() };
+        let dear = Leverage { operating_cost: 1.50, ..Leverage::default() };
         let critical = critical_operating_cost(&cost, &cheap);
         assert!(
             cheap.operating_cost < critical && dear.operating_cost > critical,
@@ -847,18 +806,12 @@ mod tests {
         );
         let lhs = cost.curvature * (cost.natural_margin - subtle.margin);
         let rhs = dear.harvest() / (subtle.margin + dear.operating_cost).powi(2);
-        assert!(
-            close(lhs, rhs, 1e-6),
-            "the first-order condition must hold: {lhs} vs {rhs}"
-        );
+        assert!(close(lhs, rhs, 1e-6), "the first-order condition must hold: {lhs} vs {rhs}");
 
         // And the comparative static: a dearer operation is a more subtle one.
         let mut previous = 0.0;
         for epsilon in [0.60, 0.80, 1.00, 1.50, 2.00] {
-            let model = Leverage {
-                operating_cost: epsilon,
-                ..Leverage::default()
-            };
+            let model = Leverage { operating_cost: epsilon, ..Leverage::default() };
             let optimum = grievance_optimum(&cost, &model).expect("worth doing");
             assert!(
                 !optimum.at_edge && optimum.margin > previous,
@@ -881,11 +834,7 @@ mod tests {
         // identically placed: same sigma, hence same ratio.
         let by_grievance = margin - 0.2;
         let by_subsidy = margin - 0.2; // dc raised by 0.2 lowers sigma by 0.2
-        assert!(close(
-            leverage.ratio(by_grievance),
-            leverage.ratio(by_subsidy),
-            1e-12
-        ));
+        assert!(close(leverage.ratio(by_grievance), leverage.ratio(by_subsidy), 1e-12));
 
         // Therefore the choice is a pure price comparison, and the cheaper instrument wins.
         let narrative_unit_cost = 0.30;
@@ -963,11 +912,7 @@ mod tests {
     /// `kappa * n` while leaving aggregate power alone.
     #[test]
     fn the_coordination_charge_is_the_whole_gain_from_division() {
-        let deterrent = Deterrent {
-            power: 10.0,
-            parties: 4,
-            kappa: 0.20,
-        };
+        let deterrent = Deterrent { power: 10.0, parties: 4, kappa: 0.20 };
         let before = deterrent.value();
         let divided = deterrent.divided(2);
         let after = divided.value();
@@ -1016,18 +961,12 @@ mod tests {
         // (iii) There is a positive attribution threshold below which nobody acts.
         let threshold = punishment.attribution_threshold();
         assert!(threshold > 0.0, "the threshold must be positive");
-        let guilty_but_free = Punishment {
-            attribution: threshold * 0.5,
-            ..punishment
-        };
+        let guilty_but_free = Punishment { attribution: threshold * 0.5, ..punishment };
         assert!(
             !guilty_but_free.deterred(),
             "below the threshold the spoiler is guilty and nobody acts"
         );
-        let caught = Punishment {
-            attribution: threshold * 3.0,
-            ..punishment
-        };
+        let caught = Punishment { attribution: threshold * 3.0, ..punishment };
         assert!(caught.deterred(), "well above it, the spoiler is deterred");
     }
 
@@ -1047,20 +986,14 @@ mod tests {
         };
         let threshold = base.attribution_threshold();
 
-        let already_hidden = Punishment {
-            attribution: threshold * 0.5,
-            ..base
-        };
+        let already_hidden = Punishment { attribution: threshold * 0.5, ..base };
         assert_eq!(
             already_hidden.deniability_required(),
             0.0,
             "a spoiler facing victims who cannot attribute the operation buys nothing"
         );
 
-        let exposed = Punishment {
-            attribution: threshold * 2.0,
-            ..base
-        };
+        let exposed = Punishment { attribution: threshold * 2.0, ..base };
         assert!(
             close(exposed.deniability_required(), threshold, 1e-12),
             "an exposed spoiler buys exactly enough deniability to reach the threshold"
@@ -1155,14 +1088,10 @@ mod tests {
 
         // The same prize with victims who can actually punish: the containment fails and a
         // band of profitable-but-deterred spoilers opens.
-        let strong_victims = Exposure {
-            punishment_capacity: 3.00,
-            ..contained
-        };
+        let strong_victims = Exposure { punishment_capacity: 3.00, ..contained };
         assert!(!strong_victims.impunity_contains_profit());
-        let band = strong_victims
-            .deterred_band()
-            .expect("the complement must give a nonempty band");
+        let band =
+            strong_victims.deterred_band().expect("the complement must give a nonempty band");
         assert!(band.0 < band.1, "the band must be an interval: {band:?}");
         // Inside the band the spoiler would profit, and does not act.
         let inside = 0.5 * (band.0 + band.1);

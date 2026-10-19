@@ -100,12 +100,20 @@ pub struct BaseScale {
 impl BaseScale {
     /// The bands that apply to the given marital status.
     pub fn brackets(&self, married: bool) -> &'static [FederalBracket] {
-        if married { self.married } else { self.single }
+        if married {
+            self.married
+        } else {
+            self.single
+        }
     }
 
     /// The formula segments that apply to the given marital status.
     pub fn formulas(&self, married: bool) -> &'static [TaxFormula] {
-        if married { self.formula_married } else { self.formula_single }
+        if married {
+            self.formula_married
+        } else {
+            self.formula_single
+        }
     }
 
     /// Whether this canton publishes its tariff as formulas.
@@ -116,7 +124,11 @@ impl BaseScale {
     /// The splitting factor to apply, which is only ever non-`None` for a
     /// married taxpayer on a shared scale.
     pub fn splitting_factor(&self, married: bool) -> Option<f64> {
-        if married { self.splitting_factor_married } else { None }
+        if married {
+            self.splitting_factor_married
+        } else {
+            None
+        }
     }
 
     /// Whether this canton is a flat-rate one.
@@ -242,9 +254,18 @@ pub const AR_MARRIED_BRACKETS: &[FederalBracket] = &[
 /// Simple-tax tariff for canton BL, single taxpayer,
 /// published as algebraic expressions rather than bands.
 pub const BL_SINGLE_FORMULAS: &[TaxFormula] = &[
-    TaxFormula { threshold: 16731.0, expression: "-0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746" },
-    TaxFormula { threshold: 44615.0, expression: "-0.328507* $wert$ + 0.043108 * $wert$ * (log $wert$ - 1) + (-1249.444454)" },
-    TaxFormula { threshold: 111538.0, expression: "0.051153* $wert$ + 0.010441 * $wert$ * (log $wert$ - 1) + (-4893.077017)" },
+    TaxFormula {
+        threshold: 16731.0,
+        expression: "-0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746",
+    },
+    TaxFormula {
+        threshold: 44615.0,
+        expression: "-0.328507* $wert$ + 0.043108 * $wert$ * (log $wert$ - 1) + (-1249.444454)",
+    },
+    TaxFormula {
+        threshold: 111538.0,
+        expression: "0.051153* $wert$ + 0.010441 * $wert$ * (log $wert$ - 1) + (-4893.077017)",
+    },
     TaxFormula { threshold: 1282692.0, expression: "235687.5410 + 0.1862 * ($wert$ - 1282692)" },
 ];
 
@@ -252,9 +273,18 @@ pub const BL_SINGLE_FORMULAS: &[TaxFormula] = &[
 /// published as algebraic expressions rather than bands.
 pub const BL_MARRIED_FORMULAS: &[TaxFormula] = &[
     TaxFormula { threshold: 8366.0, expression: "0.49 * $wert$ / 100" },
-    TaxFormula { threshold: 16731.0, expression: "-0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746" },
-    TaxFormula { threshold: 44615.0, expression: "-0.328507* $wert$ + 0.043108 * $wert$ * (log $wert$ - 1) + (-1249.444454)" },
-    TaxFormula { threshold: 111538.0, expression: "0.051153* $wert$ + 0.010441 * $wert$ * (log $wert$ - 1) + (-4893.077017)" },
+    TaxFormula {
+        threshold: 16731.0,
+        expression: "-0.827548* $wert$ + 0.089722* $wert$ * (log $wert$ - 1) + 830.223746",
+    },
+    TaxFormula {
+        threshold: 44615.0,
+        expression: "-0.328507* $wert$ + 0.043108 * $wert$ * (log $wert$ - 1) + (-1249.444454)",
+    },
+    TaxFormula {
+        threshold: 111538.0,
+        expression: "0.051153* $wert$ + 0.010441 * $wert$ * (log $wert$ - 1) + (-4893.077017)",
+    },
     TaxFormula { threshold: 1282692.0, expression: "235687.5410 + 0.1862 * ($wert$ - 1282692)" },
 ];
 
@@ -642,16 +672,12 @@ pub const NW_MARRIED_BRACKETS: &[FederalBracket] = &[
 /// Simple-tax scale for canton OW, single taxpayer.
 /// The canton publishes one shared scale; this is the same table
 /// for both marital statuses.
-pub const OW_SINGLE_BRACKETS: &[FederalBracket] = &[
-    FederalBracket { threshold: 0.0, rate: 0.0 },
-];
+pub const OW_SINGLE_BRACKETS: &[FederalBracket] = &[FederalBracket { threshold: 0.0, rate: 0.0 }];
 
 /// Simple-tax scale for canton OW, married taxpayer.
 /// The canton publishes one shared scale; this is the same table
 /// for both marital statuses.
-pub const OW_MARRIED_BRACKETS: &[FederalBracket] = &[
-    FederalBracket { threshold: 0.0, rate: 0.0 },
-];
+pub const OW_MARRIED_BRACKETS: &[FederalBracket] = &[FederalBracket { threshold: 0.0, rate: 0.0 }];
 
 /// Simple-tax scale for canton SG, single taxpayer.
 /// The canton publishes one shared scale; this is the same table
@@ -872,16 +898,12 @@ pub const TI_MARRIED_BRACKETS: &[FederalBracket] = &[
 /// Simple-tax scale for canton UR, single taxpayer.
 /// The canton publishes one shared scale; this is the same table
 /// for both marital statuses.
-pub const UR_SINGLE_BRACKETS: &[FederalBracket] = &[
-    FederalBracket { threshold: 0.0, rate: 0.0 },
-];
+pub const UR_SINGLE_BRACKETS: &[FederalBracket] = &[FederalBracket { threshold: 0.0, rate: 0.0 }];
 
 /// Simple-tax scale for canton UR, married taxpayer.
 /// The canton publishes one shared scale; this is the same table
 /// for both marital statuses.
-pub const UR_MARRIED_BRACKETS: &[FederalBracket] = &[
-    FederalBracket { threshold: 0.0, rate: 0.0 },
-];
+pub const UR_MARRIED_BRACKETS: &[FederalBracket] = &[FederalBracket { threshold: 0.0, rate: 0.0 }];
 
 /// Simple-tax scale for canton VD, single taxpayer.
 pub const VD_SINGLE_BRACKETS: &[FederalBracket] = &[
@@ -1149,7 +1171,10 @@ pub const BASE_SCALES: &[BaseScale] = &[
         flat_rate_percent: None,
         formula_single: &[],
         formula_married: &[],
-        subjects: &["Alleinstehend mit Kindern im Konkubinat", "Verheiratet / Alleinstehend mit Kindern (nicht im Konkubinat)"],
+        subjects: &[
+            "Alleinstehend mit Kindern im Konkubinat",
+            "Verheiratet / Alleinstehend mit Kindern (nicht im Konkubinat)",
+        ],
     },
     BaseScale {
         canton_code: "LU",

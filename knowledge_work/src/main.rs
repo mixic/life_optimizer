@@ -55,21 +55,9 @@ struct OptionSpec {
 /// spent on capacity to judge rather than on throughput.
 fn options() -> [OptionSpec; 3] {
     [
-        OptionSpec {
-            label: "lean (push everything)",
-            policy: Policy::Push,
-            training_share: 0.05,
-        },
-        OptionSpec {
-            label: "buffered (WIP cap)",
-            policy: Policy::WipCap,
-            training_share: 0.05,
-        },
-        OptionSpec {
-            label: "learning buffer",
-            policy: Policy::WipCap,
-            training_share: 0.25,
-        },
+        OptionSpec { label: "lean (push everything)", policy: Policy::Push, training_share: 0.05 },
+        OptionSpec { label: "buffered (WIP cap)", policy: Policy::WipCap, training_share: 0.05 },
+        OptionSpec { label: "learning buffer", policy: Policy::WipCap, training_share: 0.25 },
     ]
 }
 
@@ -95,10 +83,8 @@ fn evaluate_option(spec: OptionSpec, wf: &WorkflowParameters) -> OptionResult {
         PERSON_HUMAN_SHARE,
     );
     let review_capacity = states.last().map(|state| state.capacity).unwrap_or(0.0);
-    let autonomy_years = states
-        .iter()
-        .filter(|state| state.autonomy >= AUTONOMY_FLOOR)
-        .count() as f64;
+    let autonomy_years =
+        states.iter().filter(|state| state.autonomy >= AUTONOMY_FLOOR).count() as f64;
 
     // A quarter of the period spent learning is a quarter not spent reviewing, so the review
     // capacity the workflow gets is scaled by the time that is actually available. Without this
@@ -121,12 +107,7 @@ fn evaluate_option(spec: OptionSpec, wf: &WorkflowParameters) -> OptionResult {
         autonomy_years,
         backlog: envelope.unadmitted_per_day,
     };
-    OptionResult {
-        spec,
-        review_capacity,
-        envelope,
-        outcome,
-    }
+    OptionResult { spec, review_capacity, envelope, outcome }
 }
 
 fn main() {
@@ -268,40 +249,27 @@ fn report(export: Option<&Path>) {
     println!();
     println!("  THE LOAD IDENTITY");
     println!("  {}", "-".repeat(74));
-    println!(
-        "  One generated item consumes review time in three ways: reviewed, then either"
-    );
-    println!(
-        "  reworked because the defect was caught, or reworked later because it escaped."
-    );
+    println!("  One generated item consumes review time in three ways: reviewed, then either");
+    println!("  reworked because the defect was caught, or reworked later because it escaped.");
     println!();
     println!("    L(e) = 1 + d[(1 - e)c_caught + e c_escape]");
     println!();
     println!(
-        "  With d = {:.2}, c_caught = {:.2} and c_escape = {:.2}, a review stage that catches"
-        ,
+        "  With d = {:.2}, c_caught = {:.2} and c_escape = {:.2}, a review stage that catches",
         wf.defect_share, wf.caught_rework_cost, wf.escape_rework_cost
     );
     println!(
         "  everything still carries L = {:.2} services per item, so counting only",
         at_full.load
     );
-    println!(
-        "  first-pass review understates the load by {:.0}%.",
-        (at_full.load - 1.0) * 100.0
-    );
+    println!("  first-pass review understates the load by {:.0}%.", (at_full.load - 1.0) * 100.0);
     println!();
     println!(
-        "  At full capacity the workflow runs at {:.1}% of its review capacity. That is inside"
-        ,
+        "  At full capacity the workflow runs at {:.1}% of its review capacity. That is inside",
         at_full.rho_at_generated * 100.0
     );
-    println!(
-        "  the envelope, with about three points of margin -- which is what a lean target of"
-    );
-    println!(
-        "  high utilisation leaves, and why a small loss of capacity to judge is enough to"
-    );
+    println!("  the envelope, with about three points of margin -- which is what a lean target of");
+    println!("  high utilisation leaves, and why a small loss of capacity to judge is enough to");
     println!("  matter.");
 
     // ---- the envelope by capacity -----------------------------------------
@@ -346,7 +314,9 @@ fn report(export: Option<&Path>) {
             println!(
                 "  between them is the range in which the queue still converges but the promise"
             );
-            println!("  is already broken -- which is the range most organisations actually occupy.");
+            println!(
+                "  is already broken -- which is the range most organisations actually occupy."
+            );
         }
         (None, Some(steady)) => {
             println!("  The workflow cannot meet its commitment even at full capacity.");
@@ -362,11 +332,9 @@ fn report(export: Option<&Path>) {
     println!("  What the commitment costs, by how tight it is:");
     println!();
     println!("    {:>9} {:>14}", "deadline", "critical cap.");
-    for (deadline, critical) in envelope::deadline_sensitivity(
-        &wf,
-        &params,
-        &[10.0, 7.0, 5.0, 3.0, 2.0, 1.0, 0.5],
-    ) {
+    for (deadline, critical) in
+        envelope::deadline_sensitivity(&wf, &params, &[10.0, 7.0, 5.0, 3.0, 2.0, 1.0, 0.5])
+    {
         match critical {
             Some(value) => println!("    {:>9.1} {:>14.3}", deadline, value),
             None => println!("    {:>9.1} {:>14}", deadline, "unmeetable"),
@@ -390,12 +358,8 @@ fn report(export: Option<&Path>) {
         PERSON_HUMAN_SHARE,
     );
     let path = workflow::trajectory(&states, &wf, Policy::Push, &params);
-    println!(
-        "  Same workflow throughout. The only thing that changes is the person's capacity to"
-    );
-    println!(
-        "  judge, which falls because assistance is solved for rather than chosen."
-    );
+    println!("  Same workflow throughout. The only thing that changes is the person's capacity to");
+    println!("  judge, which falls because assistance is solved for rather than chosen.");
     println!();
     println!(
         "  {:>5} {:>10} {:>8} {:>7} {:>8} {:>12}",
@@ -445,10 +409,8 @@ fn report(export: Option<&Path>) {
     );
     println!("  judge rather than on throughput, and it is the only one that buys any.");
     println!();
-    let results: Vec<OptionResult> = options()
-        .into_iter()
-        .map(|spec| evaluate_option(spec, &wf))
-        .collect();
+    let results: Vec<OptionResult> =
+        options().into_iter().map(|spec| evaluate_option(spec, &wf)).collect();
     println!(
         "  {:<24} {:>8} {:>8} {:>8} {:>9} {:>8} {:>7}",
         "configuration", "deskills", "through", "cycle", "escapes", "auton.", "steady"
@@ -473,19 +435,12 @@ fn report(export: Option<&Path>) {
     println!();
     println!("  PRODUCTIVITY TOWARD WHAT");
     println!("  {}", "-".repeat(74));
-    println!(
-        "  The framework does not rank these. It reports, for every weighting of the five"
-    );
-    println!(
-        "  criteria, which configuration comes first -- and then hands the question back."
-    );
+    println!("  The framework does not rank these. It reports, for every weighting of the five");
+    println!("  criteria, which configuration comes first -- and then hands the question back.");
     println!();
     let outcomes: Vec<Outcome> = results.iter().map(|result| result.outcome).collect();
     let acceptance = direction::acceptance(&outcomes, WEIGHT_STEPS);
-    println!(
-        "  {:>8} {:>24}  {:>20}",
-        "share", "configuration", "rank under declared"
-    );
+    println!("  {:>8} {:>24}  {:>20}", "share", "configuration", "rank under declared");
     let declared = &acceptance.declared_ranking;
     for (position, index) in declared.iter().enumerate() {
         println!(
@@ -499,15 +454,11 @@ fn report(export: Option<&Path>) {
     println!(
         "  {} weightings over the five criteria: {}.",
         acceptance.weightings,
-        (0..CRITERIA)
-            .map(direction::criterion_name)
-            .collect::<Vec<_>>()
-            .join(", ")
+        (0..CRITERIA).map(direction::criterion_name).collect::<Vec<_>>().join(", ")
     );
     println!();
-    let contested: Vec<usize> = (0..outcomes.len())
-        .filter(|index| acceptance.shares[*index] > 0.0)
-        .collect();
+    let contested: Vec<usize> =
+        (0..outcomes.len()).filter(|index| acceptance.shares[*index] > 0.0).collect();
     if contested.len() > 1 {
         println!(
             "  No rank order exists: {} configurations win under some defensible weighting.",
@@ -516,9 +467,7 @@ fn report(export: Option<&Path>) {
         println!(
             "  The declared weighting is one point on that surface and is printed above as one"
         );
-        println!(
-            "  of them, not as the answer. Which criterion should outrank which is the"
-        );
+        println!("  of them, not as the answer. Which criterion should outrank which is the");
         println!("  question this document cannot settle, and does not pretend to.");
     } else {
         println!("  One configuration wins under every weighting in the grid, so on these");
@@ -580,7 +529,10 @@ fn print_header(wf: &WorkflowParameters) {
     println!("{}", "=".repeat(78));
     println!(
         "  {} reviewers at {:.0} items/day, generating {:.0} items/day from a demand of {:.0}.",
-        wf.servers, wf.review_rate, wf.generated_per_day(), wf.demand_per_day
+        wf.servers,
+        wf.review_rate,
+        wf.generated_per_day(),
+        wf.demand_per_day
     );
     println!(
         "  The machine multiplied what the team can generate by {:.1}. The review that catches",
@@ -638,15 +590,15 @@ fn write_bundle(
     write("envelope.csv", envelope_csv)?;
 
     let mut deadline_csv = String::from("deadline_days,critical_capacity\n");
-    for (deadline, critical) in
-        envelope::deadline_sensitivity(wf, params, &[12.0, 10.0, 8.0, 6.0, 5.0, 4.0, 3.0, 2.5, 2.0, 1.5, 1.0])
-    {
+    for (deadline, critical) in envelope::deadline_sensitivity(
+        wf,
+        params,
+        &[12.0, 10.0, 8.0, 6.0, 5.0, 4.0, 3.0, 2.5, 2.0, 1.5, 1.0],
+    ) {
         let _ = writeln!(
             deadline_csv,
             "{deadline:.2},{}",
-            critical
-                .map(|value| format!("{value:.6}"))
-                .unwrap_or_else(|| "NaN".to_string())
+            critical.map(|value| format!("{value:.6}")).unwrap_or_else(|| "NaN".to_string())
         );
     }
     write("deadline.csv", deadline_csv)?;
@@ -658,10 +610,7 @@ fn write_bundle(
             trajectory_csv,
             "{},{:.6},{:.6},{:.6},{:.6},{},{},{}",
             year,
-            states
-                .get(year)
-                .map(|state| state.capacity)
-                .unwrap_or(f64::NAN),
+            states.get(year).map(|state| state.capacity).unwrap_or(f64::NAN),
             point.escape,
             point.load,
             point.rho,
@@ -700,8 +649,7 @@ fn write_bundle(
 
     // The phase diagram: the thesis's operating point against the boundary, across the one
     // parameter an organisation actually chooses -- how much of the machine's output to generate.
-    let mut phase_csv =
-        String::from("multiplier,capacity,rho,absorbable,stable,on_time\n");
+    let mut phase_csv = String::from("multiplier,capacity,rho,absorbable,stable,on_time\n");
     for multiplier in [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 3.0, 4.0] {
         let mut probe = wf.clone();
         probe.generation_multiplier = multiplier;
@@ -731,13 +679,8 @@ fn write_bundle(
         String::from("target_rho,seed,realised_rho,mean_cycle_time,analytic_cycle_time\n");
     for target in [0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.93, 0.95, 0.97, 0.98] {
         let rate = sim::arrival_rate_for_utilisation(wf, escape, target);
-        let analytic = queue::cycle_time(
-            target,
-            wf.servers,
-            wf.arrival_cv,
-            wf.service_cv,
-            wf.base_service(),
-        );
+        let analytic =
+            queue::cycle_time(target, wf.servers, wf.arrival_cv, wf.service_cv, wf.base_service());
         for seed in 0..8_u64 {
             let outcome = sim::simulate(wf, escape, rate, 2500.0, 11 + seed);
             let _ = writeln!(
@@ -757,16 +700,12 @@ fn write_bundle(
     let _ = writeln!(
         meta,
         "critical_stability,{}",
-        stability
-            .map(|value| format!("{value:.6}"))
-            .unwrap_or_else(|| "NaN".to_string())
+        stability.map(|value| format!("{value:.6}")).unwrap_or_else(|| "NaN".to_string())
     );
     let _ = writeln!(
         meta,
         "critical_commitment,{}",
-        absorption
-            .map(|value| format!("{value:.6}"))
-            .unwrap_or_else(|| "NaN".to_string())
+        absorption.map(|value| format!("{value:.6}")).unwrap_or_else(|| "NaN".to_string())
     );
     let _ = writeln!(meta, "deadline_days,{:.4}", wf.deadline_days);
     let _ = writeln!(meta, "generation_multiplier,{:.4}", wf.generation_multiplier);
@@ -781,10 +720,7 @@ fn write_bundle(
         provenance,
         "Every parameter below is DECLARED. None is calibrated against workplace data."
     );
-    let _ = writeln!(
-        provenance,
-        "The files support the SHAPE of the thresholds, not the levels."
-    );
+    let _ = writeln!(provenance, "The files support the SHAPE of the thresholds, not the levels.");
     let _ = writeln!(provenance);
     for (name, source) in wf.provenance_table() {
         let _ = writeln!(provenance, "  {name:<36} {}", source.label());

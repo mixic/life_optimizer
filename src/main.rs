@@ -16,14 +16,20 @@
 
 // The binary is a thin CLI wrapper over the `life_optimizer` library so that
 // the integration tests in `tests/` can exercise the same code paths.
-use life_optimizer::{tax, requirements, optimizer, display, monte_carlo, mc_display, consumption, cantons, deductions, early_retirement, team, retirement_needs, robustness, ai_scenario};
-use life_optimizer::early_retirement::{BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters, TaxBand, TaxTreatment};
+use life_optimizer::early_retirement::{
+    BandedTax, ConsumptionNeed, ContributionPrinciple, Degree, Household, RetirementParameters,
+    TaxBand, TaxTreatment,
+};
+use life_optimizer::{
+    ai_scenario, cantons, consumption, deductions, display, early_retirement, mc_display,
+    monte_carlo, optimizer, requirements, retirement_needs, robustness, tax, team,
+};
 
-use clap::{Args, Parser, Subcommand, ArgAction};
-use requirements::{LifeStage, PersonalRequirements, PreferenceWeights, FamilySupport};
-use tax::TaxSchedule;
-use optimizer::{OptimizerConfig, LifeOptimizer};
+use clap::{ArgAction, Args, Parser, Subcommand};
 use colored::*;
+use optimizer::{LifeOptimizer, OptimizerConfig};
+use requirements::{FamilySupport, LifeStage, PersonalRequirements, PreferenceWeights};
+use tax::TaxSchedule;
 
 #[derive(Parser)]
 #[command(name = "life-optimizer")]
@@ -496,7 +502,6 @@ struct OptimizeArgs {
     retirement_needs_percent: Option<f64>,
 }
 
-
 /// The employer-side achievement constraint and its AI coefficients, split out of `optimize`.
 ///
 /// These eight flags model what an employer does with the productivity gain -- what output it
@@ -575,10 +580,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
     let capital_tax = match args.capital_tax_rate {
         Some(flat) => BandedTax {
             allowance: 0.0,
-            bands: vec![TaxBand {
-                width: 10_000_000.0,
-                marginal_rate: flat,
-            }],
+            bands: vec![TaxBand { width: 10_000_000.0, marginal_rate: flat }],
             provenance: early_retirement::Provenance::Declared {
                 rationale: "a flat rate passed on the command line",
             },
@@ -616,7 +618,8 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         taxable_savings: args.savings,
         life_expectancy: args.life_expectancy,
     };
-    let entitlements = early_retirement::project(&household, &params, args.retirement_age, args.work_pct);
+    let entitlements =
+        early_retirement::project(&household, &params, args.retirement_age, args.work_pct);
 
     println!();
     println!("  2. Entitlements at {}", args.retirement_age);
@@ -638,10 +641,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         entitlements.bvg_capital,
         entitlements.effective_conversion_rate * 100.0
     );
-    println!(
-        "    BVG annuity if whole: {:>12.0} a year",
-        entitlements.bvg_annuity_annual
-    );
+    println!("    BVG annuity if whole: {:>12.0} a year", entitlements.bvg_annuity_annual);
     println!("    Pillar 3a capital:    {:>12.0}", entitlements.pillar3a_capital);
     println!("    Taxable savings:      {:>12.0}", entitlements.bridge_capital);
     println!(
@@ -686,9 +686,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             "    THE BRIDGE: {} years between retirement and the AHV reference age carry no",
             bridge_years
         );
-        println!(
-            "    full AHV, and a non-employed person still owes AHV contributions of"
-        );
+        println!("    full AHV, and a non-employed person still owes AHV contributions of");
         println!(
             "    CHF {:.0} to {:.0} a year for {} years — between CHF {:.0} and CHF {:.0} in",
             params.ahv_non_employed_annual_min,
@@ -697,37 +695,32 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             entitlements.bridge_ahv_contributions_min,
             entitlements.bridge_ahv_contributions_max
         );
-        println!(
-            "    total (AHVG Art. 3 Abs. 1bis, Art. 10). The range is real: the amount is a"
-        );
-        println!(
-            "    table assessed on wealth and rental income, not a rate, so a single figure"
-        );
+        println!("    total (AHVG Art. 3 Abs. 1bis, Art. 10). The range is real: the amount is a");
+        println!("    table assessed on wealth and rental income, not a rate, so a single figure");
         println!("    would be a claim about your balance sheet.");
     }
-    if args.conversion_rate <= crate::early_retirement::RetirementParameters::default().bvg_conversion_rate + 1e-9
+    if args.conversion_rate
+        <= crate::early_retirement::RetirementParameters::default().bvg_conversion_rate + 1e-9
     {
         println!();
-        println!("  ON THE CONVERSION RATE: {:.3}% is at or below the statutory floor of 6.8%.", args.conversion_rate * 100.0);
+        println!(
+            "  ON THE CONVERSION RATE: {:.3}% is at or below the statutory floor of 6.8%.",
+            args.conversion_rate * 100.0
+        );
         println!("  The floor is what the law guarantees, but the average rate funds actually");
         println!("  apply is about 5.2% (OAK BV, 1,257 funds). A plan priced at 6.8% overstates");
         println!("  the annuity by roughly a quarter, so pass your fund's own figure.");
     }
 
     // ---- 3. the allocation the LP chooses --------------------------------------
-    let need = ConsumptionNeed {
-        mandatory_annual: args.mandatory,
-        lifestyle_annual: args.lifestyle,
-    };
+    let need =
+        ConsumptionNeed { mandatory_annual: args.mandatory, lifestyle_annual: args.lifestyle };
     let annuity_share = args.annuity_share.clamp(0.0, 1.0);
-    let capital_to_place = entitlements.bvg_capital * (1.0 - annuity_share)
-        + entitlements.pillar3a_capital;
+    let capital_to_place =
+        entitlements.bvg_capital * (1.0 - annuity_share) + entitlements.pillar3a_capital;
     let annuity_income = entitlements.ahv_annual
         + entitlements.bvg_capital * annuity_share * entitlements.effective_conversion_rate;
-    let years = args
-        .life_expectancy
-        .saturating_sub(args.retirement_age)
-        .max(1) as usize;
+    let years = args.life_expectancy.saturating_sub(args.retirement_age).max(1) as usize;
 
     // The committed income each year, and therefore the withdrawal each year *requires*.
     // Before the AHV reference age there is no AHV in it, which is what makes the bridge
@@ -757,10 +750,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         "    REQUIRED is {:.0} over {} years — {:.0} of it in the {} bridge years before the",
         total_required,
         years,
-        required
-            .iter()
-            .take(65u32.saturating_sub(args.retirement_age) as usize)
-            .sum::<f64>(),
+        required.iter().take(65u32.saturating_sub(args.retirement_age) as usize).sum::<f64>(),
         bridge_years
     );
     println!("    AHV reference age.");
@@ -771,7 +761,10 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
     if surplus < 0.0 {
         println!();
         println!("    THE POT DOES NOT FUND THIS CONSUMPTION AT THIS AGE. The requirement alone");
-        println!("    exceeds the capital by {:.0}. No allocation fixes that: the answer is to", -surplus);
+        println!(
+            "    exceeds the capital by {:.0}. No allocation fixes that: the answer is to",
+            -surplus
+        );
         println!("    retire later, spend less, or annuitise more. The risk table below reports");
         println!("    the consequence, which is a statement about arithmetic and not about luck.");
     }
@@ -837,10 +830,8 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
     }
 
     // ---- 4. risk, across retirement ages --------------------------------------
-    let need = ConsumptionNeed {
-        mandatory_annual: args.mandatory,
-        lifestyle_annual: args.lifestyle,
-    };
+    let need =
+        ConsumptionNeed { mandatory_annual: args.mandatory, lifestyle_annual: args.lifestyle };
     let schedule = TaxSchedule::bern_city_default(args.married, args.children);
 
     println!();
@@ -850,8 +841,12 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         "    {} paths an age, the SAME seed everywhere, so the differences are the age",
         args.paths
     );
-    println!("    and not the draws. Real return {:.1}% +/- {:.1}%, life expectancy {}.",
-        args.real_return * 100.0, args.return_std * 100.0, args.life_expectancy);
+    println!(
+        "    and not the draws. Real return {:.1}% +/- {:.1}%, life expectancy {}.",
+        args.real_return * 100.0,
+        args.return_std * 100.0,
+        args.life_expectancy
+    );
     println!();
     println!(
         "    {:<5} {:>11} {:>11} {:>9} {:>11} {:>11} {:>10}",
@@ -940,9 +935,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
     let target = 0.10;
     let paths = early_retirement::draw_paths(
         args.paths,
-        args.life_expectancy
-            .saturating_sub(args.retirement_age)
-            .max(1),
+        args.life_expectancy.saturating_sub(args.retirement_age).max(1),
         args.real_return,
         args.return_std,
         args.life_expectancy,
@@ -950,7 +943,9 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         args.seed,
     );
     let annuity_income = entitlements.ahv_annual
-        + entitlements.bvg_capital * args.annuity_share.clamp(0.0, 1.0) * entitlements.effective_conversion_rate;
+        + entitlements.bvg_capital
+            * args.annuity_share.clamp(0.0, 1.0)
+            * entitlements.effective_conversion_rate;
     let taxable = schedule.taxable_income_after_estimated_deductions(annuity_income);
     let annuity_tax = taxable * schedule.tax_rate_on_taxable(taxable);
 
@@ -964,9 +959,7 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             &need,
             &TaxTreatment::new(params.capital_withdrawal_tax.clone(), annuity_tax),
             &paths,
-            args.life_expectancy
-                .saturating_sub(args.retirement_age)
-                .max(1),
+            args.life_expectancy.saturating_sub(args.retirement_age).max(1),
         );
         profile.probability_of_shortfall
     };
@@ -985,7 +978,10 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
             "    Even {:.0} of extra capital does not bring the shortfall probability to",
             high
         );
-        println!("    {:.0}% at this annuity share. The binding constraint is the annuity,", target * 100.0);
+        println!(
+            "    {:.0}% at this annuity share. The binding constraint is the annuity,",
+            target * 100.0
+        );
         println!("    not the pot: annuitising more is the lever that removes this risk.");
     } else {
         let mut low = 0.0_f64;
@@ -997,10 +993,9 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
                 high = mid;
             }
         }
-        let funded = entitlements.bvg_capital + entitlements.pillar3a_capital + entitlements.bridge_capital;
-        println!(
-            "    The smallest extra capital that holds the shortfall probability at or",
-        );
+        let funded =
+            entitlements.bvg_capital + entitlements.pillar3a_capital + entitlements.bridge_capital;
+        println!("    The smallest extra capital that holds the shortfall probability at or",);
         println!(
             "    below {:.0}% is {:.0}, against the {:.0} already held — a total of {:.0}.",
             target * 100.0,
@@ -1019,7 +1014,10 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
 
     if let Some((shortfall, expected, mean_terminal, median_terminal, p10)) = centred {
         println!();
-        println!("  At the chosen age {} and annuity share {:.2}:", args.retirement_age, args.annuity_share);
+        println!(
+            "  At the chosen age {} and annuity share {:.2}:",
+            args.retirement_age, args.annuity_share
+        );
         println!(
             "    shortfall {:.1}%, expected gap when it happens {:.0}, terminal wealth mean",
             shortfall * 100.0,
@@ -1077,7 +1075,10 @@ fn run_early_retirement(args: &EarlyRetirementArgs) {
         };
         println!(
             "    {:<28} {:>12.0} {:>14.0} {:>9.1}x",
-            name, ledger.principle_surcharge, ledger.lifetime_income_tax, ledger.tax_multiple_of_state_cost
+            name,
+            ledger.principle_surcharge,
+            ledger.lifetime_income_tax,
+            ledger.tax_multiple_of_state_cost
         );
     }
     println!();
@@ -1200,7 +1201,12 @@ fn main() {
                 insurance_premiums,
                 education_contribution,
             } = *args;
-            let consumption = match consumption_config(consumption_profile, sparing_ratio, utilization_discipline, quasi_inelastic_share) {
+            let consumption = match consumption_config(
+                consumption_profile,
+                sparing_ratio,
+                utilization_discipline,
+                quasi_inelastic_share,
+            ) {
                 Ok(c) => c,
                 Err(e) => {
                     eprintln!("{} {}", "error:".red().bold(), e);
@@ -1229,8 +1235,7 @@ fn main() {
                 println!("\n  AI scenario: {}", ai_scenario::describe(&scenario));
                 println!(
                     "  {}",
-                    "The individual --ai-* flags are ignored when a scenario is named."
-                        .dimmed()
+                    "The individual --ai-* flags are ignored when a scenario is named.".dimmed()
                 );
             }
             run_optimization(OptimizeParams {
@@ -1315,13 +1320,7 @@ fn main() {
                 canton: canton.as_deref(),
             });
         }
-        Commands::Lifetime {
-            salary,
-            age,
-            married,
-            children,
-            retirement_age,
-        } => {
+        Commands::Lifetime { salary, age, married, children, retirement_age } => {
             run_lifetime_strategy(salary, age, married, children, retirement_age);
         }
         Commands::Interactive => {
@@ -1346,7 +1345,17 @@ fn main() {
             conversion_rate,
             pension_fund,
         } => {
-            run_pension_simulation(salary, age, married, work_pct, retirement_age, life_expectancy, pillar3a, custom_tax_rate, resolve_conversion(conversion_rate, pension_fund));
+            run_pension_simulation(
+                salary,
+                age,
+                married,
+                work_pct,
+                retirement_age,
+                life_expectancy,
+                pillar3a,
+                custom_tax_rate,
+                resolve_conversion(conversion_rate, pension_fund),
+            );
         }
     }
 }
@@ -1462,11 +1471,7 @@ fn resolve_conversion(
 ///   Bern" requirement, and it is enforced at the CLI boundary.
 fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
     let Some(code) = requested else {
-        println!(
-            "{}",
-            "No --canton given; using Bern."
-                .dimmed()
-        );
+        println!("{}", "No --canton given; using Bern.".dimmed());
         return Some(cantons::Canton::Bern);
     };
 
@@ -1499,11 +1504,7 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
         // fixed "the scale has not been supplied" sentence would be false for
         // them — and would send the reader looking for a file already present.
         eprintln!("  Cantonal tax = simple_tax(income) x Steuerfuss, where both sides");
-        eprintln!(
-            "  must come from the same year. For {}: {}",
-            canton.code(),
-            missing.join(", ")
-        );
+        eprintln!("  must come from the same year. For {}: {}", canton.code(), missing.join(", "));
         if missing.contains(&"cantonal base tax scale") {
             eprintln!(
                 "  The scale is imported from an ESTV \"Tarife\" export; this canton's \
@@ -1517,7 +1518,9 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
                  {} cell is",
                 cantons::SELF_ASSESSMENT_YEAR
             );
-            eprintln!("  not a plain number (blank, or a footnote this project will not guess at).");
+            eprintln!(
+                "  not a plain number (blank, or a footnote this project will not guess at)."
+            );
         }
         if missing.contains(&"capital municipal Steuerfuss") {
             eprintln!("  The capital city's multiplier is missing from the same workbook.");
@@ -1532,11 +1535,7 @@ fn resolve_canton(requested: Option<&str>) -> Option<cantons::Canton> {
             .map(|c| c.code())
             .collect();
         eprintln!("  Two ways forward:");
-        eprintln!(
-            "    - use a canton that is priced ({}): {}",
-            priced.len(),
-            priced.join(", ")
-        );
+        eprintln!("    - use a canton that is priced ({}): {}", priced.len(), priced.join(", "));
         eprintln!(
             "    - pass --custom-tax-rate with your observed rate from your tax \
              assessment (most accurate)"
@@ -1629,9 +1628,7 @@ impl EmployerInputs {
         }
         if let Some(high) = raw.ai_productivity_gain_high {
             if high < 0.0 {
-                return Err(format!(
-                    "--ai-productivity-gain-high cannot be negative, got {high}"
-                ));
+                return Err(format!("--ai-productivity-gain-high cannot be negative, got {high}"));
             }
             if high < raw.ai_productivity_gain {
                 return Err(format!(
@@ -1658,20 +1655,17 @@ impl EmployerInputs {
             == Some(optimizer::Enforcement::RiskWeighted)
             && raw.replacement_risk <= 0.0
         {
-            return Err(
-                "--enforcement risk-weighted requires --replacement-risk above 0. The \
+            return Err("--enforcement risk-weighted requires --replacement-risk above 0. The \
                  mode's whole function is to price a missed goal, and with nothing \
                  declared the required output stops constraining the search at all. \
                  Use --enforcement strict to refuse undelivered schedules outright."
-                    .to_string(),
-            );
+                .to_string());
         }
         Ok(raw)
     }
 
     fn enforcement(&self) -> optimizer::Enforcement {
-        optimizer::Enforcement::parse(&self.enforcement)
-            .unwrap_or(optimizer::Enforcement::Strict)
+        optimizer::Enforcement::parse(&self.enforcement).unwrap_or(optimizer::Enforcement::Strict)
     }
 
     /// Build the employer-side constraint. Absent a required output index it is
@@ -1679,13 +1673,11 @@ impl EmployerInputs {
     /// fully discretionary.
     fn constraint(&self) -> Option<optimizer::AchievementConstraint> {
         let required = self.required_output_index?;
-        let mut constraint = optimizer::AchievementConstraint::new(required, self.ai_productivity_gain)
-            .with_quality(
-                self.ai_quality_retention,
-                self.compression_quality_sensitivity,
-            )
-            .with_replacement_risk(self.replacement_risk)
-            .with_evaluation_period(self.evaluation_period_years);
+        let mut constraint =
+            optimizer::AchievementConstraint::new(required, self.ai_productivity_gain)
+                .with_quality(self.ai_quality_retention, self.compression_quality_sensitivity)
+                .with_replacement_risk(self.replacement_risk)
+                .with_evaluation_period(self.evaluation_period_years);
         if let Some(high) = self.ai_productivity_gain_high {
             constraint = constraint.with_ai_gain_range(high);
         }
@@ -1807,11 +1799,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // the mandatory floor rather than the discretionary tier (§2.1).
     requirements.debt_repayment = monthly_debt.max(0.0);
 
-    let child_ages_vec = if let Some(youngest) = youngest_child_age {
-        vec![youngest]
-    } else {
-        vec![]
-    };
+    let child_ages_vec =
+        if let Some(youngest) = youngest_child_age { vec![youngest] } else { vec![] };
 
     let life_stage = LifeStage::determine_from_age(age, children > 0, &child_ages_vec);
 
@@ -1853,9 +1842,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // at all. A grid whose boundary is a plausible answer cannot distinguish "the best percentage"
     // from "the smallest one we tried".
     let candidates = vec![0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-    let outcome = optimizer
-        .search_outcome(&candidates)
-        .expect("candidate list is non-empty");
+    let outcome = optimizer.search_outcome(&candidates).expect("candidate list is non-empty");
     let (optimal, all_scenarios) = (outcome.scenario.clone(), outcome.all_scenarios.clone());
     let feasible_found = outcome.feasible_found;
 
@@ -1888,9 +1875,7 @@ fn run_optimization(p: OptimizeParams<'_>) {
 
     // ── Monte Carlo pension simulation ──────────────────────────────────────
     let monthly_needs = requirements
-        .adjusted_for_life_stage(
-            &LifeStage::determine_from_age(retirement_age, false, &[])
-        )
+        .adjusted_for_life_stage(&LifeStage::determine_from_age(retirement_age, false, &[]))
         .total_monthly();
 
     let (con, base, opt_mc) = monte_carlo::PensionSimulator {
@@ -1909,7 +1894,14 @@ fn run_optimization(p: OptimizeParams<'_>) {
     }
     .run_all_scenarios();
 
-    mc_display::print_monte_carlo_summary(&con, &base, &opt_mc, monthly_needs, retirement_age, life_expectancy);
+    mc_display::print_monte_carlo_summary(
+        &con,
+        &base,
+        &opt_mc,
+        monthly_needs,
+        retirement_age,
+        life_expectancy,
+    );
 
     // ── Regime-switching (recession/inflation-aware) simulation ─────────────
     let regime_sim = monte_carlo::PensionSimulator {
@@ -1940,10 +1932,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
     }
 
     // Stochastic rate uncertainty, with explicit downside (CVaR).
-    let rate_uncertainty = regime_sim.conversion_rate_uncertainty(
-        regime_result.median_capital,
-        monthly_needs,
-    );
+    let rate_uncertainty =
+        regime_sim.conversion_rate_uncertainty(regime_result.median_capital, monthly_needs);
     mc_display::print_conversion_rate_uncertainty(&rate_uncertainty);
 
     mc_display::print_regime_switching_result(&regime_result, monthly_needs);
@@ -1955,10 +1945,8 @@ fn run_optimization(p: OptimizeParams<'_>) {
         regime_result.median_real_pension,
         regime_result.ahv_monthly,
     );
-    let needs_report = retirement_needs::NeedsReport::new(
-        projected,
-        optimal.after_tax_income / 12.0,
-        {
+    let needs_report =
+        retirement_needs::NeedsReport::new(projected, optimal.after_tax_income / 12.0, {
             // The figure that decides the adequacy verdict. A supplied number wins over a
             // percentage, and a percentage wins over the modelled budget, because the more
             // specific the user was the less the tool should substitute its own construction.
@@ -1974,17 +1962,26 @@ fn run_optimization(p: OptimizeParams<'_>) {
                 (None, Some(share)) => retirement_needs::Basis::PercentOfNet(share),
                 (None, None) => retirement_needs::Basis::Modelled(monthly_needs),
             }
-        },
-    );
+        });
     display::print_needs_report(&needs_report);
 
     let stress_result = regime_sim.run_retirement_shock_stress_test();
-    mc_display::print_stress_test_result(&stress_result, regime_result.median_real_pension, monthly_needs);
+    mc_display::print_stress_test_result(
+        &stress_result,
+        regime_result.median_real_pension,
+        monthly_needs,
+    );
 
     // Work % vs pension quality comparison
     let comparisons = monte_carlo::compare_work_percentages(
-        age, retirement_age, life_expectancy,
-        salary, married, monthly_needs, pillar3a, &candidates,
+        age,
+        retirement_age,
+        life_expectancy,
+        salary,
+        married,
+        monthly_needs,
+        pillar3a,
+        &candidates,
     );
     mc_display::print_work_pct_pension_comparison(&comparisons, monthly_needs);
 
@@ -2002,42 +1999,59 @@ fn run_optimization(p: OptimizeParams<'_>) {
     // ── Family Support & Education Planning ─────────────────────────────────
     if let Some(ages_str) = children_ages {
         println!("\n{}", "=== RETIREMENT ADEQUACY WITH FAMILY SUPPORT ===".bold().cyan());
-        
+
         let family_support = FamilySupport::from_ages_string(ages_str, education_cost_per_child);
-        
+
         // Estimate pension balance at retirement using simplified projection
         let years_to_retirement = (retirement_age - age) as f64;
-        let bvg_contribution_annual = salary * optimal.work_percentage * 0.083;  // ~8.3% BVG rate
-        let pension_at_65 = bvg_contribution_annual 
+        let bvg_contribution_annual = salary * optimal.work_percentage * 0.083; // ~8.3% BVG rate
+        let pension_at_65 = bvg_contribution_annual
             * ((1.02_f64.powf(years_to_retirement) - 1.0) / (1.02 - 1.0))  // 2% annual return
-            + (pillar3a * years_to_retirement);  // Pillar 3a linear accumulation
-        
+            + (pillar3a * years_to_retirement); // Pillar 3a linear accumulation
+
         let adequacy = optimizer.calculate_retirement_adequacy(
             optimal.work_percentage,
             pension_at_65,
             &family_support,
             life_expectancy,
         );
-        
+
         println!("\n📊 Monthly Retirement Income:");
-        println!("  Pension withdrawal (4% rule): CHF {:>8.0}", 
-            (pension_at_65 * 0.04 / 12.0).round());
-        println!("  AHV (state pension):          CHF {:>8.0}", 
-            (adequacy.retirement_income_monthly - pension_at_65 * 0.04 / 12.0).round());
-        println!("  TOTAL:                        CHF {:>8.0}", 
-            adequacy.retirement_income_monthly.round());
-        
+        println!(
+            "  Pension withdrawal (4% rule): CHF {:>8.0}",
+            (pension_at_65 * 0.04 / 12.0).round()
+        );
+        println!(
+            "  AHV (state pension):          CHF {:>8.0}",
+            (adequacy.retirement_income_monthly - pension_at_65 * 0.04 / 12.0).round()
+        );
+        println!(
+            "  TOTAL:                        CHF {:>8.0}",
+            adequacy.retirement_income_monthly.round()
+        );
+
         println!("\n💰 Monthly Expenses:");
-        println!("  Personal needs:               CHF {:>8.0}", adequacy.self_sustaining_monthly.round());
+        println!(
+            "  Personal needs:               CHF {:>8.0}",
+            adequacy.self_sustaining_monthly.round()
+        );
         let education_cost = adequacy.total_required_monthly - adequacy.self_sustaining_monthly;
         println!("  Child education support:      CHF {:>8.0}", education_cost.round());
-        println!("  TOTAL:                        CHF {:>8.0}", adequacy.total_required_monthly.round());
-        
+        println!(
+            "  TOTAL:                        CHF {:>8.0}",
+            adequacy.total_required_monthly.round()
+        );
+
         println!("\n✓ Financial Security:");
-        println!("  Monthly surplus/deficit:      CHF {:>+8.0}", adequacy.monthly_surplus_deficit.round());
-        println!("  Sustainable until age ~{}:   {} years", 
+        println!(
+            "  Monthly surplus/deficit:      CHF {:>+8.0}",
+            adequacy.monthly_surplus_deficit.round()
+        );
+        println!(
+            "  Sustainable until age ~{}:   {} years",
             (retirement_age as f64 + adequacy.sustainable_years) as u32,
-            adequacy.sustainable_years.round());
+            adequacy.sustainable_years.round()
+        );
         println!("  Education support years:      {:.1} years", adequacy.education_support_years);
         println!("\n  Status: {}", adequacy.summary);
     }
@@ -2064,10 +2078,7 @@ fn resolve_tax_schedule(
         let canton = resolve_canton(canton).expect("resolve_canton exits on failure");
         if canton == cantons::Canton::Bern {
             // Bern's standalone Stadt Bern table is complete and in use.
-            println!(
-                "{}",
-                "  Tax basis: Bern — official Stadt Bern rate table (2024).".dimmed()
-            );
+            println!("{}", "  Tax basis: Bern — official Stadt Bern rate table (2024).".dimmed());
             return (
                 TaxSchedule::bern_city_default(married, children),
                 "official Bern table".to_string(),
@@ -2100,18 +2111,9 @@ fn resolve_tax_schedule(
         };
         println!(
             "{}",
-            format!(
-                "  Tax basis: {} — {} ({}).",
-                canton.name(),
-                detail,
-                canton.capital()
-            )
-            .dimmed()
+            format!("  Tax basis: {} — {} ({}).", canton.name(), detail, canton.capital()).dimmed()
         );
-        println!(
-            "  {}",
-            "  Verify against your own tax assessment before relying on it.".yellow()
-        );
+        println!("  {}", "  Verify against your own tax assessment before relying on it.".yellow());
         return (schedule, format!("{} {}", canton.code(), detail));
     };
 
@@ -2119,10 +2121,7 @@ fn resolve_tax_schedule(
     // not resolved in this branch -- resolving it would reject a run that does
     // not need cantonal data at all.
     println!("Using custom tax rate: {:.2}%\n", rate * 100.0);
-    (
-        TaxSchedule::custom_rate(rate),
-        "your observed rate".to_string(),
-    )
+    (TaxSchedule::custom_rate(rate), "your observed rate".to_string())
 }
 
 /// Everything `compare` needs. A struct rather than eight positional arguments,
@@ -2195,9 +2194,7 @@ fn print_deduction_model_comparison(
 
     println!("\n{}", "🧾 DEDUCTION MODEL COMPARISON".bold().cyan());
     println!("{}", "=".repeat(60));
-    println!(
-        "  Gross income: CHF {gross_income:.0}   ({tax_basis})"
-    );
+    println!("  Gross income: CHF {gross_income:.0}   ({tax_basis})");
     println!(
         "  Estimated (in use): CHF {estimate:.0} ({:.1}%)",
         if gross_income > 0.0 { estimate / gross_income * 100.0 } else { 0.0 }
@@ -2218,14 +2215,11 @@ fn print_deduction_model_comparison(
 
     // The itemisation is the point: a total with no breakdown cannot be checked.
     for (label, assessment) in [("Bund", Some(&federal)), ("canton", cantonal.as_ref())] {
-        let Some(assessment) = assessment else { continue };
+        let Some(assessment) = assessment else {
+            continue;
+        };
         for applied in &assessment.applied {
-            println!(
-                "      {:>9.2}  [{}] {}",
-                applied.amount,
-                label,
-                applied.name
-            );
+            println!("      {:>9.2}  [{}] {}", applied.amount, label, applied.name);
         }
         if assessment.means_tested > 0.0 {
             println!(
@@ -2289,11 +2283,9 @@ fn run_comparison(p: CompareParams<'_>) {
         canton,
     } = p;
     println!("\n{}", "=== SCENARIO COMPARISON ===".bold().cyan());
-    
-    let percentages: Vec<f64> = percentages_str
-        .split(',')
-        .filter_map(|s| s.trim().parse().ok())
-        .collect();
+
+    let percentages: Vec<f64> =
+        percentages_str.split(',').filter_map(|s| s.trim().parse().ok()).collect();
 
     // Same resolution path as `optimize`, so `--canton` means the same thing in
     // both commands. It used to be accepted here and ignored, which meant a
@@ -2306,20 +2298,13 @@ fn run_comparison(p: CompareParams<'_>) {
     let life_stage = LifeStage::determine_from_age(age, children > 0, &[]);
     let preferences = PreferenceWeights::balanced();
 
-    let config = OptimizerConfig::new(
-        salary,
-        tax_schedule.clone(),
-        requirements,
-        life_stage,
-        preferences,
-    );
+    let config =
+        OptimizerConfig::new(salary, tax_schedule.clone(), requirements, life_stage, preferences);
 
     let optimizer = LifeOptimizer::new(config);
-    
-    let scenarios: Vec<_> = percentages
-        .iter()
-        .map(|&pct| optimizer.evaluate_scenario(pct))
-        .collect();
+
+    let scenarios: Vec<_> =
+        percentages.iter().map(|&pct| optimizer.evaluate_scenario(pct)).collect();
 
     for scenario in &scenarios {
         display::print_tax_deduction_breakdown(&tax_schedule, scenario.gross_income);
@@ -2327,13 +2312,7 @@ fn run_comparison(p: CompareParams<'_>) {
     display::print_comparison_table_for(&scenarios, Some(&tax_basis));
 }
 
-fn run_lifetime_strategy(
-    salary: f64,
-    age: u32,
-    married: bool,
-    children: u32,
-    retirement_age: u32,
-) {
+fn run_lifetime_strategy(salary: f64, age: u32, married: bool, children: u32, retirement_age: u32) {
     println!("\n{}", "=== LIFETIME STRATEGY ===".bold().cyan());
     println!("Calculating optimal work percentages from age {} to {}...\n", age, retirement_age);
 
@@ -2342,13 +2321,8 @@ fn run_lifetime_strategy(
     let life_stage = LifeStage::determine_from_age(age, children > 0, &[]);
     let preferences = PreferenceWeights::balanced();
 
-    let mut config = OptimizerConfig::new(
-        salary,
-        tax_schedule,
-        requirements,
-        life_stage,
-        preferences,
-    );
+    let mut config =
+        OptimizerConfig::new(salary, tax_schedule, requirements, life_stage, preferences);
     config.retirement_age = retirement_age;
 
     let optimizer = LifeOptimizer::new(config);
@@ -2373,26 +2347,17 @@ fn run_interactive() {
     }
 
     // Collect information
-    let salary: f64 = read_input("What is your full-time annual salary (CHF)? ")
-        .parse()
-        .unwrap_or(80000.0);
+    let salary: f64 =
+        read_input("What is your full-time annual salary (CHF)? ").parse().unwrap_or(80000.0);
 
-    let age: u32 = read_input("What is your age? ")
-        .parse()
-        .unwrap_or(35);
+    let age: u32 = read_input("What is your age? ").parse().unwrap_or(35);
 
-    let married = read_input("Are you married? (y/n) ")
-        .to_lowercase()
-        .starts_with('y');
+    let married = read_input("Are you married? (y/n) ").to_lowercase().starts_with('y');
 
-    let children: u32 = read_input("How many children do you have? ")
-        .parse()
-        .unwrap_or(0);
+    let children: u32 = read_input("How many children do you have? ").parse().unwrap_or(0);
 
     let youngest_age = if children > 0 {
-        Some(read_input("What is the age of your youngest child? ")
-            .parse()
-            .unwrap_or(5))
+        Some(read_input("What is the age of your youngest child? ").parse().unwrap_or(5))
     } else {
         None
     };
@@ -2415,10 +2380,8 @@ fn run_interactive() {
     println!("  The result reports a 60/75/90 range and the level at which the plan stops");
     println!("  working either way, so this is a starting point rather than a commitment.");
     let needs_answer = read_input("Monthly need (CHF, blank for the modelled budget): ");
-    let retirement_needs: Option<f64> = needs_answer
-        .parse::<f64>()
-        .ok()
-        .filter(|value| *value > 0.0);
+    let retirement_needs: Option<f64> =
+        needs_answer.parse::<f64>().ok().filter(|value| *value > 0.0);
     if retirement_needs.is_some() {
         println!("  Using your figure.");
     } else if !needs_answer.is_empty() {
@@ -2426,7 +2389,7 @@ fn run_interactive() {
     }
 
     println!("\n{}", "Analyzing your situation...".yellow());
-    
+
     run_optimization(OptimizeParams {
         salary,
         age,
@@ -2490,10 +2453,18 @@ fn run_pension_simulation(
     // to draw on, so it states the assumption and labels it.
     let monthly_needs = after_tax / 12.0 * retirement_needs::DEFAULT_PERCENT;
 
-    println!("\n  Work:         {:.0}%  |  Gross: CHF {:.0}/year  |  Net: CHF {:.0}/month",
-        work_pct * 100.0, working_income, after_tax / 12.0);
-    println!("  Retirement:   age {}  →  age {}  ({} years in retirement)",
-        retirement_age, life_expectancy, life_expectancy - retirement_age);
+    println!(
+        "\n  Work:         {:.0}%  |  Gross: CHF {:.0}/year  |  Net: CHF {:.0}/month",
+        work_pct * 100.0,
+        working_income,
+        after_tax / 12.0
+    );
+    println!(
+        "  Retirement:   age {}  →  age {}  ({} years in retirement)",
+        retirement_age,
+        life_expectancy,
+        life_expectancy - retirement_age
+    );
     println!("  Pillar 3a:    CHF {:.0}/year", pillar3a);
     println!(
         "  Target needs: CHF {:.0}/month ({:.0}% of current net -- a rule of thumb, not a budget)",
@@ -2502,15 +2473,27 @@ fn run_pension_simulation(
     );
 
     let mut sim = monte_carlo::PensionSimulator::new(
-        age, retirement_age, life_expectancy,
-        salary, work_pct, married, monthly_needs,
+        age,
+        retirement_age,
+        life_expectancy,
+        salary,
+        work_pct,
+        married,
+        monthly_needs,
     );
     sim.pillar3a_annual = pillar3a;
     sim.n_simulations = 10_000;
     sim.conversion_scenario = conversion;
 
     let (con, base, opt) = sim.run_all_scenarios();
-    mc_display::print_monte_carlo_summary(&con, &base, &opt, monthly_needs, retirement_age, life_expectancy);
+    mc_display::print_monte_carlo_summary(
+        &con,
+        &base,
+        &opt,
+        monthly_needs,
+        retirement_age,
+        life_expectancy,
+    );
 
     // Conversion-rate transparency, before the regime/stress sections
     let pension_range = sim.pension_range_for_capital(base.median_capital);
@@ -2525,17 +2508,23 @@ fn run_pension_simulation(
     mc_display::print_regime_switching_result(&regime_result, monthly_needs);
 
     let stress_result = sim.run_retirement_shock_stress_test();
-    mc_display::print_stress_test_result(&stress_result, regime_result.median_real_pension, monthly_needs);
+    mc_display::print_stress_test_result(
+        &stress_result,
+        regime_result.median_real_pension,
+        monthly_needs,
+    );
 
     // Also compare all work percentages
     let candidates = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     let comparisons = monte_carlo::compare_work_percentages(
-        age, retirement_age, life_expectancy,
-        salary, married, monthly_needs, pillar3a, &candidates,
+        age,
+        retirement_age,
+        life_expectancy,
+        salary,
+        married,
+        monthly_needs,
+        pillar3a,
+        &candidates,
     );
     mc_display::print_work_pct_pension_comparison(&comparisons, monthly_needs);
 }
-
-
-
-

@@ -303,10 +303,8 @@ impl Args {
             eprintln!("warning: --bloc needs a non-empty name: {spec:?}");
             return false;
         }
-        let parsed: Option<Vec<f64>> = parts[1..]
-            .iter()
-            .map(|field| field.trim().parse::<f64>().ok())
-            .collect();
+        let parsed: Option<Vec<f64>> =
+            parts[1..].iter().map(|field| field.trim().parse::<f64>().ok()).collect();
         let Some(numbers) = parsed else {
             eprintln!("warning: --bloc has a non-numeric field: {spec:?}");
             return false;
@@ -320,11 +318,7 @@ impl Args {
         if let Some(valuation) = numbers.get(4) {
             bloc = bloc.with_cooperation_valuation(*valuation);
         }
-        match self
-            .blocs
-            .iter_mut()
-            .find(|existing| existing.name.eq_ignore_ascii_case(name))
-        {
+        match self.blocs.iter_mut().find(|existing| existing.name.eq_ignore_ascii_case(name)) {
             Some(existing) => *existing = bloc,
             None => self.blocs.push(bloc),
         }
@@ -362,11 +356,7 @@ impl Args {
         // reported rather than ignored: a mistyped target would otherwise produce a
         // perfectly ordinary-looking random-war world.
         config.war_target = self.war_target.as_ref().and_then(|name| {
-            match config
-                .blocs
-                .iter()
-                .position(|bloc| bloc.name.eq_ignore_ascii_case(name))
-            {
+            match config.blocs.iter().position(|bloc| bloc.name.eq_ignore_ascii_case(name)) {
                 Some(index) => Some(index),
                 None => {
                     eprintln!("warning: --war-target names no bloc ({name:?}); wars stay random");
@@ -955,18 +945,12 @@ fn run_comparison(base: &Args) {
     }
 
     // ---- how the world itself fares ----------------------------------------
-    let coop: Vec<f64> = results
-        .iter()
-        .map(|(_, _, e)| e.summarize(|o| o.mean_cooperation).0)
-        .collect();
-    let trap: Vec<f64> = results
-        .iter()
-        .map(|(_, _, e)| e.summarize(|o| o.trap_fraction).0)
-        .collect();
-    let loss: Vec<f64> = results
-        .iter()
-        .map(|(_, _, e)| e.summarize(|o| o.mean_efficiency_loss).0)
-        .collect();
+    let coop: Vec<f64> =
+        results.iter().map(|(_, _, e)| e.summarize(|o| o.mean_cooperation).0).collect();
+    let trap: Vec<f64> =
+        results.iter().map(|(_, _, e)| e.summarize(|o| o.trap_fraction).0).collect();
+    let loss: Vec<f64> =
+        results.iter().map(|(_, _, e)| e.summarize(|o| o.mean_efficiency_loss).0).collect();
     let pension: Vec<f64> = results
         .iter()
         .map(|(_, config, ensemble)| {
@@ -978,10 +962,7 @@ fn run_comparison(base: &Args) {
     println!();
     println!("  HOW THE WORLD ITSELF FARES");
     println!("  {}", "-".repeat(74));
-    println!(
-        "  {:<26} {:>14} {:>16}   better",
-        "", "cooperative", "non-coop."
-    );
+    println!("  {:<26} {:>14} {:>16}   better", "", "cooperative", "non-coop.");
     let rows: [(&str, &[f64], bool); 4] = [
         ("cooperation index", &coop, true),
         ("conflict-trap years", &trap, false),
@@ -995,11 +976,7 @@ fn run_comparison(base: &Args) {
             label,
             values[0],
             values[1],
-            if cooperative_better {
-                "cooperative"
-            } else {
-                "non-cooperative"
-            }
+            if cooperative_better { "cooperative" } else { "non-cooperative" }
         );
     }
 
@@ -1010,10 +987,8 @@ fn run_comparison(base: &Args) {
         .iter()
         .map(|(_, _, e)| e.mean_shares_by_year.last().cloned().unwrap_or_default())
         .collect();
-    let dominance: Vec<Vec<f64>> = results
-        .iter()
-        .map(|(_, _, e)| e.dominance_probabilities(n))
-        .collect();
+    let dominance: Vec<Vec<f64>> =
+        results.iter().map(|(_, _, e)| e.dominance_probabilities(n)).collect();
 
     println!();
     println!("  SHARE OF WORLD POWER -- start versus horizon");
@@ -1039,20 +1014,12 @@ fn run_comparison(base: &Args) {
     println!();
     println!("  PROBABILITY OF ENDING DOMINANT (above 45% of world power)");
     println!("  {}", "-".repeat(74));
-    println!(
-        "  {:<16} {:>14} {:>18}",
-        "", "cooperative", "non-cooperative"
-    );
+    println!("  {:<16} {:>14} {:>18}", "", "cooperative", "non-cooperative");
     for (index, bloc) in blocs.iter().enumerate() {
         let with = dominance[0].get(index).copied().unwrap_or(0.0);
         let without = dominance[1].get(index).copied().unwrap_or(0.0);
         if with.max(without) > 0.0 {
-            println!(
-                "  {:<16} {:>13.1}% {:>17.1}%",
-                bloc.name,
-                with * 100.0,
-                without * 100.0
-            );
+            println!("  {:<16} {:>13.1}% {:>17.1}%", bloc.name, with * 100.0, without * 100.0);
         }
     }
 
@@ -1110,19 +1077,11 @@ fn run_comparison(base: &Args) {
     println!("  the shares still move:");
     println!(
         "    gaining: {}",
-        if gaining.is_empty() {
-            "nobody".to_string()
-        } else {
-            gaining.join(", ")
-        }
+        if gaining.is_empty() { "nobody".to_string() } else { gaining.join(", ") }
     );
     println!(
         "    losing:  {}",
-        if losing.is_empty() {
-            "nobody".to_string()
-        } else {
-            losing.join(", ")
-        }
+        if losing.is_empty() { "nobody".to_string() } else { losing.join(", ") }
     );
     println!();
     println!("  That is the security dilemma written as an outcome rather than as a");
@@ -1188,11 +1147,7 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
     let (cooperation, _, _) = ensemble.summarize(|o| o.mean_cooperation);
     let (trap, _, _) = ensemble.summarize(|o| o.trap_fraction);
     let (observed, reference) = ensemble.pension_summary(&config.pension);
-    let shares = ensemble
-        .mean_shares_by_year
-        .last()
-        .cloned()
-        .unwrap_or_default();
+    let shares = ensemble.mean_shares_by_year.last().cloned().unwrap_or_default();
     let leading = shares
         .iter()
         .enumerate()
@@ -1213,10 +1168,7 @@ fn hinge_point(config: &Config, ensemble: &Ensemble, actor: Option<usize>) -> Hi
         actor_share: actor.and_then(|index| shares.get(index).copied()),
         actor_start: actor.and_then(|index| config.blocs.get(index).map(|bloc| bloc.power_share)),
         actor_dominance: actor.and_then(|index| {
-            ensemble
-                .dominance_probabilities(config.blocs.len())
-                .get(index)
-                .copied()
+            ensemble.dominance_probabilities(config.blocs.len()).get(index).copied()
         }),
     }
 }
@@ -1263,9 +1215,7 @@ fn run_information(base: &Args) {
         "force cost", "wars/yr", "needed just.", "bare", "contestable"
     );
 
-    for (step, force_cost) in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 7.0, 9.0, 12.0]
-        .into_iter()
-        .enumerate()
+    for (step, force_cost) in [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 7.0, 9.0, 12.0].into_iter().enumerate()
     {
         let mut args = base.clone();
         args.information = true;
@@ -1274,23 +1224,13 @@ fn run_information(base: &Args) {
         config.information = args.information_params(base.information_verification);
         let ensemble = Ensemble::run(&config);
         let wars = ensemble.summarize(|o| f64::from(o.shock_counts.2)).0;
-        let legitimated = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.legitimated_wars)))
-            .0;
-        let bare = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| f64::from(i.bare_wars)))
-            .0;
-        let contestable = ensemble
-            .summarize(|o| {
-                o.information
-                    .map_or(0.0, |i| f64::from(i.contestable_years))
-            })
-            .0;
-        let marker = if (force_cost - base.information_force_cost).abs() < 1e-9 {
-            " *"
-        } else {
-            ""
-        };
+        let legitimated =
+            ensemble.summarize(|o| o.information.map_or(0.0, |i| f64::from(i.legitimated_wars))).0;
+        let bare = ensemble.summarize(|o| o.information.map_or(0.0, |i| f64::from(i.bare_wars))).0;
+        let contestable =
+            ensemble.summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years))).0;
+        let marker =
+            if (force_cost - base.information_force_cost).abs() < 1e-9 { " *" } else { "" };
         println!(
             "  {:>11.1}  {:>10.2}  {:>12.1}  {:>10.1}  {:>12.1}{}",
             force_cost,
@@ -1341,19 +1281,12 @@ fn run_information(base: &Args) {
         let mut config = args.to_config();
         config.information = args.information_params(verification);
         let ensemble = Ensemble::run(&config);
-        let belief = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| i.mean_belief))
-            .0;
-        let credibility = ensemble
-            .summarize(|o| o.information.map_or(0.0, |i| i.mean_credibility))
-            .0;
+        let belief = ensemble.summarize(|o| o.information.map_or(0.0, |i| i.mean_belief)).0;
+        let credibility =
+            ensemble.summarize(|o| o.information.map_or(0.0, |i| i.mean_credibility)).0;
         let wars = ensemble.summarize(|o| f64::from(o.shock_counts.2)).0;
-        let contestable = ensemble
-            .summarize(|o| {
-                o.information
-                    .map_or(0.0, |i| f64::from(i.contestable_years))
-            })
-            .0;
+        let contestable =
+            ensemble.summarize(|o| o.information.map_or(0.0, |i| f64::from(i.contestable_years))).0;
         let marker = if verification > threshold { " " } else { "*" };
         println!(
             "  {:>7.2}{}  {:>10.2}  {:>9.3}  {:>10.3}  {:>10.1}  {:>11.1}",
@@ -1585,9 +1518,9 @@ fn run_ai_hinge(base: &Args) {
     // that the row moves without showing how, and "how" is the whole question here:
     // if the branch opens discontinuously then the magnitude of the effect is not a
     // finding, only its direction is.
-    for value in [
-        -0.30, -0.20, -0.15, -0.10, -0.05, -0.01, 0.00, 0.01, 0.05, 0.10, 0.15, 0.20, 0.30,
-    ] {
+    for value in
+        [-0.30, -0.20, -0.15, -0.10, -0.05, -0.01, 0.00, 0.01, 0.05, 0.10, 0.15, 0.20, 0.30]
+    {
         let mut args = base.clone();
         args.ai_cooperation = value;
         args.blocs = args.ai_params(AiRole::WieldedInstrument).apply(&base.blocs);
@@ -1773,11 +1706,7 @@ fn run_scenarios(base: &Args) {
         if let Some((name, share, bias, volatility, affinity, valuation)) = scenario.bloc {
             let mut bloc = PowerBloc::new(name, share, bias, volatility, affinity);
             bloc = bloc.with_cooperation_valuation(valuation);
-            match args
-                .blocs
-                .iter_mut()
-                .find(|existing| existing.name.eq_ignore_ascii_case(name))
-            {
+            match args.blocs.iter_mut().find(|existing| existing.name.eq_ignore_ascii_case(name)) {
                 Some(existing) => *existing = bloc,
                 None => args.blocs.push(bloc),
             }
@@ -1802,11 +1731,7 @@ fn run_scenarios(base: &Args) {
             baseline_world = Some((config.clone(), ensemble.clone()));
         }
         let point = hinge_point(&config, &ensemble, None);
-        let shares = ensemble
-            .mean_shares_by_year
-            .last()
-            .cloned()
-            .unwrap_or_default();
+        let shares = ensemble.mean_shares_by_year.last().cloned().unwrap_or_default();
         let per_bloc: Vec<String> = config
             .blocs
             .iter()
@@ -1953,21 +1878,16 @@ fn print_scenario_reading(base: &Args, rows: &[(&Scenario, HingePoint, Vec<Strin
     println!("  {}", "-".repeat(74));
 
     let find = |label: &str| rows.iter().find(|(s, _, _)| s.label == label);
-    let (Some(baseline), Some(grows), Some(values)) = (
-        find("BASELINE"),
-        find("SINIC GROWS FASTER"),
-        find("SINIC VALUES COOPERATION"),
-    ) else {
+    let (Some(baseline), Some(grows), Some(values)) =
+        (find("BASELINE"), find("SINIC GROWS FASTER"), find("SINIC VALUES COOPERATION"))
+    else {
         return;
     };
 
     println!("  1. Can Sinic win through the economy? Yes -- but only one of the two");
     println!("     economic routes works, and the other backfires.");
     println!();
-    println!(
-        "     {:<24} {:>7} {:>7} {:>9}",
-        "world", "Sinic", "coop", "pension"
-    );
+    println!("     {:<24} {:>7} {:>7} {:>9}", "world", "Sinic", "coop", "pension");
     for (scenario, point, per_bloc) in rows.iter().take(3) {
         let sinic = per_bloc
             .iter()
@@ -2154,9 +2074,9 @@ fn strategy_statistics(config: &Config, ensemble: &Ensemble) -> Vec<[f64; 6]> {
         .outcomes
         .iter()
         .map(|outcome| {
-            let (conflict, rent) = outcome.strategy.map_or((0.0, 0.0), |s| {
-                (s.mean_regions_in_conflict, s.realised_rent)
-            });
+            let (conflict, rent) = outcome
+                .strategy
+                .map_or((0.0, 0.0), |s| (s.mean_regions_in_conflict, s.realised_rent));
             [
                 outcome.mean_cooperation,
                 outcome.trap_fraction,
@@ -2181,16 +2101,11 @@ fn paired_difference(first: &[[f64; 6]], second: &[[f64; 6]], index: usize) -> (
     if count == 0 {
         return (0.0, 0.0, 0.0);
     }
-    let differences: Vec<f64> = (0..count)
-        .map(|run| second[run][index] - first[run][index])
-        .collect();
+    let differences: Vec<f64> =
+        (0..count).map(|run| second[run][index] - first[run][index]).collect();
     let mean = differences.iter().sum::<f64>() / count as f64;
     let variance = if count > 1 {
-        differences
-            .iter()
-            .map(|value| (value - mean).powi(2))
-            .sum::<f64>()
-            / (count as f64 - 1.0)
+        differences.iter().map(|value| (value - mean).powi(2)).sum::<f64>() / (count as f64 - 1.0)
     } else {
         0.0
     };
@@ -2276,7 +2191,9 @@ fn run_strategies(base: &Args) {
     println!("  negative, so a negative row is a region already at war and a positive one is a");
     println!("  peace a strategist would be defending. `rent` is what a conflict there releases");
     println!("  annually; `retal.` is the victims' capacity to identify and punish a sponsor,");
-    println!("  which is `documents/THIRD_PARTY_SPOILER.md` Theorem 6 reused rather than re-derived.");
+    println!(
+        "  which is `documents/THIRD_PARTY_SPOILER.md` Theorem 6 reused rather than re-derived."
+    );
 
     // ---- 2. the verdict, region by region ---------------------------------
     println!();
@@ -2318,10 +2235,7 @@ fn run_strategies(base: &Args) {
         comparison.total_spoiling,
         margin
     );
-    println!(
-        "  the framework prefers {} on the declared parameters.",
-        preferred.label()
-    );
+    println!("  the framework prefers {} on the declared parameters.", preferred.label());
     println!();
     println!(
         "  regions at peace: baseline {} of {}, under cooperation {} of {}",
@@ -2476,10 +2390,8 @@ fn run_strategies(base: &Args) {
         "  {:<24} {:>9} {:>9} {:>8}  {:<11}",
         "contrast", "mean", "std err", "t", "runs ahead"
     );
-    for (name, index, higher_is_better) in STRATEGY_STATS
-        .iter()
-        .enumerate()
-        .map(|(index, (name, higher))| (*name, index, *higher))
+    for (name, index, higher_is_better) in
+        STRATEGY_STATS.iter().enumerate().map(|(index, (name, higher))| (*name, index, *higher))
     {
         println!("  {name}");
         // Three contrasts rather than two, because the baseline is the layer switched
@@ -2488,19 +2400,12 @@ fn run_strategies(base: &Args) {
         // had no regions. For those the informative contrast is spoiling against
         // cooperation, and printing only the two baseline rows would report "the layer
         // exists" as though it were "the strategy is worse".
-        let contrasts: [(&str, usize, usize); 3] = [
-            ("cooperation - base", 0, 1),
-            ("spoiling - base", 0, 2),
-            ("SPOILING - COOP", 1, 2),
-        ];
+        let contrasts: [(&str, usize, usize); 3] =
+            [("cooperation - base", 0, 1), ("spoiling - base", 0, 2), ("SPOILING - COOP", 1, 2)];
         for (label, first, second) in contrasts {
             let (mean, standard_error, ahead) =
                 paired_difference(&statistics[first].1, &statistics[second].1, index);
-            let t = if standard_error > 0.0 {
-                mean / standard_error
-            } else {
-                0.0
-            };
+            let t = if standard_error > 0.0 { mean / standard_error } else { 0.0 };
             println!(
                 "    {:<22} {:>+9.4} {:>9.4} {:>+8.1}  {:>7.1}%  {}",
                 label,
@@ -2508,11 +2413,7 @@ fn run_strategies(base: &Args) {
                 standard_error,
                 t,
                 ahead * 100.0,
-                if (mean > 0.0) == higher_is_better {
-                    "2nd arm better"
-                } else {
-                    "2nd arm worse"
-                }
+                if (mean > 0.0) == higher_is_better { "2nd arm better" } else { "2nd arm worse" }
             );
         }
     }
@@ -2804,11 +2705,8 @@ fn run_psyche(base: &Args) {
     let floor = base.psyche_autonomy_floor;
     let cohort = psyche::draw_cohort(base.psyche_persons, &params, base.seed);
     let tracking = psyche::run_cohort(&cohort, &params, psyche::Strategy::Tracking);
-    let held = psyche::run_cohort(
-        &cohort,
-        &params,
-        psyche::Strategy::Fixed(params.initial_assistance),
-    );
+    let held =
+        psyche::run_cohort(&cohort, &params, psyche::Strategy::Fixed(params.initial_assistance));
     let tracked = psyche::summarise(&tracking, floor);
     let still = psyche::summarise(&held, floor);
 
@@ -2893,10 +2791,7 @@ fn run_psyche(base: &Args) {
     println!();
     println!("  THE COHORT");
     println!("  {}", "-".repeat(74));
-    println!(
-        "  {:>28} {:>14} {:>14} {:>14}",
-        "", "tracked", "held", "difference"
-    );
+    println!("  {:>28} {:>14} {:>14} {:>14}", "", "tracked", "held", "difference");
     let row = |label: &str, a: f64, b: f64, scale: f64, unit: &str| {
         println!(
             "  {:<28} {:>13.3}{} {:>13.3}{} {:>+13.3}{}",
@@ -2909,34 +2804,10 @@ fn run_psyche(base: &Args) {
             unit
         );
     };
-    row(
-        "mean capacity",
-        tracked.mean_capacity,
-        still.mean_capacity,
-        1.0,
-        "",
-    );
-    row(
-        "p10 capacity",
-        tracked.p10_capacity,
-        still.p10_capacity,
-        1.0,
-        "",
-    );
-    row(
-        "median capacity",
-        tracked.median_capacity,
-        still.median_capacity,
-        1.0,
-        "",
-    );
-    row(
-        "mean autonomy",
-        tracked.mean_autonomy,
-        still.mean_autonomy,
-        1.0,
-        "",
-    );
+    row("mean capacity", tracked.mean_capacity, still.mean_capacity, 1.0, "");
+    row("p10 capacity", tracked.p10_capacity, still.p10_capacity, 1.0, "");
+    row("median capacity", tracked.median_capacity, still.median_capacity, 1.0, "");
+    row("mean autonomy", tracked.mean_autonomy, still.mean_autonomy, 1.0, "");
     row(
         "mean effective output",
         tracked.mean_effective_output,
@@ -2951,13 +2822,7 @@ fn run_psyche(base: &Args) {
         100.0,
         "%",
     );
-    row(
-        "share below autonomy floor",
-        tracked.share_led,
-        still.share_led,
-        100.0,
-        "%",
-    );
+    row("share below autonomy floor", tracked.share_led, still.share_led, 100.0, "%");
     println!();
     println!(
         "  The autonomy floor is {floor:.2}, and it is DECLARED: no measurement fixes the point at"
@@ -3010,26 +2875,14 @@ fn run_psyche(base: &Args) {
             summary.mean_effective_output
         );
     }
-    let first = runway_curve
-        .first()
-        .map(|(_, s)| s.mean_autonomous_years)
-        .unwrap_or(f64::NAN);
-    let last = runway_curve
-        .last()
-        .map(|(_, s)| s.mean_autonomous_years)
-        .unwrap_or(f64::NAN);
+    let first = runway_curve.first().map(|(_, s)| s.mean_autonomous_years).unwrap_or(f64::NAN);
+    let last = runway_curve.last().map(|(_, s)| s.mean_autonomous_years).unwrap_or(f64::NAN);
     println!();
     println!(
         "  Six extra years of runway buys {:+.1} years spent judging, and {:+.3} of mean",
         last - first,
-        runway_curve
-            .last()
-            .map(|(_, s)| s.mean_capacity)
-            .unwrap_or(f64::NAN)
-            - runway_curve
-                .first()
-                .map(|(_, s)| s.mean_capacity)
-                .unwrap_or(f64::NAN)
+        runway_curve.last().map(|(_, s)| s.mean_capacity).unwrap_or(f64::NAN)
+            - runway_curve.first().map(|(_, s)| s.mean_capacity).unwrap_or(f64::NAN)
     );
     println!("  capacity at the horizon. Read those two numbers together, because the difference");
     println!("  between them is what this model has to say about the runway:");
@@ -3106,11 +2959,7 @@ fn run_psyche(base: &Args) {
             );
             println!(
                 "  share the model is {} the threshold.",
-                if params.channels.substitution > threshold {
-                    "above"
-                } else {
-                    "below"
-                }
+                if params.channels.substitution > threshold { "above" } else { "below" }
             );
         }
         None => println!("  Deskilling threshold: undefined at this capacity or training share."),
@@ -3369,10 +3218,7 @@ mod tests {
             "a case-different name is still an edit, not an addition"
         );
         assert_eq!(
-            args.blocs
-                .iter()
-                .filter(|bloc| bloc.name.eq_ignore_ascii_case("sinic"))
-                .count(),
+            args.blocs.iter().filter(|bloc| bloc.name.eq_ignore_ascii_case("sinic")).count(),
             1,
             "the edit must not have created a second Sinic"
         );
@@ -3392,19 +3238,11 @@ mod tests {
                 .expect("just added")
                 .cooperation_valuation
         };
-        assert_eq!(
-            antarctic(&args),
-            1.0,
-            "a five-field spec must leave the valuation neutral"
-        );
+        assert_eq!(antarctic(&args), 1.0, "a five-field spec must leave the valuation neutral");
 
         // Supplying it must take effect, and must not disturb the other fields.
         assert!(args.set_bloc("Antarctic:0.05:0.000:0.010:1.00:1.75"));
-        assert_eq!(
-            args.blocs.len(),
-            before + 1,
-            "still an edit, not an addition"
-        );
+        assert_eq!(args.blocs.len(), before + 1, "still an edit, not an addition");
         assert_eq!(antarctic(&args), 1.75);
 
         // A seventh field is still refused rather than partly applied.
@@ -3435,10 +3273,7 @@ mod tests {
     fn the_comparison_modes_produce_the_regimes_they_are_named_for() {
         let modes = comparison_modes();
         assert_eq!(modes.len(), 2, "there are exactly two worlds to compare");
-        assert_ne!(
-            modes[0].label, modes[1].label,
-            "two identical labels would be unreadable"
-        );
+        assert_ne!(modes[0].label, modes[1].label, "two identical labels would be unreadable");
 
         let cooperativeness = |mode: &Mode| -> f64 {
             let config = Config {
@@ -3530,12 +3365,7 @@ mod tests {
             for bloc in edited.iter_mut() {
                 bloc.cooperation_valuation = valuation;
             }
-            let config = Config {
-                blocs: edited,
-                horizon: 1,
-                runs: 20,
-                ..Config::default()
-            };
+            let config = Config { blocs: edited, horizon: 1, runs: 20, ..Config::default() };
             Ensemble::run(&config).summarize(|o| o.mean_cooperation).0
         };
         let neutral = by_valuation(1.0);
@@ -3555,22 +3385,14 @@ mod tests {
     /// -- the dangerous kind of failure, and the same one `--compare` guards against.
     #[test]
     fn the_ai_hypotheses_produce_different_outcomes() {
-        let base = Args {
-            horizon: 30,
-            runs: 30,
-            ..Args::default()
-        };
+        let base = Args { horizon: 30, runs: 30, ..Args::default() };
         let measure = |role: AiRole| -> (f64, f64) {
             let layer = base.ai_params(role);
             let mut args = base.clone();
             args.blocs = layer.apply(&base.blocs);
             let config = args.to_config();
             let ensemble = Ensemble::run(&config);
-            let shares = ensemble
-                .mean_shares_by_year
-                .last()
-                .cloned()
-                .unwrap_or_default();
+            let shares = ensemble.mean_shares_by_year.last().cloned().unwrap_or_default();
             (
                 ensemble.summarize(|o| o.mean_cooperation).0,
                 shares.iter().cloned().fold(0.0_f64, f64::max),

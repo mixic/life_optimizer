@@ -380,9 +380,7 @@ impl AiParams {
 
     /// Where the AI actor sits in the list this layer produces, if it is there.
     pub fn actor_index(&self, blocs: &[PowerBloc]) -> Option<usize> {
-        blocs
-            .iter()
-            .position(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME))
+        blocs.iter().position(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME))
     }
 
     /// Every parameter this layer carries, for the report and for the completeness
@@ -410,11 +408,7 @@ impl AiParams {
 
 /// The three worlds `--ai` compares, in report order.
 pub fn ai_worlds(blocs: &[PowerBloc]) -> Vec<AiParams> {
-    vec![
-        AiParams::absent(),
-        AiParams::sixth_power(),
-        AiParams::wielded_instrument(blocs),
-    ]
+    vec![AiParams::absent(), AiParams::sixth_power(), AiParams::wielded_instrument(blocs)]
 }
 
 /// Force a share vector into a valid distribution, flooring at zero.
@@ -637,10 +631,7 @@ mod tests {
     fn the_control_world_changes_nothing_at_all() {
         let blocs = default_blocs();
         let applied = AiParams::absent().apply(&blocs);
-        assert_eq!(
-            applied, blocs,
-            "the no-AI world must be the blocs exactly as defined"
-        );
+        assert_eq!(applied, blocs, "the no-AI world must be the blocs exactly as defined");
     }
 
     /// Adding an actor has to leave a valid power distribution, and its recorded
@@ -693,9 +684,7 @@ mod tests {
 
         assert_eq!(applied.len(), blocs.len(), "no actor may be added");
         assert!(
-            AiParams::wielded_instrument(&blocs)
-                .actor_index(&applied)
-                .is_none(),
+            AiParams::wielded_instrument(&blocs).actor_index(&applied).is_none(),
             "the tool world must contain no AI actor"
         );
         assert!((share_total(&applied) - 1.0).abs() < 1e-9);
@@ -715,24 +704,14 @@ mod tests {
         let applied = params.apply(&blocs);
 
         let lead_of = |name: &str| {
-            params.lead[blocs
-                .iter()
-                .position(|bloc| bloc.name == name)
-                .expect("default bloc")]
+            params.lead[blocs.iter().position(|bloc| bloc.name == name).expect("default bloc")]
         };
         let bias_of = |name: &str| {
-            applied
-                .iter()
-                .find(|bloc| bloc.name == name)
-                .expect("default bloc")
-                .growth_bias
+            applied.iter().find(|bloc| bloc.name == name).expect("default bloc").growth_bias
         };
 
         // The United States leads, Eurasian barely registers.
-        assert!(
-            lead_of("United States") > lead_of("Eurasian"),
-            "the lead vector must not be flat"
-        );
+        assert!(lead_of("United States") > lead_of("Eurasian"), "the lead vector must not be flat");
         assert!(
             bias_of("United States") > bias_of("Eurasian"),
             "the larger lead must buy the larger growth advantage: {} vs {}",
@@ -807,9 +786,7 @@ mod tests {
              removes nobody"
         );
         assert!(
-            tool_world
-                .iter()
-                .any(|bloc| bloc.growth_bias > 0.010 + 1e-12),
+            tool_world.iter().any(|bloc| bloc.growth_bias > 0.010 + 1e-12),
             "the tool world must have moved at least one bloc's growth"
         );
     }
@@ -822,19 +799,12 @@ mod tests {
     fn the_ai_actor_holds_no_monetary_leverage_and_is_maximally_exposed() {
         let blocs = AiParams::sixth_power().apply(&default_blocs());
         let economy = Economy::for_blocs(&blocs);
-        let actor = blocs
-            .iter()
-            .position(|bloc| bloc.name == AI_ACTOR_NAME)
-            .expect("the actor is present");
-        let issuer = blocs
-            .iter()
-            .position(|bloc| bloc.name == "United States")
-            .expect("default bloc");
+        let actor =
+            blocs.iter().position(|bloc| bloc.name == AI_ACTOR_NAME).expect("the actor is present");
+        let issuer =
+            blocs.iter().position(|bloc| bloc.name == "United States").expect("default bloc");
 
-        assert_eq!(
-            economy.reserve_shares[actor], 0.0,
-            "an AI actor issues no reserve currency"
-        );
+        assert_eq!(economy.reserve_shares[actor], 0.0, "an AI actor issues no reserve currency");
         assert_eq!(
             economy.monetary_leverage(actor, issuer),
             0.0,
@@ -871,21 +841,15 @@ mod tests {
         let mut blocs = default_blocs();
         blocs.push(PowerBloc::new(AI_ACTOR_NAME, 0.40, 0.03, 0.02, 1.0));
 
-        for role in [
-            AiRole::Absent,
-            AiRole::WieldedInstrument,
-            AiRole::SixthPower,
-        ] {
+        for role in [AiRole::Absent, AiRole::WieldedInstrument, AiRole::SixthPower] {
             let params = match role {
                 AiRole::Absent => AiParams::absent(),
                 AiRole::SixthPower => AiParams::sixth_power(),
                 AiRole::WieldedInstrument => AiParams::wielded_instrument(&blocs),
             };
             let applied = params.apply(&blocs);
-            let actors = applied
-                .iter()
-                .filter(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME))
-                .count();
+            let actors =
+                applied.iter().filter(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME)).count();
 
             if role.has_actor() {
                 assert_eq!(actors, 1, "the player world must have exactly one actor");
@@ -915,10 +879,7 @@ mod tests {
         let applied = params.apply(&blocs);
 
         assert_eq!(
-            applied
-                .iter()
-                .filter(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME))
-                .count(),
+            applied.iter().filter(|bloc| bloc.name.eq_ignore_ascii_case(AI_ACTOR_NAME)).count(),
             1,
             "the actor must not be duplicated"
         );
@@ -936,10 +897,8 @@ mod tests {
     fn the_ai_actor_is_a_pure_energy_importer() {
         let blocs = AiParams::sixth_power().apply(&default_blocs());
         let economy = Economy::for_blocs(&blocs);
-        let actor = blocs
-            .iter()
-            .position(|bloc| bloc.name == AI_ACTOR_NAME)
-            .expect("the actor is present");
+        let actor =
+            blocs.iter().position(|bloc| bloc.name == AI_ACTOR_NAME).expect("the actor is present");
 
         let exposure = economy.energy[actor];
         assert!(
@@ -1021,10 +980,7 @@ mod tests {
     #[test]
     fn instrument_effect_reads_the_top_share() {
         // A clear rise and a clear fall.
-        assert_eq!(
-            instrument_effect(0.30, 0.40),
-            InstrumentEffect::Concentrating
-        );
+        assert_eq!(instrument_effect(0.30, 0.40), InstrumentEffect::Concentrating);
         assert_eq!(instrument_effect(0.30, 0.20), InstrumentEffect::Levelling);
         // A move smaller than the convention is not a move, in either direction.
         // 0.5pp is half the threshold, so it is unambiguous under floating point --
@@ -1043,16 +999,9 @@ mod tests {
         let blocs = default_blocs();
         for params in ai_worlds(&blocs) {
             let rows = params.provenance_table();
-            assert!(
-                !rows.is_empty(),
-                "{} must declare its parameters",
-                params.role.label()
-            );
+            assert!(!rows.is_empty(), "{} must declare its parameters", params.role.label());
             for (what, provenance) in rows {
-                assert!(
-                    !what.trim().is_empty(),
-                    "a provenance row must name what it describes"
-                );
+                assert!(!what.trim().is_empty(), "a provenance row must name what it describes");
                 assert!(
                     !provenance.is_sourced(),
                     "{what} claims a source; no AI figure in this model is measured"

@@ -128,18 +128,9 @@ fn profile_parsing_is_strict() {
         ConsumptionProfile::parse("EXTREME_SAVING"),
         Some(ConsumptionProfile::ExtremeSaving)
     );
-    assert_eq!(
-        ConsumptionProfile::parse("Luxury"),
-        Some(ConsumptionProfile::Luxury)
-    );
-    assert_eq!(
-        ConsumptionProfile::parse("normal"),
-        Some(ConsumptionProfile::Normal)
-    );
-    assert_eq!(
-        ConsumptionProfile::parse("moderate"),
-        Some(ConsumptionProfile::Moderate)
-    );
+    assert_eq!(ConsumptionProfile::parse("Luxury"), Some(ConsumptionProfile::Luxury));
+    assert_eq!(ConsumptionProfile::parse("normal"), Some(ConsumptionProfile::Normal));
+    assert_eq!(ConsumptionProfile::parse("moderate"), Some(ConsumptionProfile::Moderate));
     assert_eq!(ConsumptionProfile::parse("lavish"), None);
     assert_eq!(ConsumptionProfile::parse(""), None);
 }
@@ -226,10 +217,7 @@ fn quasi_inelastic_share_moves_spending_between_tiers() {
     let a = req.elasticity_tiers(&none);
     let b = req.elasticity_tiers(&some);
 
-    assert!(
-        b.quasi_inelastic > a.quasi_inelastic,
-        "share should populate the quasi tier"
-    );
+    assert!(b.quasi_inelastic > a.quasi_inelastic, "share should populate the quasi tier");
     assert!(b.elastic < a.elastic, "share should drain the elastic tier");
     // Locking spending into the quasi tier raises the floor, because the floor
     // includes quasi-inelastic costs.
@@ -308,10 +296,7 @@ fn default_baskets_have_positive_totals() {
         let req = requirements(children);
         let config = ConsumptionProfileConfig::new(ConsumptionProfile::Normal);
         let tiers = req.elasticity_tiers(&config);
-        assert!(
-            tiers.inelastic > 0.0,
-            "children={children}: inelastic must be positive"
-        );
+        assert!(tiers.inelastic > 0.0, "children={children}: inelastic must be positive");
         assert!(tiers.mandatory_monthly() > 0.0);
         assert!(tiers.lifestyle_target_monthly() >= tiers.mandatory_monthly());
     }
@@ -385,10 +370,7 @@ fn a_large_debt_can_turn_an_affordable_schedule_into_an_unaffordable_one() {
     };
 
     let before = build(0.0).evaluate_scenario(0.8);
-    assert!(
-        before.meets_requirements,
-        "the baseline household can afford 80% work"
-    );
+    assert!(before.meets_requirements, "the baseline household can afford 80% work");
 
     // A monthly instalment equal to the whole net income doubles the floor and
     // therefore exceeds it, whatever the household does to its discretionary
@@ -421,14 +403,15 @@ fn saving_capacity_follows_income_minus_consumption() {
             LifeStage::YoungSingle { age: 40 },
             PreferenceWeights::balanced(),
         );
-        config.consumption = ConsumptionProfileConfig::new(profile).with_utilization_discipline(1.0);
+        config.consumption =
+            ConsumptionProfileConfig::new(profile).with_utilization_discipline(1.0);
         config.conversion_scenario = ConversionRateScenario::Statutory;
         LifeOptimizer::new(config)
     };
 
     let scenario = build(ConsumptionProfile::Normal).evaluate_scenario(0.8);
-    let expected =
-        scenario.monthly_after_tax - (scenario.target_monthly - requirements(CHILDLESS).savings_goal);
+    let expected = scenario.monthly_after_tax
+        - (scenario.target_monthly - requirements(CHILDLESS).savings_goal);
     assert!(
         (scenario.saving_capacity_monthly - expected).abs() < 1e-9,
         "saving capacity must be Y - T - C, got {} vs {expected}",

@@ -160,10 +160,7 @@ pub struct LegitimationParams {
 
 impl Default for LegitimationParams {
     fn default() -> Self {
-        LegitimationParams {
-            max: 0.85,
-            steepness: 3.0,
-        }
+        LegitimationParams { max: 0.85, steepness: 3.0 }
     }
 }
 
@@ -388,9 +385,7 @@ impl Influence {
                     continue;
                 }
                 let factor = values[col];
-                for (value, pivot_value) in
-                    values[col..=n].iter_mut().zip(&pivot_row[col..=n])
-                {
+                for (value, pivot_value) in values[col..=n].iter_mut().zip(&pivot_row[col..=n]) {
                     *value -= factor * pivot_value;
                 }
             }
@@ -415,11 +410,7 @@ pub fn instalment_damage(params: &CredibilityParams, mass: f64, instalments: f64
 
 /// The optimum number of instalments, or `None` when the optimum is unbounded --
 /// `delta * mu >= 4 * chi * exp(-2)`, above which the bloc dribbles forever.
-pub fn instalment_optimum(
-    params: &CredibilityParams,
-    mass: f64,
-    time_cost: f64,
-) -> Option<f64> {
+pub fn instalment_optimum(params: &CredibilityParams, mass: f64, time_cost: f64) -> Option<f64> {
     if mass <= 0.0 || time_cost <= 0.0 || params.hazard <= 0.0 || params.damage <= 0.0 {
         return None;
     }
@@ -473,13 +464,7 @@ impl VerificationGame {
         self.marginal_valuation
             .iter()
             .zip(&self.cost)
-            .map(|(u, c)| {
-                if *u <= 0.0 || *c <= 0.0 {
-                    0.0
-                } else {
-                    self.productivity * u / c
-                }
-            })
+            .map(|(u, c)| if *u <= 0.0 || *c <= 0.0 { 0.0 } else { self.productivity * u / c })
             .collect()
     }
 
@@ -504,20 +489,10 @@ impl VerificationGame {
     /// tug of war, and its sign is not fixed. `world_welfare_gap` reports that comparison
     /// separately, because the model's honesty depends on not conflating them.
     pub fn target_coalition(&self) -> Vec<f64> {
-        let total: f64 = self
-            .targets()
-            .iter()
-            .map(|i| self.marginal_valuation[*i])
-            .sum();
+        let total: f64 = self.targets().iter().map(|i| self.marginal_valuation[*i]).sum();
         self.cost
             .iter()
-            .map(|c| {
-                if total <= 0.0 || *c <= 0.0 {
-                    0.0
-                } else {
-                    self.productivity * total / c
-                }
-            })
+            .map(|c| if total <= 0.0 || *c <= 0.0 { 0.0 } else { self.productivity * total / c })
             .collect()
     }
 
@@ -526,13 +501,7 @@ impl VerificationGame {
         let total: f64 = self.marginal_valuation.iter().sum();
         self.cost
             .iter()
-            .map(|c| {
-                if total <= 0.0 || *c <= 0.0 {
-                    0.0
-                } else {
-                    self.productivity * total / c
-                }
-            })
+            .map(|c| if total <= 0.0 || *c <= 0.0 { 0.0 } else { self.productivity * total / c })
             .collect()
     }
 
@@ -565,11 +534,8 @@ impl VerificationGame {
 /// authorisation for a fixed effort budget -- which is where the "target the swing veto
 /// holder, not the strongest member" claim becomes arithmetic.
 pub fn pivotality_weights(pivotality: &[f64], persuadability: &[f64]) -> Vec<f64> {
-    let raw: Vec<f64> = pivotality
-        .iter()
-        .zip(persuadability)
-        .map(|(p, q)| (p * q).max(0.0))
-        .collect();
+    let raw: Vec<f64> =
+        pivotality.iter().zip(persuadability).map(|(p, q)| (p * q).max(0.0)).collect();
     let total: f64 = raw.iter().sum();
     if total <= 0.0 {
         return vec![0.0; raw.len()];
@@ -591,11 +557,7 @@ pub struct Council {
 
 impl Default for Council {
     fn default() -> Self {
-        Council {
-            elected: 10,
-            permanent: 5,
-            quota: 9,
-        }
+        Council { elected: 10, permanent: 5, quota: 9 }
     }
 }
 
@@ -655,16 +617,8 @@ impl Council {
     /// than a closed form because the point of Theorem 0(iii) is a *comparison*
     /// between two structures, and a shared enumeration cannot favour either.
     pub fn pivotality(&self, q: f64, permanent_member: bool) -> f64 {
-        let others_permanent = if permanent_member {
-            self.permanent - 1
-        } else {
-            self.permanent
-        };
-        let others_elected = if permanent_member {
-            self.elected
-        } else {
-            self.elected - 1
-        };
+        let others_permanent = if permanent_member { self.permanent - 1 } else { self.permanent };
+        let others_elected = if permanent_member { self.elected } else { self.elected - 1 };
         let mut probability = 0.0;
         for yes_p in 0..=others_permanent {
             // A no vote from any other permanent member vetoes, so their support is
@@ -877,15 +831,9 @@ mod tests {
     fn outside_the_band_disinformation_changes_nothing() {
         let legit = LegitimationParams::default();
         // Profitable on its own: no justification required.
-        assert_eq!(
-            attack_threshold(1.5, 1.0, 0.0, &legit),
-            AttackThreshold::NoneNeeded
-        );
+        assert_eq!(attack_threshold(1.5, 1.0, 0.0, &legit), AttackThreshold::NoneNeeded);
         // Too expensive for any belief to cover: deterred, and no lie can help.
-        assert_eq!(
-            attack_threshold(0.05, 5.0, 0.0, &legit),
-            AttackThreshold::Deterred
-        );
+        assert_eq!(attack_threshold(0.05, 5.0, 0.0, &legit), AttackThreshold::Deterred);
         // ...and only in between is the dyad contestable.
         assert!(attack_threshold(0.35, 1.0, 0.0, &legit).is_contestable());
     }
@@ -936,18 +884,9 @@ mod tests {
         // It is a break-even: expected damage equals regeneration there.
         assert!(close(base.detection_burden(x), base.regeneration, 1e-6));
 
-        let better_verification = CredibilityParams {
-            hazard: base.hazard * 2.0,
-            ..base
-        };
-        let more_regeneration = CredibilityParams {
-            regeneration: base.regeneration * 2.0,
-            ..base
-        };
-        let cheaper_scandal = CredibilityParams {
-            damage: base.damage / 2.0,
-            ..base
-        };
+        let better_verification = CredibilityParams { hazard: base.hazard * 2.0, ..base };
+        let more_regeneration = CredibilityParams { regeneration: base.regeneration * 2.0, ..base };
+        let cheaper_scandal = CredibilityParams { damage: base.damage / 2.0, ..base };
 
         assert!(
             better_verification.break_even_lie().unwrap() < x,
@@ -957,10 +896,7 @@ mod tests {
             more_regeneration.break_even_lie().unwrap() > x,
             "faster institutional recovery must enlarge it"
         );
-        assert!(
-            cheaper_scandal.break_even_lie().unwrap() > x,
-            "a cheaper scandal must enlarge it"
-        );
+        assert!(cheaper_scandal.break_even_lie().unwrap() > x, "a cheaper scandal must enlarge it");
 
         // And below the break-even the stock has a positive reversion target.
         assert!(base.stationary_credibility(0.5 * x) > 0.0);
@@ -975,10 +911,7 @@ mod tests {
             let influence = Influence::ring(8, strength);
             let rho = influence.spectral_radius();
             // A symmetric ring has spectral radius equal to its row sum.
-            assert!(
-                close(rho, 2.0 * strength, 1e-9),
-                "strength {strength}: rho = {rho}"
-            );
+            assert!(close(rho, 2.0 * strength, 1e-9), "strength {strength}: rho = {rho}");
             for verification in [0.1, 0.3, 0.6] {
                 let a = influence.transition(verification);
                 // The identity is what makes Corollary 3.1 exact.
@@ -1104,10 +1037,8 @@ mod tests {
 
         // Make the aggressor decisive and the world-welfare comparison flips outright:
         // the planner wants *less* verification than the exposed blocs already fund.
-        let dominant_aggressor = VerificationGame {
-            marginal_valuation: vec![-2.0, 0.6, 0.4, 0.3],
-            ..game.clone()
-        };
+        let dominant_aggressor =
+            VerificationGame { marginal_valuation: vec![-2.0, 0.6, 0.4, 0.3], ..game.clone() };
         assert!(
             dominant_aggressor.world_welfare_gap() < 0.0,
             "with a decisive aggressor the world-welfare comparison must flip, got {}",
@@ -1120,10 +1051,8 @@ mod tests {
 
         // With everyone a net target the two benchmarks coincide and the gap is still
         // positive: free-riding is about the public good, not about the aggressor.
-        let all_targets = VerificationGame {
-            marginal_valuation: vec![0.5, 0.5, 0.5],
-            ..game.clone()
-        };
+        let all_targets =
+            VerificationGame { marginal_valuation: vec![0.5, 0.5, 0.5], ..game.clone() };
         assert!(all_targets.under_provision_gap() > 0.0);
         assert!(
             close(all_targets.under_provision_gap(), all_targets.world_welfare_gap(), 1e-12),

@@ -40,18 +40,11 @@ const YEAR: u32 = 2050;
 /// about.
 #[test]
 fn every_fund_profile_is_named_and_sourced() {
-    assert!(
-        !PENSION_FUND_PROFILES.is_empty(),
-        "the registry must not be empty"
-    );
+    assert!(!PENSION_FUND_PROFILES.is_empty(), "the registry must not be empty");
 
     for fund in PENSION_FUND_PROFILES {
         assert!(!fund.id.trim().is_empty(), "every profile needs an id");
-        assert!(
-            !fund.name.trim().is_empty(),
-            "{}: needs a display name",
-            fund.id
-        );
+        assert!(!fund.name.trim().is_empty(), "{}: needs a display name", fund.id);
         assert!(
             !fund.source_note.trim().is_empty(),
             "{}: every rate must state its provenance",
@@ -91,11 +84,7 @@ fn fund_lookup_is_strict_but_forgiving_about_case() {
 fn fund_id_list_covers_the_registry() {
     let listed = pension_fund_ids();
     for fund in PENSION_FUND_PROFILES {
-        assert!(
-            listed.contains(fund.id),
-            "'{}' missing from the id list",
-            fund.id
-        );
+        assert!(listed.contains(fund.id), "'{}' missing from the id list", fund.id);
     }
 }
 
@@ -123,14 +112,8 @@ fn stochastic_percentiles_are_ordered() {
     let r = simulate();
 
     assert!(r.p10_monthly <= r.p25_monthly, "P10 must not exceed P25");
-    assert!(
-        r.p25_monthly <= r.median_monthly,
-        "P25 must not exceed the median"
-    );
-    assert!(
-        r.median_monthly <= r.p75_monthly,
-        "median must not exceed P75"
-    );
+    assert!(r.p25_monthly <= r.median_monthly, "P25 must not exceed the median");
+    assert!(r.median_monthly <= r.p75_monthly, "median must not exceed P75");
     assert!(r.p75_monthly <= r.p90_monthly, "P75 must not exceed P90");
     assert!(
         r.cvar_10_monthly <= r.p10_monthly + 1e-9,
@@ -167,14 +150,8 @@ fn stochastic_draws_respect_the_bounds() {
     let max_possible = CAPITAL * STATUTORY_CONVERSION_RATE / 12.0;
     let min_possible = CAPITAL * MIN_PROJECTED_CONVERSION_RATE / 12.0;
 
-    assert!(
-        r.p90_monthly <= max_possible + 1e-6,
-        "P90 exceeds the statutory maximum"
-    );
-    assert!(
-        r.p10_monthly >= min_possible - 1e-6,
-        "P10 falls below the projection floor"
-    );
+    assert!(r.p90_monthly <= max_possible + 1e-6, "P90 exceeds the statutory maximum");
+    assert!(r.p10_monthly >= min_possible - 1e-6, "P10 falls below the projection floor");
     assert!(r.rate_std_dev > 0.0);
     assert!((r.rate_std_dev - CONVERSION_RATE_UNCERTAINTY_BAND).abs() < 1e-12);
 }

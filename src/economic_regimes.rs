@@ -62,9 +62,9 @@ impl Regime {
     /// (real_return, volatility, inflation) for this regime
     pub fn parameters(&self) -> (f64, f64, f64) {
         match self {
-            Regime::Boom        => (0.080, 0.120, 0.010),
-            Regime::Normal      => (0.032, 0.080, 0.015),
-            Regime::Recession   => (-0.080, 0.180, 0.005),
+            Regime::Boom => (0.080, 0.120, 0.010),
+            Regime::Normal => (0.032, 0.080, 0.015),
+            Regime::Recession => (-0.080, 0.180, 0.005),
             Regime::Stagflation => (-0.030, 0.140, 0.050),
         }
     }

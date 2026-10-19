@@ -42,25 +42,24 @@
 //! not exist. A build failure there cannot block this library either. See
 //! `multipolar_sim/README.md`.
 
-pub mod tax;
-pub mod federal_tax;
-pub mod federal_tariff_data;
-pub mod estv_scales_data;
-pub mod estv_deductions_data;
-pub mod deductions;
-pub mod cantons;
+pub mod ai_scenario;
 pub mod canton_steuerfuss_data;
-pub mod requirements;
+pub mod cantons;
 pub mod consumption;
-pub mod optimizer;
+pub mod deductions;
 pub mod display;
-pub mod monte_carlo;
-pub mod mc_display;
+pub mod early_retirement;
 pub mod economic_regimes;
-pub mod simplex;
-pub mod team;
+pub mod estv_deductions_data;
+pub mod estv_scales_data;
+pub mod federal_tariff_data;
+pub mod federal_tax;
+pub mod mc_display;
+pub mod monte_carlo;
+pub mod optimizer;
+pub mod requirements;
 pub mod retirement_needs;
 pub mod robustness;
-pub mod ai_scenario;
-pub mod early_retirement;
-
+pub mod simplex;
+pub mod tax;
+pub mod team;

@@ -72,10 +72,7 @@ use crate::tax::TaxSchedule;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Provenance {
     /// Published and citable, at the named source and vintage.
-    Sourced {
-        source: &'static str,
-        vintage: &'static str,
-    },
+    Sourced { source: &'static str, vintage: &'static str },
     /// A statutory figure that varies by fund or canton. The *rule* is sourced; the
     /// number is not, because there is no single number.
     VariesByFundOrCanton { basis: &'static str },
@@ -255,22 +252,10 @@ impl Default for RetirementParameters {
             capital_withdrawal_tax: BandedTax {
                 allowance: 0.0,
                 bands: vec![
-                    TaxBand {
-                        width: 50_000.0,
-                        marginal_rate: 0.0065,
-                    },
-                    TaxBand {
-                        width: 150_000.0,
-                        marginal_rate: 0.012,
-                    },
-                    TaxBand {
-                        width: 300_000.0,
-                        marginal_rate: 0.02,
-                    },
-                    TaxBand {
-                        width: 500_000.0,
-                        marginal_rate: 0.03,
-                    },
+                    TaxBand { width: 50_000.0, marginal_rate: 0.0065 },
+                    TaxBand { width: 150_000.0, marginal_rate: 0.012 },
+                    TaxBand { width: 300_000.0, marginal_rate: 0.02 },
+                    TaxBand { width: 500_000.0, marginal_rate: 0.03 },
                 ],
                 provenance: Provenance::VariesByFundOrCanton {
                     basis: "the capital-benefit rate is set by the canton of domicile: the \
@@ -365,7 +350,8 @@ impl RetirementParameters {
             (
                 "BVG coordination deduction and entry threshold",
                 Provenance::Sourced {
-                    source: "BVG Art. 8 Abs. 1 and BVV 2 Art. 5: coordination deduction CHF 26,460 \
+                    source:
+                        "BVG Art. 8 Abs. 1 and BVV 2 Art. 5: coordination deduction CHF 26,460 \
                              and entry threshold CHF 22,680, upper limit CHF 90,720, unchanged \
                              for 2026",
                     vintage: "2026",
@@ -597,11 +583,8 @@ pub fn project(
         + (f64::from(years_to_retirement) * work_fraction).round() as u32;
     let record_fraction =
         (f64::from(accrued_years) / f64::from(params.ahv_full_contribution_years.max(1))).min(1.0);
-    let full_pension = if household.married {
-        params.ahv_max_annual_couple
-    } else {
-        params.ahv_max_annual_single
-    };
+    let full_pension =
+        if household.married { params.ahv_max_annual_couple } else { params.ahv_max_annual_single };
     let ahv_draw_age = retirement_age.max(params.ahv_earliest_age);
     let early_years = params
         .ahv_reference_age
@@ -643,8 +626,8 @@ pub fn project(
     // ---- Pillar 3a ---------------------------------------------------------
     let mut pillar3a = household.pillar3a_capital_now;
     for _ in 0..years_to_retirement {
-        pillar3a = pillar3a * (1.0 + params.bvg_min_interest)
-            + params.pillar3a_max_annual * work_fraction;
+        pillar3a =
+            pillar3a * (1.0 + params.bvg_min_interest) + params.pillar3a_max_annual * work_fraction;
     }
 
     Entitlements {
@@ -713,10 +696,7 @@ pub struct WithdrawalPlan {
 fn effective_bands(schedule: &BandedTax) -> Vec<TaxBand> {
     let mut bands = Vec::new();
     if schedule.allowance > 0.0 {
-        bands.push(TaxBand {
-            width: schedule.allowance,
-            marginal_rate: 0.0,
-        });
+        bands.push(TaxBand { width: schedule.allowance, marginal_rate: 0.0 });
     }
     bands.extend(schedule.bands.iter().copied());
     bands
@@ -868,9 +848,7 @@ pub fn optimise_withdrawals(
     // withdrawal is simply its row sum.
     let mut capital_withdrawn = Vec::with_capacity(years);
     for year in 0..years {
-        let extra: f64 = (0..bands)
-            .map(|band_index| solution.x[year * bands + band_index])
-            .sum();
+        let extra: f64 = (0..bands).map(|band_index| solution.x[year * bands + band_index]).sum();
         capital_withdrawn.push(extra.max(0.0));
     }
     // The objective prices only the extra income, because the base is fixed. The tax on
@@ -956,11 +934,9 @@ pub fn greedy_withdrawals(
     // Anything left goes into the emptiest year at the top rate. Only reachable when the
     // capital exceeds every band's room, in which case the top band takes the excess.
     if remaining > 1e-9 {
-        if let Some(year) = (0..years).min_by(|a, b| {
-            income[*a]
-                .partial_cmp(&income[*b])
-                .unwrap_or(std::cmp::Ordering::Equal)
-        }) {
+        if let Some(year) = (0..years)
+            .min_by(|a, b| income[*a].partial_cmp(&income[*b]).unwrap_or(std::cmp::Ordering::Equal))
+        {
             income[year] += remaining;
         }
     }
@@ -1001,10 +977,7 @@ fn band_end_income(bands: &[TaxBand], rate: f64) -> f64 {
 /// evenly across a retirement minimises nothing if the early years need more of it than
 /// the later ones — and the bridge years, with no AHV in them, need a great deal more.
 pub fn required_withdrawals(bridge_income: &[f64], annual_need: f64) -> Vec<f64> {
-    bridge_income
-        .iter()
-        .map(|income| (annual_need - income).max(0.0))
-        .collect()
+    bridge_income.iter().map(|income| (annual_need - income).max(0.0)).collect()
 }
 
 /// The withdrawal plan for a capital, funding the required amount each year and spreading
@@ -1029,11 +1002,7 @@ pub fn plan_withdrawals(
         // actually available, which is a declared rule for an unfundable plan: it spreads
         // the failure proportionally instead of pretending the early years can be funded
         // and the later ones cannot. The shortfall measurement then reports it.
-        let scale = if total_required > 0.0 {
-            capital / total_required
-        } else {
-            0.0
-        };
+        let scale = if total_required > 0.0 { capital / total_required } else { 0.0 };
         let scaled: Vec<f64> = required.iter().map(|value| value * scale).collect();
         return (
             WithdrawalPlan {
@@ -1155,13 +1124,9 @@ pub fn draw_paths(
         // plan horizon. Declared, and the report says so.
         let spread: f64 = rng.gen_range(-1.0_f64..1.0);
         let drawn = f64::from(life_expectancy) + spread * 6.0;
-        let years_lived = (drawn - f64::from(retirement_age))
-            .round()
-            .clamp(1.0, f64::from(horizon)) as u32;
-        paths.push(PathDraw {
-            real_return,
-            years_lived,
-        });
+        let years_lived =
+            (drawn - f64::from(retirement_age)).round().clamp(1.0, f64::from(horizon)) as u32;
+        paths.push(PathDraw { real_return, years_lived });
     }
     paths
 }
@@ -1178,10 +1143,7 @@ pub struct TaxTreatment {
 
 impl TaxTreatment {
     pub fn new(capital: BandedTax, annual_ordinary_tax_on_annuity: f64) -> Self {
-        TaxTreatment {
-            capital,
-            annual_ordinary_tax_on_annuity,
-        }
+        TaxTreatment { capital, annual_ordinary_tax_on_annuity }
     }
 }
 /// Evaluate one strategy over a set of simulated paths.
@@ -1243,7 +1205,8 @@ pub fn evaluate_strategy(
     // optional and not the LP's to trade away: an allocation that minimises tax by
     // spreading the capital evenly leaves the AHV-free bridge years short, which is the
     // failure the risk measure exists to catch. See `plan_withdrawals`.
-    let (plan, surplus) = plan_withdrawals(capital, &bridge_income, need.lifestyle_annual, &tax.capital);
+    let (plan, surplus) =
+        plan_withdrawals(capital, &bridge_income, need.lifestyle_annual, &tax.capital);
     let funded = surplus >= 0.0;
 
     let mut shortfalls = 0usize;
@@ -1297,11 +1260,7 @@ pub fn evaluate_strategy(
         plan,
         paths: paths.len(),
         probability_of_shortfall: shortfalls as f64 / n as f64,
-        expected_shortfall: if shortfalls > 0 {
-            shortfall_total / shortfalls as f64
-        } else {
-            0.0
-        },
+        expected_shortfall: if shortfalls > 0 { shortfall_total / shortfalls as f64 } else { 0.0 },
         mean_terminal_wealth: mean(&terminals),
         // The tenth percentile is the value at index len/10. The first version wrote
         // `len / 10.min(len - 1)`, which because of precedence is a *division* by
@@ -1334,10 +1293,7 @@ pub struct Preferences {
 
 impl Default for Preferences {
     fn default() -> Self {
-        Preferences {
-            terminal_wealth_weight: 0.25,
-            lifestyle_weight: 1.0,
-        }
+        Preferences { terminal_wealth_weight: 0.25, lifestyle_weight: 1.0 }
     }
 }
 
@@ -1413,10 +1369,7 @@ pub fn contribution_ledger(
 
     let principle_surcharge = match principle {
         ContributionPrinciple::AbilityToPay => 0.0,
-        ContributionPrinciple::EducationCostRecovery {
-            state_cost,
-            recovery_years,
-        } => {
+        ContributionPrinciple::EducationCostRecovery { state_cost, recovery_years } => {
             let years = recovery_years.min(career_years).max(1);
             state_cost / f64::from(years) * f64::from(career_years.min(years))
         }
@@ -1516,22 +1469,11 @@ mod tests {
         BandedTax {
             allowance: 10_000.0,
             bands: vec![
-                TaxBand {
-                    width: 20_000.0,
-                    marginal_rate: 0.05,
-                },
-                TaxBand {
-                    width: 30_000.0,
-                    marginal_rate: 0.15,
-                },
-                TaxBand {
-                    width: 60_000.0,
-                    marginal_rate: 0.30,
-                },
+                TaxBand { width: 20_000.0, marginal_rate: 0.05 },
+                TaxBand { width: 30_000.0, marginal_rate: 0.15 },
+                TaxBand { width: 60_000.0, marginal_rate: 0.30 },
             ],
-            provenance: Provenance::Declared {
-                rationale: "test fixture",
-            },
+            provenance: Provenance::Declared { rationale: "test fixture" },
         }
     }
 
@@ -1564,11 +1506,7 @@ mod tests {
         assert!((total - capital).abs() < 1e-6);
         // And the spread has to be even rather than concentrated: no year may take half
         // the capital, which is what the cheapest-year-first rule did.
-        let largest = plan
-            .capital_withdrawn
-            .iter()
-            .cloned()
-            .fold(0.0_f64, f64::max);
+        let largest = plan.capital_withdrawn.iter().cloned().fold(0.0_f64, f64::max);
         assert!(
             largest < capital * 0.5,
             "one year took {largest} of {capital}, so the allocation concentrated"
@@ -1584,20 +1522,19 @@ mod tests {
         let household = Household::default();
         let params = RetirementParameters::default();
         let entitlements = project(&household, &params, 63, 1.0);
-        let need = ConsumptionNeed {
-            mandatory_annual: 45_000.0,
-            lifestyle_annual: 60_000.0,
-        };
+        let need = ConsumptionNeed { mandatory_annual: 45_000.0, lifestyle_annual: 60_000.0 };
         let s = schedule();
         let years = 90 - 63;
-        let paths = vec![
-            PathDraw {
-                real_return: 0.02,
-                years_lived: years,
-            };
-            1
-        ];
-        let profile = evaluate_strategy(63, 1.0, &entitlements, &need, &TaxTreatment::new(s.clone(), 0.0), &paths, years);
+        let paths = vec![PathDraw { real_return: 0.02, years_lived: years }; 1];
+        let profile = evaluate_strategy(
+            63,
+            1.0,
+            &entitlements,
+            &need,
+            &TaxTreatment::new(s.clone(), 0.0),
+            &paths,
+            years,
+        );
         assert!(
             profile.capital_funds_the_planned_consumption,
             "the fixture is meant to be funded, but the requirement exceeds the capital"
@@ -1615,10 +1552,7 @@ mod tests {
     fn an_unfundable_requirement_is_reported_and_never_overspends() {
         let bridge = vec![10_000.0_f64; 10];
         let (plan, surplus) = plan_withdrawals(50_000.0, &bridge, 60_000.0, &schedule());
-        assert!(
-            surplus < 0.0,
-            "a 50,000 pot cannot fund ten years of a 50,000 annual gap"
-        );
+        assert!(surplus < 0.0, "a 50,000 pot cannot fund ten years of a 50,000 annual gap");
         let total: f64 = plan.capital_withdrawn.iter().sum();
         assert!(
             (total - 50_000.0).abs() < 1e-6,
@@ -1760,9 +1694,7 @@ mod tests {
             );
         }
         assert!(
-            next_franc
-                .iter()
-                .any(|rate| (rate - multiplier).abs() < 1e-9),
+            next_franc.iter().any(|rate| (rate - multiplier).abs() < 1e-9),
             "no year offers the multiplier {multiplier}, so it is not the marginal rate: \
              {next_franc:?}"
         );
@@ -1910,20 +1842,31 @@ mod tests {
         let household = Household::default();
         let params = RetirementParameters::default();
         let entitlements = project(&household, &params, 63, 1.0);
-        let need = ConsumptionNeed {
-            mandatory_annual: 45_000.0,
-            lifestyle_annual: 60_000.0,
-        };
+        let need = ConsumptionNeed { mandatory_annual: 45_000.0, lifestyle_annual: 60_000.0 };
         let s = schedule();
         let paths = draw_paths(2_000, 45, 0.015, 0.08, 90, 63, 11);
 
         // A declared ordinary tax on the pension income, held constant across both arms so
         // that what separates them is the capital strategy and not the annuity tax.
         let annuity_tax = 4_000.0;
-        let all_capital =
-            evaluate_strategy(63, 0.0, &entitlements, &need, &TaxTreatment::new(s.clone(), annuity_tax), &paths, 45);
-        let all_annuity =
-            evaluate_strategy(63, 1.0, &entitlements, &need, &TaxTreatment::new(s.clone(), annuity_tax), &paths, 45);
+        let all_capital = evaluate_strategy(
+            63,
+            0.0,
+            &entitlements,
+            &need,
+            &TaxTreatment::new(s.clone(), annuity_tax),
+            &paths,
+            45,
+        );
+        let all_annuity = evaluate_strategy(
+            63,
+            1.0,
+            &entitlements,
+            &need,
+            &TaxTreatment::new(s.clone(), annuity_tax),
+            &paths,
+            45,
+        );
         assert!(
             all_annuity.probability_of_shortfall <= all_capital.probability_of_shortfall,
             "annuitising raised the shortfall probability: {} against {}",
@@ -1937,8 +1880,3 @@ mod tests {
         );
     }
 }
-
-
-
-
-

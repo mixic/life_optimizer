@@ -64,18 +64,10 @@ fn all_jurisdictions_are_present() {
         v.dedup();
         v
     };
-    assert_eq!(
-        present.len(),
-        27,
-        "expected 26 cantons + Bund, got {present:?}"
-    );
+    assert_eq!(present.len(), 27, "expected 26 cantons + Bund, got {present:?}");
     assert!(present.contains(&"Bund"));
     for canton in life_optimizer::cantons::ALL_CANTONS {
-        assert!(
-            present.contains(&canton.code()),
-            "{} has no deduction rules",
-            canton.code()
-        );
+        assert!(present.contains(&canton.code()), "{} has no deduction rules", canton.code());
     }
 }
 
@@ -150,11 +142,8 @@ fn rule_amounts_are_plausible() {
 /// impossible.
 #[test]
 fn non_deductions_are_classified_not_merged() {
-    let thresholds: Vec<&str> = DEDUCTION_RULES
-        .iter()
-        .filter(|r| r.kind == RuleKind::Threshold)
-        .map(|r| r.name)
-        .collect();
+    let thresholds: Vec<&str> =
+        DEDUCTION_RULES.iter().filter(|r| r.kind == RuleKind::Threshold).map(|r| r.name).collect();
     assert!(
         !thresholds.is_empty(),
         "the source has threshold rows, so some must be classified as such"
@@ -168,11 +157,8 @@ fn non_deductions_are_classified_not_merged() {
         );
     }
 
-    let other: Vec<&str> = DEDUCTION_RULES
-        .iter()
-        .filter(|r| r.kind == RuleKind::Other)
-        .map(|r| r.name)
-        .collect();
+    let other: Vec<&str> =
+        DEDUCTION_RULES.iter().filter(|r| r.kind == RuleKind::Other).map(|r| r.name).collect();
     assert!(!other.is_empty(), "the source has non-deduction rows");
     for name in &other {
         assert!(
@@ -186,10 +172,7 @@ fn non_deductions_are_classified_not_merged() {
 
     // And the majority must still be ordinary deductions, or the classifier is
     // over-eager and the tool would find nothing to deduct.
-    let deductions = DEDUCTION_RULES
-        .iter()
-        .filter(|r| r.kind == RuleKind::Deduction)
-        .count();
+    let deductions = DEDUCTION_RULES.iter().filter(|r| r.kind == RuleKind::Deduction).count();
     assert!(
         deductions > DEDUCTION_RULES.len() * 3 / 4,
         "only {deductions} of {} rules are deductions; the classifier looks wrong",
@@ -212,18 +195,12 @@ fn split_rules_are_merged() {
         .unwrap_or_else(|| panic!("VD's 20-year rental rule should be present: {matches:?}"));
 
     assert_eq!(
-        matches
-            .iter()
-            .filter(|r| r.name == rule.name)
-            .count(),
+        matches.iter().filter(|r| r.name == rule.name).count(),
         1,
         "the two source rows must produce exactly one merged rule"
     );
     assert_eq!(rule.percent, 10.0, "the rate comes from the first source row");
-    assert_eq!(
-        rule.maximum, 15_000.0,
-        "the ceiling comes from the second source row"
-    );
+    assert_eq!(rule.maximum, 15_000.0, "the ceiling comes from the second source row");
 }
 
 /// A rule whose parts are stated separately must apply as one expression:
@@ -265,18 +242,10 @@ fn apply_combines_amount_and_percentage() {
 /// deductions the source contains) no increase as income rises.
 #[test]
 fn deduction_scales_are_well_formed_step_functions() {
-    assert!(
-        !DEDUCTION_SCALES.is_empty(),
-        "the scale workbook should produce at least one scale"
-    );
+    assert!(!DEDUCTION_SCALES.is_empty(), "the scale workbook should produce at least one scale");
 
     for scale in DEDUCTION_SCALES {
-        assert!(
-            !scale.points.is_empty(),
-            "{} {:?} has no points",
-            scale.canton_code,
-            scale.name
-        );
+        assert!(!scale.points.is_empty(), "{} {:?} has no points", scale.canton_code, scale.name);
         let mut previous = None;
         let mut previous_amount = f64::INFINITY;
         for point in scale.points {
@@ -314,10 +283,7 @@ fn deduction_scales_are_well_formed_step_functions() {
 /// amount of the highest threshold reached.
 #[test]
 fn amount_at_walks_the_steps() {
-    let scale = DEDUCTION_SCALES
-        .iter()
-        .find(|s| s.points.len() >= 3)
-        .expect("a multi-step scale");
+    let scale = DEDUCTION_SCALES.iter().find(|s| s.points.len() >= 3).expect("a multi-step scale");
 
     // Below the first threshold there is nothing; the first threshold is 0 for
     // every scale in this export, so this is the income <= 0 case.
@@ -362,10 +328,7 @@ fn means_tested_scales_phase_out() {
         .iter()
         .filter(|s| s.points.last().is_some_and(|p| p.amount == 0.0))
         .count();
-    assert!(
-        phased > 0,
-        "at least some scales should phase to zero; none did"
-    );
+    assert!(phased > 0, "at least some scales should phase to zero; none did");
     assert!(
         phased == DEDUCTION_SCALES.len(),
         "all {} scales should phase out, only {phased} do",

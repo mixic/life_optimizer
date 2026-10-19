@@ -152,9 +152,9 @@ impl PensionLink {
         // Channel 1: fiscal crowding. Competition is what drives the guardian
         // spending Kennedy describes, and it is paid for out of the same budget as
         // transfers.
-        let replacement_rate =
-            (self.base_replacement_rate - self.fiscal_crowding_per_competition * competition)
-                .max(0.0);
+        let replacement_rate = (self.base_replacement_rate
+            - self.fiscal_crowding_per_competition * competition)
+            .max(0.0);
 
         // Channel 2: the contributor-to-retiree ratio. Degraded by competition,
         // which is the collective-action channel: lower work percentages and
@@ -164,7 +164,8 @@ impl PensionLink {
 
         // Portfolio channel: fragmentation drags returns even for a household whose
         // own behaviour is unchanged.
-        let portfolio_return = self.cooperative_return - self.fragmentation_return_drag * competition;
+        let portfolio_return =
+            self.cooperative_return - self.fragmentation_return_drag * competition;
 
         PensionOutcome {
             cooperation_index: cooperation,
@@ -246,10 +247,7 @@ mod tests {
         }
 
         // A zero base rate must not divide by zero in the index.
-        let broken = PensionLink {
-            base_replacement_rate: 0.0,
-            ..PensionLink::default()
-        };
+        let broken = PensionLink { base_replacement_rate: 0.0, ..PensionLink::default() };
         let zero = broken.assess(0.5, 0.1);
         assert!(zero.security_index(&zero).is_finite());
     }
@@ -261,9 +259,7 @@ mod tests {
         let link = PensionLink::default();
         let outcome = link.assess(1.0, 0.0);
         let income = 100_000.0;
-        assert!(
-            (outcome.payg_income(income) - income * outcome.replacement_rate).abs() < 1e-9
-        );
+        assert!((outcome.payg_income(income) - income * outcome.replacement_rate).abs() < 1e-9);
         // A competitive world must promise less.
         let competitive = link.assess(0.0, 0.3);
         assert!(competitive.payg_income(income) < outcome.payg_income(income));

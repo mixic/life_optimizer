@@ -89,13 +89,8 @@ fn ai_gain_scales_capacity() {
 fn required_ai_gain_answers_the_80_percent_question() {
     // A worker must deliver the output that full-time work used to produce.
     let c = AchievementConstraint::new(1.0, 0.0);
-    let needed = c
-        .required_ai_gain_for(0.8)
-        .expect("80% is achievable with enough AI gain");
-    assert!(
-        (needed - 0.25).abs() < 1e-9,
-        "80% work needs a +25% productivity gain, got {needed}"
-    );
+    let needed = c.required_ai_gain_for(0.8).expect("80% is achievable with enough AI gain");
+    assert!((needed - 0.25).abs() < 1e-9, "80% work needs a +25% productivity gain, got {needed}");
 
     // If the goal is already modest, no AI help is required at all.
     let modest = AchievementConstraint::new(0.5, 0.0);
@@ -106,18 +101,13 @@ fn required_ai_gain_answers_the_80_percent_question() {
 #[test]
 fn minimum_viable_work_percentage_inverts_capacity() {
     let c = AchievementConstraint::new(0.6, 0.0);
-    let min = c
-        .minimum_viable_work_percentage()
-        .expect("60% of capacity is reachable");
+    let min = c.minimum_viable_work_percentage().expect("60% of capacity is reachable");
     assert!((min - 0.6).abs() < 1e-9);
 
     // With AI, less scheduled time is needed for the same output.
     let with_ai = AchievementConstraint::new(0.6, 0.5);
     let min_ai = with_ai.minimum_viable_work_percentage().expect("reachable");
-    assert!(
-        min_ai < min,
-        "AI gain should lower the minimum viable work percentage"
-    );
+    assert!(min_ai < min, "AI gain should lower the minimum viable work percentage");
     assert!((min_ai - 0.4).abs() < 1e-9, "0.6 / 1.5 = 0.4");
 }
 
@@ -148,10 +138,7 @@ fn constraint_eliminates_infeasible_work_percentages() {
     let bounded = constrained.search_outcome(&CANDIDATES).unwrap();
 
     // Without the constraint, reduced hours are chosen.
-    assert!(
-        baseline.scenario.work_percentage < 1.0,
-        "baseline should reduce hours"
-    );
+    assert!(baseline.scenario.work_percentage < 1.0, "baseline should reduce hours");
     // With it, only 100% can deliver the required output.
     assert!(
         (bounded.scenario.work_percentage - 1.0).abs() < 1e-9,
@@ -197,10 +184,7 @@ fn unachievable_constraint_reports_workload_reason() {
         "should blame the workload, not the budget"
     );
     // Financially it is fine, which is exactly the diagnostic value.
-    assert!(
-        outcome.scenario.meets_requirements,
-        "this household can afford its floor"
-    );
+    assert!(outcome.scenario.meets_requirements, "this household can afford its floor");
 }
 
 /// `is_feasible` must require both constraints, not either.
@@ -227,14 +211,8 @@ fn absent_constraint_is_vacuous() {
     let outcome = optimizer.search_outcome(&CANDIDATES).unwrap();
 
     for scenario in &outcome.all_scenarios {
-        assert!(
-            scenario.achievement.is_none(),
-            "no constraint should be recorded"
-        );
-        assert!(
-            scenario.achievement_satisfied(),
-            "an absent constraint cannot fail"
-        );
+        assert!(scenario.achievement.is_none(), "no constraint should be recorded");
+        assert!(scenario.achievement_satisfied(), "an absent constraint cannot fail");
     }
     // And the reduced-hours recommendation is still available.
     assert!(outcome.scenario.work_percentage < 1.0);
@@ -250,10 +228,7 @@ fn achievement_margin_is_signed_correctly() {
     assert!(generous.margin > 0.0, "full-time work exceeds a 0.8 goal");
 
     let tight = optimizer.evaluate_scenario(0.5).achievement.unwrap();
-    assert!(
-        tight.margin < 0.0,
-        "half-time work falls short of a 0.8 goal"
-    );
+    assert!(tight.margin < 0.0, "half-time work falls short of a 0.8 goal");
     assert!(!tight.satisfied);
 }
 
@@ -381,9 +356,7 @@ fn compressing_the_same_output_into_fewer_hours_costs_quality() {
 
     // The lowest viable percentage is now above the raw-capacity answer, and the
     // answer must still be a real percentage rather than a bisection artefact.
-    let minimum = honest
-        .minimum_viable_work_percentage()
-        .expect("full time still delivers");
+    let minimum = honest.minimum_viable_work_percentage().expect("full time still delivers");
     assert!(
         minimum > 0.8 && minimum <= 1.0,
         "quality drag must push the minimum above the raw 0.8, got {minimum}"
@@ -419,10 +392,7 @@ fn hidden_work_is_counted_as_workload_not_as_leisure() {
         "leisure is taken from the contract here, and the hidden hours are reported \
          separately rather than silently added to it"
     );
-    assert!(
-        !part_time.achievement_satisfied(),
-        "and the schedule is not offered as a reduction"
-    );
+    assert!(!part_time.achievement_satisfied(), "and the schedule is not offered as a reduction");
 
     // A robust schedule needs no cover at all.
     let robust = optimizer_with(Some(AchievementConstraint::new(0.8, 0.0)), 150_000.0)
@@ -452,23 +422,12 @@ fn replacement_risk_is_priced_when_it_is_declared() {
     let priced = AchievementConstraint::new(goal, 0.0).with_replacement_risk(2.5);
     assert!((priced.replacement_risk_at(0.8) - 0.5).abs() < 1e-9);
     assert!((priced.replacement_risk_at(1.0) - 0.0).abs() < 1e-9);
-    assert!(
-        priced.replacement_risk_at(0.5) <= 1.0,
-        "risk is a probability and must stay bounded"
-    );
+    assert!(priced.replacement_risk_at(0.5) <= 1.0, "risk is a probability and must stay bounded");
 
     // Strict: the search is forced to full time. Risk-weighted with a modest
     // price: the reduced schedule is offered, and carries its risk with it.
-    let strict = optimizer_with_enforcement(
-        Some(priced),
-        150_000.0,
-        Enforcement::Strict,
-    );
-    let weighted = optimizer_with_enforcement(
-        Some(priced),
-        150_000.0,
-        Enforcement::RiskWeighted,
-    );
+    let strict = optimizer_with_enforcement(Some(priced), 150_000.0, Enforcement::Strict);
+    let weighted = optimizer_with_enforcement(Some(priced), 150_000.0, Enforcement::RiskWeighted);
 
     let strict_outcome = strict.search_outcome(&CANDIDATES).unwrap();
     assert!(
@@ -478,8 +437,10 @@ fn replacement_risk_is_priced_when_it_is_declared() {
 
     let weighted_outcome = weighted.search_outcome(&CANDIDATES).unwrap();
     assert!(
-        weighted_outcome.all_scenarios.iter().any(|s| !s.achievement_satisfied()
-            && s.is_feasible()),
+        weighted_outcome
+            .all_scenarios
+            .iter()
+            .any(|s| !s.achievement_satisfied() && s.is_feasible()),
         "risk-weighted enforcement must offer at least one shortfall, priced"
     );
     for scenario in &weighted_outcome.all_scenarios {
@@ -494,11 +455,7 @@ fn replacement_risk_is_priced_when_it_is_declared() {
     // longer worth choosing and 100% wins again. This is what makes it a
     // trade-off rather than decoration.
     let punitive = AchievementConstraint::new(goal, 0.0).with_replacement_risk(100.0);
-    let punished = optimizer_with_enforcement(
-        Some(punitive),
-        150_000.0,
-        Enforcement::RiskWeighted,
-    );
+    let punished = optimizer_with_enforcement(Some(punitive), 150_000.0, Enforcement::RiskWeighted);
     let punished_outcome = punished.search_outcome(&CANDIDATES).unwrap();
     assert!(
         (punished_outcome.scenario.work_percentage - 1.0).abs() < 1e-9,
@@ -549,9 +506,8 @@ fn an_impossible_assignment_is_reported_rather_than_optimised() {
 
     // The guard must not fire for an assignment that *is* reachable optimistically:
     // that is exactly the contingent shortfall the mode is for.
-    let contingent = AchievementConstraint::new(1.0, 0.1)
-        .with_ai_gain_range(0.4)
-        .with_replacement_risk(2.5);
+    let contingent =
+        AchievementConstraint::new(1.0, 0.1).with_ai_gain_range(0.4).with_replacement_risk(2.5);
     let optimizer =
         optimizer_with_enforcement(Some(contingent), 150_000.0, Enforcement::RiskWeighted);
     let outcome = optimizer.search_outcome(&CANDIDATES).unwrap();
@@ -583,10 +539,7 @@ fn an_evaluation_period_is_averaged_into_the_workload() {
     let optimizer = optimizer_with(Some(constraint), 150_000.0);
     let scenario = optimizer.evaluate_scenario(0.8);
 
-    assert!(
-        (scenario.work_hours_per_week - 0.8 * 42.0).abs() < 1e-9,
-        "the contract is unchanged"
-    );
+    assert!((scenario.work_hours_per_week - 0.8 * 42.0).abs() < 1e-9, "the contract is unchanged");
     assert!(
         scenario.effective_work_hours_per_week > scenario.work_hours_per_week,
         "the probation must raise the average workload: {} vs {}",
@@ -606,7 +559,5 @@ fn an_evaluation_period_is_averaged_into_the_workload() {
     // keeps the original model's answers intact.
     let immediate = optimizer_with(Some(AchievementConstraint::new(0.8, 0.0)), 150_000.0)
         .evaluate_scenario(0.8);
-    assert!(
-        (immediate.effective_work_hours_per_week - immediate.work_hours_per_week).abs() < 1e-9
-    );
+    assert!((immediate.effective_work_hours_per_week - immediate.work_hours_per_week).abs() < 1e-9);
 }

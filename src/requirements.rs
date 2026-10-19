@@ -22,10 +22,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonalBasketItem {
     pub name: String,
-    pub weight: f64,           // Proportion of spending (0.0 to 1.0)
-    pub price_start: f64,      // Price at start period (CHF)
-    pub price_latest: f64,     // Price at latest period (CHF)
-    pub discount_rate: f64,    // Average discount rate (0.0 to 1.0)
+    pub weight: f64,        // Proportion of spending (0.0 to 1.0)
+    pub price_start: f64,   // Price at start period (CHF)
+    pub price_latest: f64,  // Price at latest period (CHF)
+    pub discount_rate: f64, // Average discount rate (0.0 to 1.0)
     pub category: String,
 }
 
@@ -74,17 +74,17 @@ pub struct PersonalRequirements {
 
 impl PersonalRequirements {
     pub fn total_monthly(&self) -> f64 {
-        self.housing +
-        self.food +
-        self.transport +
-        self.insurance +
-        self.childcare +
-        self.healthcare +
-        self.education +
-        self.vacation +
-        self.savings_goal +
-        self.discretionary +
-        self.debt_repayment
+        self.housing
+            + self.food
+            + self.transport
+            + self.insurance
+            + self.childcare
+            + self.healthcare
+            + self.education
+            + self.vacation
+            + self.savings_goal
+            + self.discretionary
+            + self.debt_repayment
     }
 
     pub fn total_annual(&self) -> f64 {
@@ -101,15 +101,18 @@ impl PersonalRequirements {
     /// `discretionary` is the sparing-eligible elastic tier, part of which the
     /// household may declare as quasi-inelastic via `quasi_inelastic_share`.
     pub fn elasticity_tiers(&self, config: &ConsumptionProfileConfig) -> ConsumptionTiers {
-        let inelastic =
-            self.housing + self.food + self.transport + self.insurance + self.childcare + self.healthcare
-                + self.debt_repayment;
+        let inelastic = self.housing
+            + self.food
+            + self.transport
+            + self.insurance
+            + self.childcare
+            + self.healthcare
+            + self.debt_repayment;
 
         // `discretionary` is the nominally elastic tier; `education` behaves the
         // same way (activities and materials are trimmable, unlike Kita fees).
         let nominally_elastic = self.discretionary + self.education;
-        let quasi_inelastic =
-            nominally_elastic * config.quasi_inelastic_share.clamp(0.0, 1.0);
+        let quasi_inelastic = nominally_elastic * config.quasi_inelastic_share.clamp(0.0, 1.0);
         let responsive = nominally_elastic - quasi_inelastic;
 
         let multiplier = config.discretionary_multiplier();
@@ -144,57 +147,57 @@ impl PersonalRequirements {
     /// Adjust requirements based on life stage
     pub fn adjusted_for_life_stage(&self, stage: &LifeStage) -> Self {
         let mut adjusted = self.clone();
-        
+
         match stage {
             LifeStage::YoungSingle { .. } => {
                 adjusted.childcare = 0.0;
                 adjusted.education = 0.0;
-                adjusted.housing *= 0.7;  // Smaller apartment
-            },
+                adjusted.housing *= 0.7; // Smaller apartment
+            }
             LifeStage::YoungCouple { .. } => {
                 adjusted.childcare = 0.0;
                 adjusted.education = 0.0;
-            },
+            }
             LifeStage::NewParent { .. } | LifeStage::SchoolAge { .. } => {
                 // Childcare peaks during these years
                 adjusted.childcare *= 1.5;
                 adjusted.discretionary *= 0.7;
-            },
+            }
             LifeStage::Teenagers { .. } => {
-                adjusted.childcare *= 0.5;  // Less supervision needed
-                adjusted.education *= 1.5;  // University costs
-                adjusted.food *= 1.3;  // Teenagers eat more!
-            },
+                adjusted.childcare *= 0.5; // Less supervision needed
+                adjusted.education *= 1.5; // University costs
+                adjusted.food *= 1.3; // Teenagers eat more!
+            }
             LifeStage::EmptyNest { .. } => {
                 adjusted.childcare = 0.0;
                 adjusted.education = 0.0;
                 adjusted.food *= 0.7;
-                adjusted.housing *= 0.8;  // Can downsize
-            },
+                adjusted.housing *= 0.8; // Can downsize
+            }
             LifeStage::PreRetirement { .. } => {
                 adjusted.childcare = 0.0;
                 adjusted.education = 0.0;
-                adjusted.healthcare *= 1.3;  // Health costs increase
-            },
+                adjusted.healthcare *= 1.3; // Health costs increase
+            }
         }
-        
+
         adjusted
     }
 
     /// Create default requirements for Swiss family (Bern)
     pub fn bern_family_default(children: u32) -> Self {
         Self {
-            housing: 2200.0 + (children as f64 * 250.0),  // 3.5-4.5 room apartment (Bern cheaper than ZH)
-            food: 800.0 + (children as f64 * 200.0),      // Discounted shopping
-            transport: 280.0 + (children as f64 * 50.0),  // Libero or car
+            housing: 2200.0 + (children as f64 * 250.0), // 3.5-4.5 room apartment (Bern cheaper than ZH)
+            food: 800.0 + (children as f64 * 200.0),     // Discounted shopping
+            transport: 280.0 + (children as f64 * 50.0), // Libero or car
             insurance: 380.0 + (children as f64 * 180.0), // Health, liability
-            childcare: (children as f64) * 650.0,         // Kita/Hort if needed (Bern cheaper than ZH)
-            healthcare: 100.0,                            // Co-pays, dentist
-            education: (children as f64) * 100.0,         // Activities, materials
-            vacation: 450.0,                              // Annual trips amortized
-            savings_goal: 900.0,                          // Emergency + goals
-            discretionary: 450.0,                         // Fun money
-            debt_repayment: 0.0,                          // No debt assumed by default
+            childcare: (children as f64) * 650.0, // Kita/Hort if needed (Bern cheaper than ZH)
+            healthcare: 100.0,                    // Co-pays, dentist
+            education: (children as f64) * 100.0, // Activities, materials
+            vacation: 450.0,                      // Annual trips amortized
+            savings_goal: 900.0,                  // Emergency + goals
+            discretionary: 450.0,                 // Fun money
+            debt_repayment: 0.0,                  // No debt assumed by default
         }
     }
 
@@ -242,24 +245,24 @@ impl LifeStage {
         match self {
             LifeStage::YoungSingle { .. } => 0.8,
             LifeStage::YoungCouple { .. } => 0.9,
-            LifeStage::NewParent { .. } => 1.5,  // Time with young kids is invaluable
+            LifeStage::NewParent { .. } => 1.5, // Time with young kids is invaluable
             LifeStage::SchoolAge { .. } => 1.3,
             LifeStage::Teenagers { .. } => 1.0,
             LifeStage::EmptyNest { .. } => 1.1,
-            LifeStage::PreRetirement { .. } => 1.2,  // Health is wealth
+            LifeStage::PreRetirement { .. } => 1.2, // Health is wealth
         }
     }
 
     /// Stress tolerance (how much work stress can you handle?)
     pub fn stress_tolerance(&self) -> f64 {
         match self {
-            LifeStage::YoungSingle { .. } => 1.2,  // Can handle more
+            LifeStage::YoungSingle { .. } => 1.2, // Can handle more
             LifeStage::YoungCouple { .. } => 1.1,
-            LifeStage::NewParent { .. } => 0.6,    // Already stressed with kids
+            LifeStage::NewParent { .. } => 0.6, // Already stressed with kids
             LifeStage::SchoolAge { .. } => 0.8,
             LifeStage::Teenagers { .. } => 0.9,
             LifeStage::EmptyNest { .. } => 1.0,
-            LifeStage::PreRetirement { .. } => 0.7,  // Health concerns
+            LifeStage::PreRetirement { .. } => 0.7, // Health concerns
         }
     }
 
@@ -275,7 +278,7 @@ impl LifeStage {
         } else {
             let youngest_child = children_ages.iter().min().unwrap_or(&0);
             let children = children_ages.len() as u32;
-            
+
             if *youngest_child < 6 {
                 LifeStage::NewParent { age, children }
             } else if *youngest_child < 13 {
@@ -295,42 +298,24 @@ impl LifeStage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreferenceWeights {
-    pub consumption: f64,  // How much you value spending money
-    pub leisure: f64,      // How much you value free time
-    pub family: f64,       // How much you value family time
-    pub health: f64,       // How much you value health/low stress
-    pub security: f64,     // How much you value long-term security
+    pub consumption: f64, // How much you value spending money
+    pub leisure: f64,     // How much you value free time
+    pub family: f64,      // How much you value family time
+    pub health: f64,      // How much you value health/low stress
+    pub security: f64,    // How much you value long-term security
 }
 
 impl PreferenceWeights {
     pub fn balanced() -> Self {
-        Self {
-            consumption: 0.25,
-            leisure: 0.20,
-            family: 0.25,
-            health: 0.15,
-            security: 0.15,
-        }
+        Self { consumption: 0.25, leisure: 0.20, family: 0.25, health: 0.15, security: 0.15 }
     }
 
     pub fn family_focused() -> Self {
-        Self {
-            consumption: 0.15,
-            leisure: 0.15,
-            family: 0.40,
-            health: 0.15,
-            security: 0.15,
-        }
+        Self { consumption: 0.15, leisure: 0.15, family: 0.40, health: 0.15, security: 0.15 }
     }
 
     pub fn career_focused() -> Self {
-        Self {
-            consumption: 0.30,
-            leisure: 0.10,
-            family: 0.15,
-            health: 0.15,
-            security: 0.30,
-        }
+        Self { consumption: 0.30, leisure: 0.10, family: 0.15, health: 0.15, security: 0.30 }
     }
 
     pub fn validate(&self) -> bool {
@@ -342,20 +327,15 @@ impl PreferenceWeights {
 /// Represents a dependent child for education support planning
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependentChild {
-    pub age: f64,                           // Current age in years (e.g., 9.5)
-    pub education_support_monthly: f64,     // Monthly cost during education (CHF)
-    pub education_start_age: f64,           // Age when higher education begins (default: 18)
-    pub education_end_age: f64,             // Age when support obligation ends (default: 25)
+    pub age: f64,                       // Current age in years (e.g., 9.5)
+    pub education_support_monthly: f64, // Monthly cost during education (CHF)
+    pub education_start_age: f64,       // Age when higher education begins (default: 18)
+    pub education_end_age: f64,         // Age when support obligation ends (default: 25)
 }
 
 impl DependentChild {
     pub fn new(age: f64, education_support_monthly: f64) -> Self {
-        Self {
-            age,
-            education_support_monthly,
-            education_start_age: 18.0,
-            education_end_age: 25.0,
-        }
+        Self { age, education_support_monthly, education_start_age: 18.0, education_end_age: 25.0 }
     }
 
     /// Years until this child enters higher education
@@ -397,9 +377,7 @@ impl FamilySupport {
     }
 
     pub fn empty() -> Self {
-        Self {
-            children: Vec::new(),
-        }
+        Self { children: Vec::new() }
     }
 
     /// Total monthly education support needed at retirement

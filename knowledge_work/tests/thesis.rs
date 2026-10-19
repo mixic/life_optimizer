@@ -149,16 +149,14 @@ fn p4_the_commitment_binds_before_stability() {
         "commitment at {commitment} does not exceed stability at {stability}"
     );
     // Bracketed from both sides, so neither is a number without a predicate.
-    assert!((envelope::envelope_at(&wf, commitment + 0.02, &params)
-        .absorbable_share
-        .unwrap_or(0.0)
-        - 1.0)
-        .abs()
-        < 1e-9);
     assert!(
-        envelope::envelope_at(&wf, commitment - 0.02, &params)
-            .absorbable_share
-            .unwrap_or(1.0)
+        (envelope::envelope_at(&wf, commitment + 0.02, &params).absorbable_share.unwrap_or(0.0)
+            - 1.0)
+            .abs()
+            < 1e-9
+    );
+    assert!(
+        envelope::envelope_at(&wf, commitment - 0.02, &params).absorbable_share.unwrap_or(1.0)
             < 1.0
     );
     assert!(workflow::is_stable_at(&wf, Policy::Push, stability + 0.02, &params));
@@ -173,8 +171,7 @@ fn p5_absorbable_work_falls_with_the_capacity_to_judge() {
     let mut previous = f64::INFINITY;
     for step in 0..=40 {
         let review_capacity = 1.0 - f64::from(step) / 40.0;
-        let Some(share) =
-            envelope::envelope_at(&wf, review_capacity, &params).absorbable_share
+        let Some(share) = envelope::envelope_at(&wf, review_capacity, &params).absorbable_share
         else {
             continue;
         };
@@ -186,11 +183,7 @@ fn p5_absorbable_work_falls_with_the_capacity_to_judge() {
         previous = share;
     }
     assert!(
-        (envelope::envelope_at(&wf, 1.0, &params)
-            .absorbable_share
-            .unwrap_or(0.0)
-            - 1.0)
-            .abs()
+        (envelope::envelope_at(&wf, 1.0, &params).absorbable_share.unwrap_or(0.0) - 1.0).abs()
             < 1e-9
     );
 }
@@ -277,11 +270,7 @@ fn p8_no_configuration_wins_everywhere() {
             .iter()
             .find(|proposition| proposition.id == "P8")
             .expect("the certificate contains P8");
-        assert!(
-            proposition.holds,
-            "P8 failed: {}",
-            proposition.evidence
-        );
+        assert!(proposition.holds, "P8 failed: {}", proposition.evidence);
         assert_eq!(proposition.method, Method::Indeterminacy);
         proposition.evidence.clone()
     };

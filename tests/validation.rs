@@ -30,8 +30,19 @@ fn the_bern_average_rate_never_falls() {
     let schedule = TaxSchedule::bern_city_default(false, 0);
     let mut previous = 0.0;
     for income in [
-        10_000.0, 25_000.0, 50_000.0, 75_000.0, 100_000.0, 150_000.0, 200_000.0, 250_000.0,
-        300_000.0, 400_000.0, 500_000.0, 750_000.0, 1_000_000.0,
+        10_000.0,
+        25_000.0,
+        50_000.0,
+        75_000.0,
+        100_000.0,
+        150_000.0,
+        200_000.0,
+        250_000.0,
+        300_000.0,
+        400_000.0,
+        500_000.0,
+        750_000.0,
+        1_000_000.0,
     ] {
         let rate = schedule.tax_rate_on_taxable(income);
         assert!(
@@ -134,8 +145,5 @@ fn the_monte_carlo_median_spread_shrinks_as_paths_increase() {
     );
     // And the fine run must be tight in absolute terms, or "converged" means nothing.
     let reference = median_for(2_000, 1);
-    assert!(
-        reference > 0.0,
-        "the projection produced no capital at all"
-    );
+    assert!(reference > 0.0, "the projection produced no capital at all");
 }
