@@ -15,77 +15,88 @@
 
 ## Why this exists
 
-Most take-home-pay calculators stop at "gross minus tax." That misses almost everything
-that actually determines whether reducing your work percentage is a good idea:
+The tool answers one decision problem: given a salary, an age, a canton and a stated
+household budget, which work percentage in the 50–100% range maximises the objective
+described below, and what does that choice cost in retirement security?
 
-- Swiss tax is **progressive**, so cutting your workload often costs less net income
-  than the percentage suggests.
-- Time has **value that changes with life stage** — an hour with a newborn is not
-  worth the same as an hour at 24.
-- A pension fund (Pillar 2 / BVG) built on 80% contributions for 30 years looks very
-  different from one built on 100% — and that difference doesn't show up until
-  you're 65 and it's too late to fix.
-- Retirement isn't one number. It's 20-25 years exposed to inflation, market
-  volatility, and the possibility of a recession hitting at exactly the wrong time.
+Four features of the problem make a gross-minus-tax calculation insufficient. Each is
+modelled explicitly rather than assumed away:
 
-**Life Optimizer** models all of it together — taxes, personal budget, time/health/family
-utility, and Monte Carlo pension projections — and searches for the work percentage
-that maximizes your overall quality of life, not just your paycheck.
+1. **Taxation is progressive and canton-specific.** Net income does not fall in proportion
+   to gross income, so the net cost of reducing a schedule depends on the income level and
+   on the canton of residence. The model applies the federal tariff and the cantonal tariff
+   scaled by that canton's Steuerfuss, over imported schedules covering 23 of the 26 cantons.
+2. **The objective is not income.** Consumption, leisure, family time and health enter a
+   utility function whose relative weights depend on life stage. The weights are a modelling
+   choice rather than a measurement, and they are labelled as such wherever they appear.
+3. **Pillar 2 accrual is path-dependent.** Contributions are levied on the coordinated
+   salary — insured salary above the coordination deduction and capped at the upper limit —
+   at an age-banded savings rate. A career at 80% and a career at 100% therefore diverge in
+   accumulated capital, and the divergence is realised at retirement rather than during the
+   working years.
+4. **Retirement is a stochastic, multi-decade phase.** Returns are simulated across the
+   horizon from the stated retirement age to the stated life expectancy — 25 years by
+   default, age 65 to 90. Adequacy is therefore reported as a distribution including its
+   downside, not as a single projected figure.
 
-**A second question, and a model built to answer it.** The same apparatus is applied to a question
-about AI-assisted development: for a fixed body of code, does the authoring time that machine
-generation saves survive the comprehension and maintenance cost of code the engineer did not write?
-`comprehension_cost` estimates the net effect on cumulative engineering hours over a 36-month
-horizon, decomposed into authoring, review, comprehension and maintenance. The grid, the decision
-rule and the falsification condition were pre-registered before the model was run, and every
-comprehension-side parameter is marked `Declared` rather than measured.
-
-In the central parameterisation the net effect is negative — cumulative benefit turns negative in
-month 3 and reaches −247 hours by month 36 — but the decomposition is more informative than the
-sign. The authoring saving contributes **+13 h**. The mechanism the hypothesis proposes, a faster
-decay of the mental model for code the engineer did not author, contributes **−39 h** and ranks
-seventh of sixteen in a one-at-a-time sensitivity analysis, at 7% of the total variation. The
-largest single channel is review leakage (**−127 h**): defects that a low-comprehension review
-fails to catch generate their own maintenance stream. The ranking is led by the diagnosis-cost
-terms (18% and 13%), the initial comprehension gap (11% for human-authored code, 8% for AI-authored)
-and the leakage hazard (11%).
-
-The inference available here is narrower than the effect size suggests. Because the load-bearing
-parameters are unmeasured, the result identifies which assumptions the conclusion depends on — and
-is a negative result about the model's power to settle the question — rather than evidence that
-AI-authored code is net-negative in practice. What would test it is a task-level measurement of
-diagnosis time on AI-authored versus human-authored modules; refining the decay rate would leave
-the conclusion where it is. Pre-registration, decision rule, sensitivity tables and figures are in
-[`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
+The model couples these components and searches for the work percentage that maximises the
+stated objective, rather than optimising net income alone.
 
 ### Design philosophy
 
-A decision this consequential deserves a model you can argue with. So every formula is written
-out, every input is either sourced or labelled as declared, and each assumption is placed where
-you can see it move the answer:
+Every formula is written out, every input is either sourced from a published document or
+labelled `Declared`, and each assumption is positioned so that its effect on the answer is
+observable:
 
-- nothing important hides inside a black box;
-- the trade-offs are stated as formulas rather than as weights chosen behind a slider;
-- each variable — taxes, inflation, pension contributions, utility, health stress, and regime
-  dependence — is visible, and the ones that cannot be measured are marked as such;
-- the model supports reasoning rather than only prediction, which means it should tell you what it
-  cannot establish.
+- quantities are named rather than embedded in unstated coefficients;
+- trade-offs are expressed as formulas, not as weights selected behind an interface;
+- every variable — tax, inflation, pension contributions, utility, health stress, regime
+  dependence — is exposed, and those that cannot be measured are marked accordingly;
+- the model reports what it cannot establish.
 
-Two things follow from that and are worth stating plainly, because they are the model's honesty
-rather than its limitations:
+Two properties follow, and both are reported outputs rather than disclaimers:
 
-**It reports a range where it cannot report a point.** Retirement needs are reported across 60/75/90
-with the level at which the plan stops working; the recommendation comes with the margin to the
-runner-up and with a robustness block showing how far it moves when a declared preference is moved;
-and when the optimum sits at the edge of the percentages tested, the tool says so instead of calling
-it stable.
+**A range is reported where a point is not estimable.** Retirement needs are reported across
+60/75/90 together with the level at which the plan stops working; a recommendation carries
+its margin to the runner-up and a robustness block showing how far it moves when a declared
+preference is moved; and an optimum that sits at the edge of the searched range is reported
+as boundary-dependent rather than stable.
 
-**It names what it does not know.** `VALIDATION.md` records what has been checked against an outside
-source and what has not. `CRITIQUE_RESPONSE.md` records an external review of this repository claim
-by claim, including the places the review was wrong and the places it found a real defect.
+**The limits are documented, not asserted.** [`VALIDATION.md`](VALIDATION.md) records what has
+been checked against an external source and what has not.
+[`CRITIQUE_RESPONSE.md`](CRITIQUE_RESPONSE.md) records an external review of this repository
+claim by claim, including the claims on which the review was wrong and the ones where it
+identified a real defect.
 
-The goal is not only to pick a number. It is to leave you able to say why the number is what it is,
-and where it would stop being right.
+The intended output is a number together with the conditions under which it fails.
+
+**A second question, with its own model.** The same apparatus is applied to a question about
+AI-assisted development: for a fixed body of code, does the authoring time that machine
+generation saves survive the comprehension and maintenance cost of code the engineer did not
+write? `comprehension_cost` estimates the net effect on cumulative engineering hours over a
+36-month horizon, decomposed into authoring, review, comprehension and maintenance. The
+grid, the decision rule and the falsification condition were pre-registered before the model
+was run, and every comprehension-side parameter is marked `Declared` rather than measured.
+
+In the central parameterisation the net effect is negative — cumulative benefit turns
+negative in month 3 and reaches −247 hours by month 36 — but the decomposition is more
+informative than the sign. The authoring saving contributes **+13 h**. The mechanism the
+hypothesis proposes, faster decay of the mental model for code the engineer did not author,
+contributes **−39 h** and ranks seventh of sixteen in a one-at-a-time sensitivity analysis,
+at 7% of the total variation. The largest single channel is review leakage (**−127 h**):
+defects that a low-comprehension review fails to catch generate their own maintenance
+stream. The ranking is led by the diagnosis-cost terms (18% and 13%), the initial
+comprehension gap (11% for human-authored code, 8% for AI-authored) and the leakage hazard
+(11%).
+
+The inference available is narrower than the effect size suggests. Because the load-bearing
+parameters are unmeasured, the result identifies which assumptions the conclusion depends
+on, and is a negative result about the model's power to settle the question, rather than
+evidence that AI-authored code is net-negative in practice. What would test it is a
+task-level measurement of diagnosis time on AI-authored versus human-authored modules;
+refining the decay rate would leave the conclusion where it is. Pre-registration, decision
+rule, sensitivity tables and figures are in
+[`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
 ---
 
