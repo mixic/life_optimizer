@@ -27,7 +27,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::analysis::{breakeven, breakeven_threshold, channels, monte_carlo, review_accounting};
-use crate::global_sensitivity::model_indices;
+
 use crate::model::{benefit_curve, crossover_month, run, Scenario};
 use crate::params::Params;
 use crate::sweep::{
@@ -103,12 +103,17 @@ pub fn write_all(dir: &Path, base: &Params, paths: usize) -> io::Result<Vec<Path
     written.push(write_file(dir, "sensitivity.csv", &body)?);
 
     // ---- global sensitivity --------------------------------------------------
-    let sobol = model_indices(base, 1024, 2024);
-    let mut body = String::from("parameter,first_order,total_order,interaction\n");
+    let sobol = crate::global_sensitivity::model_indices_with_ci(base, 1024, 2024, 400);
+    let mut body = String::from(
+        "parameter,first_order,total_order,interaction,first_ci_low,first_ci_high,\
+         total_ci_low,total_ci_high\n",
+    );
     for index in sobol.indices.iter() {
+        let (fl, fh) = index.first_ci.unwrap_or((f64::NAN, f64::NAN));
+        let (tl, th) = index.total_ci.unwrap_or((f64::NAN, f64::NAN));
         writeln!(
             body,
-            "\"{}\",{:.6},{:.6},{:.6}",
+            "\"{}\",{:.6},{:.6},{:.6},{fl:.6},{fh:.6},{tl:.6},{th:.6}",
             index.name,
             index.first,
             index.total,
@@ -122,6 +127,33 @@ pub fn write_all(dir: &Path, base: &Params, paths: usize) -> io::Result<Vec<Path
         "sobol_interaction_share.txt",
         &format!("{:.6}\n", sobol.interaction_share()),
     )?);
+
+    // ---- robustness of the sign to the prior band ----------------------------
+    let mut body = String::from("band,samples,negative,fraction,ci_low,ci_high,worst,best\n");
+    for spread in [0.5, 1.0, 1.5] {
+        let audit = crate::global_sensitivity::sign_audit_with_spread(base, 4096, 7, spread);
+        writeln!(
+            body,
+            "{spread:.2},{},{},{:.6},{:.6},{:.6},{:.4},{:.4}",
+            audit.samples,
+            audit.negative,
+            audit.fraction,
+            audit.ci_low,
+            audit.ci_high,
+            audit.worst,
+            audit.best
+        )
+        .unwrap();
+    }
+    written.push(write_file(dir, "sign_audit.csv", &body)?);
+
+    // ---- generative review ---------------------------------------------------
+    let mut body = String::from("closed,c_ai,benefit,crossover_month\n");
+    for row in crate::analysis::generativity(base) {
+        let month = row.crossover.map(|m| m.to_string()).unwrap_or_else(String::new);
+        writeln!(body, "{:.2},{:.4},{:.4},{}", row.closed, row.c_ai, row.benefit, month).unwrap();
+    }
+    written.push(write_file(dir, "generativity.csv", &body)?);
 
     // ---- review accounting ---------------------------------------------------
     let accounting = review_accounting(base);

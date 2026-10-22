@@ -639,3 +639,93 @@ it is untouched. What changed is the claim printed beside it.
 - **The measurement to make is diagnosis time.** Both the global analysis and the decomposition
   point at the same quantity: how much longer it takes to diagnose a defect in code you did not
   write. That is a task-level measurement and it is not in the literature the anchors came from.
+
+---
+
+## Part 5 — Answering the fifth review
+
+Four of the five findings are addressed with measurements rather than wording; the fifth is a
+statement about how to read the other four.
+
+### 5.1 The interaction share is a finding about what measurement is possible
+
+**36.9% of the outcome variance is interaction variance.** Reporting it as a justification for the
+method undersells it. If the effects were additive, one study per parameter would settle the
+question, and the field's habit of measuring the authoring saving, review time and defect rates in
+separate studies would work. It cannot, because comprehension sets the catch probability, which sets
+leakage, which sets the maintenance stream, which sets how often a module is touched, which sets
+comprehension. A single-factor study holds the rest at whatever its population had and buries the
+interaction in the error term.
+
+That specifies a design: vary **diagnosis cost, the comprehension gap and the leakage hazard
+jointly**, at least two levels each, and estimate interactions rather than main effects. It is more
+expensive than three separate studies and it is the only design that answers the question, which is
+a concrete reason the measurement is missing rather than a complaint that the field is negligent.
+`documents/THE_BY_PRODUCT_THEORY.md` §7.1 develops this.
+
+### 5.2 The indices now carry intervals, and two of the four rankings survive them
+
+400 percentile bootstrap resamples over the Saltelli sample rows, on 1024 base samples:
+
+| Contributor | ST | 95% interval | S | 95% interval |
+|---|---:|---|---:|---|
+| `diag_hours_per_unit` | 35.2% | [31.5%, 39.5%] | 29.0% | [17.9%, 40.1%] |
+| `diag_slope` | 19.4% | [17.1%, 21.6%] | 9.8% | [1.7%, 19.1%] |
+| `c_human` | 14.3% | [12.5%, 16.1%] | 12.2% | [4.3%, 19.6%] |
+| `c_ai` | 12.2% | [10.8%, 13.8%] | 5.8% | [−1.0%, 12.7%] |
+
+**Two of the four adjacent pairs in the top five are separated by their intervals; two are not.**
+Diagnosis cost is ordered above its own slope, and both are ordered above the comprehension gap.
+The gap's two components — 14.3% and 12.2% — overlap, as do `c_ai` and the leakage hazard. The
+report prints which pairs overlap and declines to rank those, which is what the interval is for.
+
+One correction to the earlier text is worth recording: the first version of this analysis compared
+the wrong endpoints when testing separation and reported the top two as overlapping. They are not.
+
+### 5.3 The sign is a property of the band, not of the world
+
+The earlier version supported the net sign on the strength of one central cell. That is now
+measured across the space, by drawing uniformly over every input's range:
+
+| Band around the declared values | Draws with a negative net effect | 95% CI | Worst | Best |
+|---|---:|---|---:|---:|
+| ±50% | **100.0%** | 99.9%–100.0% | −808 h | −20 h |
+| ±100% | **79.4%** | 78.1%–80.6% | −2046 h | +611 h |
+| ±150% | **77.2%** | 75.9%–78.5% | −3882 h | +1394 h |
+
+The conclusion is therefore not a single-cell result: within a ±50% band the sign is unanimous
+across 4,096 draws. But the band is a **prior**, and the ±50% band excludes `σ = 0` — the authoring
+saving that a controlled study actually supports for experienced developers. Widen the band enough
+to include it and about one draw in five is positive. So the honest statement is: *the net sign is
+negative throughout a narrow band around the declared values, and the direction is conditional on
+that band rather than established by any measurement.* That is the identification failure stated as
+a number.
+
+### 5.4 Total-order indices sum above 100% by construction
+
+The variance decomposition reports `Σ ST = 136.9%` against `Σ S = 100.0%`. This is not an error: in
+an additive model the two sums coincide at 100%, and the excess of the total-order sum **is** the
+interaction variance. The report now states this beside the table rather than leaving a reader to
+assume the indices should sum to one.
+
+### 5.5 Testing the theory that interprets the model
+
+`documents/THE_BY_PRODUCT_THEORY.md` argues that the defect is passive review rather than machine
+authorship, on the strength of the generation-effect literature. That is a claim about this model's
+parameterisation, so the model can test it, and it should — otherwise the theory is an
+interpretation protected from its own subject matter.
+
+Making the share of the comprehension gap that review closes into a parameter and sweeping it:
+
+| Gap closed by review | c_ai | Benefit at month 36 | Crossover |
+|---:|---:|---:|---|
+| 0% (passive) | 0.25 | −247 h | month 3 |
+| 50% | 0.55 | −139 h | month 9 |
+| 100% (full reconstruction) | 0.85 | **−75 h** | **month 15** |
+
+**The claim is necessary but not sufficient, and the theory has been corrected accordingly.** Full
+generative review recovers about 70% of the loss and twelve months of grace, and leaves the run
+negative, because four channels stay open: faster retention loss, the defect multiplier, review
+leakage, and a diagnosis cost that scales with comprehension from whatever level it starts at. An
+organisation that retrains its reviewers will buy time and will still be losing. The correction is
+in the theory's §3.2, §5.2 and §6 rather than in a footnote here.

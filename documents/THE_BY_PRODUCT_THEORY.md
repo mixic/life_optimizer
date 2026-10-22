@@ -26,9 +26,31 @@ The claim in one sentence:
 > capacity is not. Every one of the four models is a measurement of a different by-product running
 > down.**
 
-The epistemic status is stated up front because it governs how to read the rest. This is a
-synthesis with a falsifiable core, not a projection. §8 gives the observations that would refute
-it. Nothing here is a forecast of the future, and §7 is written as conditions rather than dates.
+### Refutation before claim
+
+This document is a **conjecture**, not a finding, and the condition that would kill it is stated
+here rather than at the end:
+
+> **The conjecture is false if** organisations that adopt AI heavily *and* review generatively show
+> no decay on any of the observables in §5 — review hours per change, defect escape per unit of
+> change, time-to-diagnose on unfamiliar modules, the share of shipped changes for which nobody can
+> produce an explanation — over several years, while organisations that review passively do.
+
+If that holds, the by-product story is wrong about which variable matters, and the four models were
+four ways of describing a cost that regenerates too cheaply to matter. §8 lists three further
+refutations.
+
+### Why the four models are not four observations
+
+They were built by one author, from one epistemic stance, with one vocabulary, and every parameter
+that carries their findings is `Declared`. Agreement among them is therefore not independent
+evidence: it is one observation repeated, and the repeated thing could be a prior rather than the
+world. This is the strongest objection to the document and it deserves a section rather than a
+sentence, so §7 audits what each model contributes that the others do not.
+
+The epistemic status governs how to read the rest. This is a synthesis with a falsifiable core, not
+a projection, and nothing here is a forecast — §5 is written as conditions and observables rather
+than dates.
 
 ---
 
@@ -168,6 +190,20 @@ That second bullet is the non-obvious and actionable part. AI-authored code is n
 incomprehensible; it is incomprehensible **when review is passive**. Which is exactly what review
 becomes by default, because passive reading is the cheap thing and there is a queue.
 
+**And it is not enough, which this document measured after writing the paragraph above.**
+`comprehension_cost` treats the share of the comprehension gap that review closes as a parameter and
+sweeps it. Closing the *entire* gap — a reviewer who reconstructs until they understand the module
+as well as its author would — moves the cumulative result from −247 hours to −75 hours and delays
+the crossover from month 3 to month 15. It recovers about 70% of the loss and twelve months of
+grace. It does not change the sign, because four other channels stay open: faster retention loss,
+the defect multiplier, review leakage, and the diagnosis cost that scales with comprehension
+whatever its starting point.
+
+So the claim in this section is a **necessary** condition and not a sufficient one, and the
+distinction matters for policy: an organisation that retrains its reviewers to reconstruct will buy
+time and will still be losing. Full generative review would have to be accompanied by holding slack
+(the `knowledge_work` channel) and by designing for defect containment rather than review capacity.
+
 ### 3.3 Why the loss is invisible: fluency mistaken for knowing
 
 Two further findings close the loop, and they are the bridge to the empirical puzzles in the other
@@ -273,12 +309,13 @@ encoding still happens — just later and by someone else. "Review the AI's code
 with the AI's version in front of you", which is what the generation-effect literature says is the
 difference between a 7% and a 40% memorial advantage.
 
-This regime is reachable, and the theory says precisely what it costs: the comprehension cost is
-paid as review time, up front, and it is the same order of magnitude as the authoring time saved —
-which is what `comprehension_cost` found when it reported the authoring saving as tens of hours
-against comprehension and maintenance costs in the hundreds. Regime B does not make the by-product
-free. It buys it back at close to its original price, and it is worth it because the alternative is
-§5.3.
+This regime is reachable, and it costs more than this document first claimed. The measurement is
+in §3.2 and it is unflattering to the argument: closing the whole comprehension gap recovers about
+70% of the loss and delays the crossover from month 3 to month 15, and the run still ends at −75
+hours. Regime B is therefore not a fix on its own. It is the necessary first move, and it has to be
+combined with the `B` channel — holding slack instead of re-raising the utilisation target — before
+the arithmetic turns. An organisation that does only the review part of this will believe it has
+solved the problem and will be losing more slowly.
 
 ### 5.3 Regime C — deskilled, and why it is an attractor
 
@@ -328,14 +365,62 @@ committed.
    that firms restore their old utilisation target after a capability jump and that this is a
    declared assumption rather than a measurement. The theory says why: slack is the by-product,
    utilisation is the flow, and the flow is what the dashboard sees.
-4. **`AI_AS_CATALYST`'s unmeasured ρ is a by-product, and that is why it resists measurement.**
+4. **This document's own central correction is necessary but not sufficient.** §3.2 claims the
+   defect is passive review rather than authorship, and the model was used to test that claim in the
+   way a theory should be: by closing the whole comprehension gap and seeing whether the verdict
+   flips. It does not. The loss falls from −247 h to −75 h and the crossover slips from month 3 to
+   month 15. Generative review buys time; it does not buy solvency. The claim has been narrowed
+   accordingly, and §5.2's account of Regime B's cost is revised upward to match.
+5. **`AI_AS_CATALYST`'s unmeasured ρ is a by-product, and that is why it resists measurement.**
    Delivered quality is the judgement of the person who would have caught the defect; if that
    person's capacity is itself being degraded, ρ is not merely unknown, it is *unmeasurable from
    inside the system that is losing it*.
 
 ---
 
-## Part 7 — Provenance
+## Part 7 — What each model contributes that the others do not
+
+The four models are not independent. This section is the audit the objection requires: for each
+one, what it adds that the other three cannot supply, and what it merely restates.
+
+| Model | Contributes something the others cannot | Restates |
+|---|---|---|
+| `comprehension_cost` | a *variance decomposition*: which unmeasured parameter the conclusion actually rests on, with intervals | that AI code is harder to understand — which the other three assume |
+| `knowledge_work` | the *mechanism of absorption*: why extra capacity turns into extra arrivals rather than slack, derived from queueing rather than asserted | that utilisation is high — the others take it as given |
+| `human_capacity` | *dynamics*: the judge degrades as a function of the assistance, so the loss compounds rather than sitting still | that judgement is needed — the others treat it as exogenous |
+| `AI_AS_CATALYST` | the *published spread*: what is actually measured, and the honest statement that ρ is unmeasured | the direction of the quality effect — which the others parameterise |
+
+The audit cuts both ways and should be read that way. **Three of the four contribute a mechanism;
+none contributes a measurement.** The one measured quantity across all four is the METR slowdown and
+the BairesDev self-reports, and those are two instruments disagreeing about the same quantity — the
+clock and the feeling of the clock. So the conjecture rests on mechanism plus one contested
+measurement, and it is offered at exactly that strength.
+
+A referee could reasonably reply that four mechanisms sharing an author and a prior *are* one
+mechanism. That is not a reply I can defeat from inside this repository. What can be said is that
+the mechanisms are stated separately enough to be separately wrong, and that §8 names the
+observation that would show they are.
+
+### 7.1 What the interaction share implies for measurement design
+
+`comprehension_cost` reports that **36.9% of the outcome variance is interaction variance**. That is
+not a technical footnote; it is a statement about what kind of question this is.
+
+If the effect were additive, one study per parameter would settle it, and the field's current
+strategy — measure the authoring saving, measure review time, measure defect rates, in separate
+studies — would work. It cannot work here, because the parameters are not separable: comprehension
+sets the review catch probability, which sets the leakage rate, which sets the maintenance stream,
+which sets how often the module is touched, which sets comprehension. A study that varies one
+factor holds the others at whatever the study population happened to have, and the interaction
+variance lands in the error term.
+
+The design this implies is a **joint** one: vary diagnosis cost, the initial comprehension gap and
+the leakage hazard together, across at least two levels each, and estimate the interaction terms
+rather than the main effects. It is more expensive than three separate studies. It is also the only
+design that answers the question, which is a concrete reason the measurement does not exist yet —
+more useful than saying the field has neglected it.
+
+## Part 8 — Provenance
 
 Following the convention of this repository: every claim is either sourced, cited without having
 been read, or declared as the theory's own construction.
@@ -385,7 +470,7 @@ this theory says would settle it, and it does not exist yet.
 
 ---
 
-## Part 8 — What would refute this
+## Part 9 — What would refute this
 
 Stated as observations rather than arguments, so that the theory is falsifiable rather than merely
 persuasive.

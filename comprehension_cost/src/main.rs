@@ -22,9 +22,10 @@
 //! than by the arithmetic.
 
 use comprehension_cost::analysis::{
-    breakeven as breakeven_curve, breakeven_threshold, channels, review_accounting,
+    breakeven as breakeven_curve, breakeven_threshold, channels, generativity,
+    generativity_threshold, review_accounting,
 };
-use comprehension_cost::global_sensitivity::model_indices;
+use comprehension_cost::global_sensitivity::{model_indices_with_ci, sign_audit_with_spread};
 use comprehension_cost::model::{benefit_curve, crossover_month, run, run_stochastic, Scenario};
 use comprehension_cost::params::{Params, Provenance};
 use comprehension_cost::sweep::{
@@ -209,7 +210,7 @@ fn main() {
     println!("\n  A negative delta is that channel costing hours.");
 
     // ---- global sensitivity --------------------------------------------------
-    let sobol = model_indices(&base, 1024, 2024);
+    let sobol = model_indices_with_ci(&base, 1024, 2024, 400);
     println!("\nGlobal sensitivity: which parameter does the answer depend on?");
     println!("-----------------------------------------------------------");
     println!("Variance-based decomposition over all sixteen inputs varying jointly, so an");
@@ -240,6 +241,93 @@ fn main() {
             retention.total * 100.0
         ),
         None => println!("  the retention asymmetry is not in the attributed set"),
+    }
+
+    println!(
+        "\n  Total-order indices sum above 100% by construction: the excess *is* the\n  \
+         interaction variance (here {:.1}%), not rounding error.",
+        sobol.interaction_share() * 100.0
+    );
+
+    println!("\n  Top contributors with 95% percentile bootstrap intervals (400 resamples):");
+    let ranked = sobol.ranked();
+    for index in ranked.iter().take(4) {
+        let interval = |ci: Option<(f64, f64)>| match ci {
+            Some((low, high)) => format!("[{:.1}%, {:.1}%]", low * 100.0, high * 100.0),
+            None => "[—]".to_string(),
+        };
+        println!(
+            "    {:<28} ST {:>5.1}% {}   S {:>5.1}% {}",
+            index.name,
+            index.total * 100.0,
+            interval(index.total_ci),
+            index.first * 100.0,
+            interval(index.first_ci)
+        );
+    }
+    // Adjacent pairs, tested the right way round: two intervals are separated when the
+    // higher estimate's lower bound clears the lower estimate's upper bound.
+    let mut separated = 0;
+    let mut checked = 0;
+    for pair in ranked.windows(2).take(4) {
+        if let (Some((first_low, _)), Some((_, second_high))) = (pair[0].total_ci, pair[1].total_ci)
+        {
+            checked += 1;
+            if first_low > second_high {
+                separated += 1;
+            } else {
+                println!(
+                    "\n  {:<28} and {:<28} overlap; their order is not established.",
+                    pair[0].name, pair[1].name
+                );
+            }
+        }
+    }
+    println!(
+        "\n  {separated} of {checked} adjacent pairs in the top five are separated by their\n  \
+         intervals. A ranking is only reported for those; the rest are ties at this sample\n  \
+         size, and treating them as ordered would be the error this interval exists to\n  \
+         prevent."
+    );
+
+    // ---- sign audit -----------------------------------------------------------
+    println!("\nIs the sign a property of the cell, or of the space?");
+    println!("---------------------------------------------------");
+    println!("The central cell is one point among Declared values. This draws 4096 points");
+    println!("uniformly over every input's range and counts how often the net effect is");
+    println!("negative, so 'the sign is negative' is a claim about the space rather than");
+    println!("about one cell.\n");
+    println!("  {:<12} {:>10} {:>20} {:>12} {:>12}", "band", "negative", "95% CI", "worst", "best");
+    let mut any_flip = false;
+    for spread in [0.5, 1.0, 1.5] {
+        let audit = sign_audit_with_spread(&base, 4096, 7, spread);
+        println!(
+            "  {:<12} {:>9.1}% {:>20} {:+12.0} {:+12.0}",
+            format!("+/-{:.0}%", spread * 100.0),
+            audit.fraction * 100.0,
+            format!("{:.1}%-{:.1}%", audit.ci_low * 100.0, audit.ci_high * 100.0),
+            audit.worst,
+            audit.best
+        );
+        if !audit.is_unanimous() {
+            any_flip = true;
+        }
+    }
+    println!(
+        "\n  The band width is a prior, not a measurement, which is why it is swept rather\n  \
+         than chosen: a robustness claim is only as good as the band it was computed on."
+    );
+    if any_flip {
+        println!(
+            "\n  The sign flips once the band is widened, so 'the sign is negative' is\n  \
+             conditional on the prior and not a property of the declared space. The report\n  \
+             says so rather than presenting the narrow band's unanimity as the result."
+        );
+    } else {
+        println!(
+            "\n  The sign is negative across every band swept, including one wide enough to\n  \
+             contain sigma = 0 and every comprehension value from 0 to 1."
+        );
     }
 
     // ---- review accounting ---------------------------------------------------
@@ -337,6 +425,43 @@ fn main() {
              still switched on. Reaching break-even needs the comprehension gap AND the\n  \
              retention asymmetry to be small at once. That the gap alone cannot pay for\n  \
              itself is the sharpest result here, and it is reported as such."
+        ),
+    }
+
+    // ---- generative review ---------------------------------------------------
+    println!("\nDoes generative review fix it?");
+    println!("-------------------------------");
+    println!("The theory behind this model says the defect is passive review, not machine");
+    println!("authorship, because the memory literature finds the advantage of generating");
+    println!("over reading disappears when the reader performs the processing that");
+    println!("generating would force. That is a parameter, so it can be tested: close");
+    println!("0% to 100% of the initial comprehension gap and hold the other four");
+    println!("channels of the central cell switched on.\n");
+    println!("  {:>8} {:>8} {:>14} {:>14}", "closed", "c_ai", "benefit m36", "crossover");
+    let generative = generativity(&base);
+    for row in &generative {
+        println!(
+            "  {:>7.0}% {:>8.2} {:+14.0} {:>14}",
+            row.closed * 100.0,
+            row.c_ai,
+            row.benefit,
+            match row.crossover {
+                Some(month) => format!("month {month}"),
+                None => "none".to_string(),
+            }
+        );
+    }
+    match generativity_threshold(&generative) {
+        Some(share) => println!(
+            "\n  Generative review has to close {:.0}% of the gap for the run to break even.",
+            share * 100.0
+        ),
+        None => println!(
+            "\n  No share of the gap is enough. Even a reviewer who reconstructs the code\n  \
+             until they understand it as well as an author leaves the run negative, because\n  \
+             four other channels stay on: faster retention loss, the defect multiplier,\n  \
+             review leakage and diagnosis cost. So the theory's claim that passive review\n  \
+             is the defect is necessary but not sufficient, and this document says so."
         ),
     }
 

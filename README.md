@@ -276,11 +276,40 @@ The pre-registration, the decision rule fixed before the run, the audit of each 
 and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
-This is one of four models in the repository that find AI harming the people using it, from four
-unrelated angles. [`documents/THE_BY_PRODUCT_THEORY.md`](documents/THE_BY_PRODUCT_THEORY.md) argues
-they are one mechanism — AI substitutes for production, and production was also producing the
-judgement, slack, skill and comprehension a system needs to govern itself — and sets out what would
-falsify that reading.
+**What that agreement is worth, stated before the claim.** This is one of four models in the
+repository that report AI costing the people using it more than the headline suggests. The four were
+built by one author working from one epistemic stance, and all four rest on `Declared` parameters,
+so their shared direction is not four independent observations of the world — it is one observation
+repeated, and the repeated thing could be the author's prior rather than the world.
+
+[`documents/THE_BY_PRODUCT_THEORY.md`](documents/THE_BY_PRODUCT_THEORY.md) is therefore offered as a
+**conjecture**, and it states its refutation before its claim: if organisations with high AI
+adoption *and* generative review protocols show no stock decay on the observables listed in its §5,
+the conjecture is false. What it conjectures is that the four findings share one shape — AI
+substitutes for production, and production was also producing the judgement, slack, skill and
+comprehension a system needs in order to govern itself. Its §7 audits what each model contributes
+that the others do not, because that audit is the only sense in which four models can support one
+claim rather than illustrate one prior.
+
+**What is measured, and what each measurement is worth:**
+
+- The net sign is negative in the pre-registered central cell, and negative in **100%** of 4,096
+  draws over a ±50% band around every declared value — but only **79%** of draws once the band is
+  widened enough to contain `σ = 0`, the authoring saving a controlled study actually supports. The
+  direction is conditional on the band, not a property of the world.
+- The variance decomposition attributes **35.2%** of the outcome to diagnosis cost, 95% interval
+  [31.5%, 39.5%], and **19.4%** to its comprehension slope at [17.1%, 21.6%]. Those two are
+  separated, so they are ordered. The next two, at 14.3% and 12.2%, overlap and are reported as ties
+  rather than ranked.
+- **Interaction accounts for 36.9% of the variance.** That is the most consequential number here and
+  it is not a technicality: it means the model's behaviour is not decomposable into independent
+  parameter effects, so **no single measurement can settle this question**. Settling it requires a
+  joint design varying diagnosis cost, comprehension gap and leakage together — a more expensive
+  study than any the current literature offers, which is part of why it has not been done.
+- **Generative review is necessary but not sufficient**, which corrects this project's own argument.
+  Closing the entire initial comprehension gap — a reviewer who reconstructs until they understand
+  as well as an author would — still leaves the run negative, because four other channels remain
+  open. The correction is recorded in place rather than dropped.
 
 ---
 

@@ -210,3 +210,50 @@ pub fn review_accounting(base: &Params) -> ReviewAccounting {
         ai_maintenance: total(&ai, |month| month.maintenance),
     }
 }
+
+/// One row of the generative-review sweep.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerativityRow {
+    /// Share of the initial comprehension gap that generative review closes. 0 is passive
+    /// reading, 1 is a reviewer who reconstructs until they understand as well as an author.
+    pub closed: f64,
+    pub c_ai: f64,
+    pub benefit: f64,
+    pub crossover: Option<usize>,
+}
+
+/// Vary one thing: how much of the comprehension gap review closes.
+///
+/// The memory literature says the advantage of generating over reading is eliminated when the
+/// reader performs the processing generation would force (see `documents/THE_BY_PRODUCT_THEORY.md`
+/// §3.2). That makes "generative review" a parameter, not a slogan, and it can be swept. The
+/// central cell's other four channels are left on, so the result answers a sharper question than
+/// the control does: not "does removing the asymmetry win" but "does closing the asymmetry win".
+pub fn generativity(base: &Params) -> Vec<GenerativityRow> {
+    let passive = base.c_ai;
+    let author = base.c_human;
+    let mut rows = Vec::with_capacity(11);
+    for step in 0..=10 {
+        let closed = step as f64 / 10.0;
+        let mut params = central_cell(base);
+        params.c_ai = passive + closed * (author - passive);
+
+        let human = run(&params, Scenario::Human);
+        let ai = run(&params, Scenario::Ai);
+        rows.push(GenerativityRow {
+            closed,
+            c_ai: params.c_ai,
+            benefit: benefit_curve(&human, &ai).last().copied().unwrap_or(0.0),
+            crossover: crossover_month(&human, &ai),
+        });
+    }
+    rows
+}
+
+/// The smallest share of the gap that has to close for the run to stop losing.
+///
+/// `None` means generative review alone is not sufficient: the remaining channels carry the
+/// loss on their own.
+pub fn generativity_threshold(rows: &[GenerativityRow]) -> Option<f64> {
+    rows.iter().find(|row| row.benefit >= 0.0).map(|row| row.closed)
+}

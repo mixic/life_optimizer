@@ -23,8 +23,13 @@
 //! If the implementation cannot distinguish those two cases, it cannot support the correction
 //! it was written to make.
 
-use comprehension_cost::analysis::{benefit_at_horizon, review_accounting};
-use comprehension_cost::global_sensitivity::{knobs, model_indices, range, sobol};
+use comprehension_cost::analysis::{
+    benefit_at_horizon, generativity, generativity_threshold, review_accounting,
+};
+use comprehension_cost::global_sensitivity::{
+    knobs, model_indices, model_indices_with_ci, range, sign_audit_with_spread, sobol,
+    sobol_with_ci,
+};
 use comprehension_cost::params::Params;
 
 fn close(a: f64, b: f64, tolerance: f64) -> bool {
@@ -231,4 +236,146 @@ fn the_attribution_target_is_the_reported_quantity() {
     // At the declared values, not the central cell, the objective is well defined and finite.
     let value = benefit_at_horizon(&base);
     assert!(value.is_finite(), "benefit at horizon is {value}");
+}
+
+/// Bootstrap intervals exist, are ordered, and separate the two contributors whose analytic
+/// shares differ by a factor of four.
+///
+/// The point of the interval is to stop a ranking being read off two point estimates. In the
+/// additive case the true indices are 0.8 and 0.2, so a working estimator must not merely
+/// order them — it must place their intervals apart.
+#[test]
+fn bootstrap_intervals_separate_a_known_ranking_and_merge_a_known_tie() {
+    let separated = sobol_with_ci(
+        |x| 2.0 * x[0] + x[1],
+        &[(0.0, 1.0), (0.0, 1.0)],
+        &["x1", "x2"],
+        4096,
+        4242,
+        400,
+        99,
+    );
+    for index in &separated.indices {
+        let (low, high) = index.total_ci.expect("intervals requested");
+        assert!(low <= high, "{}: interval is inverted ({low}, {high})", index.name);
+        assert!(high - low < 0.5, "{}: interval is implausibly wide", index.name);
+    }
+    let (x1, x2) = (&separated.indices[0], &separated.indices[1]);
+    let (x1_low, _) = x1.total_ci.unwrap();
+    let (_, x2_high) = x2.total_ci.unwrap();
+    assert!(
+        x1_low > x2_high,
+        "0.8 and 0.2 must be distinguishable: x1 lower bound {x1_low:.3} against x2 upper {x2_high:.3}"
+    );
+
+    // A model where both inputs have the same share cannot be ordered, and the intervals say so.
+    let tied = sobol_with_ci(
+        |x| x[0] + x[1],
+        &[(0.0, 1.0), (0.0, 1.0)],
+        &["x1", "x2"],
+        4096,
+        4242,
+        400,
+        99,
+    );
+    let (a, b) = (&tied.indices[0], &tied.indices[1]);
+    let (a_low, _) = a.total_ci.unwrap();
+    let (_, b_high) = b.total_ci.unwrap();
+    assert!(
+        a_low <= b_high,
+        "two equal inputs must not be separated: {a_low:.3} against {b_high:.3}"
+    );
+}
+
+/// The sign audit is a proportion with an interval that brackets it.
+#[test]
+fn the_sign_audit_is_a_proportion_with_an_interval() {
+    let base = Params::default();
+    for spread in [0.5, 1.0] {
+        let audit = sign_audit_with_spread(&base, 512, 11, spread);
+        assert_eq!(audit.samples, 512);
+        assert!(audit.negative <= audit.samples);
+        assert!((0.0..=1.0).contains(&audit.fraction));
+        assert!(
+            audit.ci_low <= audit.fraction && audit.fraction <= audit.ci_high,
+            "spread {spread}: the interval ({:.3}, {:.3}) does not bracket {:.3}",
+            audit.ci_low,
+            audit.ci_high,
+            audit.fraction
+        );
+        assert!(audit.worst <= audit.best, "worst must not exceed best");
+    }
+}
+
+/// Widening the band can only make unanimity harder to reach, never easier.
+///
+/// This is the property the report's robustness claim rests on: if a wider band produced more
+/// uniformity, the band width would be doing the work rather than the model.
+#[test]
+fn widening_the_band_does_not_increase_the_share_of_negative_draws() {
+    let base = Params::default();
+    let narrow = sign_audit_with_spread(&base, 1024, 5, 0.5);
+    let wide = sign_audit_with_spread(&base, 1024, 5, 1.5);
+    assert!(
+        wide.fraction <= narrow.fraction + 0.06,
+        "widening the band raised the negative share from {:.3} to {:.3}",
+        narrow.fraction,
+        wide.fraction
+    );
+}
+
+/// Generative review closes the gap monotonically, and at 100% it has closed all of it.
+#[test]
+fn generative_review_is_monotone_and_closes_the_gap() {
+    let base = Params::default();
+    let rows = generativity(&base);
+
+    assert_eq!(rows.len(), 11);
+    assert!((rows[0].closed).abs() < 1e-9, "the sweep starts at passive review");
+    assert!((rows[10].closed - 1.0).abs() < 1e-9, "and ends at full reconstruction");
+    assert!(
+        (rows[0].c_ai - base.c_ai).abs() < 1e-9,
+        "the passive end must be the declared comprehension"
+    );
+    assert!(
+        (rows[10].c_ai - base.c_human).abs() < 1e-9,
+        "the generative end must reach the author's comprehension"
+    );
+
+    for pair in rows.windows(2) {
+        assert!(
+            pair[1].benefit >= pair[0].benefit - 1e-6,
+            "closing more of the gap made the outcome worse: {:.2} h at {:.0}% against {:.2} h at {:.0}%",
+            pair[0].benefit,
+            pair[0].closed * 100.0,
+            pair[1].benefit,
+            pair[1].closed * 100.0
+        );
+    }
+}
+
+/// The reported threshold is exactly the first row that stops losing.
+#[test]
+fn the_generativity_threshold_matches_the_sweep() {
+    let rows = generativity(&Params::default());
+    let threshold = generativity_threshold(&rows);
+    for row in &rows {
+        match threshold {
+            Some(share) => {
+                if row.closed < share - 1e-9 {
+                    assert!(
+                        row.benefit < 0.0,
+                        "row at {:.0}% is non-negative but sits below the threshold {:.0}%",
+                        row.closed * 100.0,
+                        share * 100.0
+                    );
+                }
+            }
+            None => assert!(
+                row.benefit < 0.0,
+                "no threshold is reported but the row at {:.0}% is non-negative",
+                row.closed * 100.0
+            ),
+        }
+    }
 }

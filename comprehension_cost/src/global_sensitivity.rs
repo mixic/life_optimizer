@@ -172,6 +172,10 @@ pub struct SobolIndex {
     /// Share that would remain if every other input were fixed: first order plus every
     /// interaction this input takes part in.
     pub total: f64,
+    /// Percentile bootstrap interval for `first`, when a bootstrap was requested.
+    pub first_ci: Option<(f64, f64)>,
+    /// Percentile bootstrap interval for `total`.
+    pub total_ci: Option<(f64, f64)>,
 }
 
 impl SobolIndex {
@@ -218,6 +222,143 @@ impl SobolReport {
 /// Exposed generically so it can be validated against functions with analytically known
 /// indices — an implementation of a variance decomposition that has only ever been run on the
 /// model it was written for is an implementation nobody has checked.
+fn evaluate<F>(model: &F, matrix: &[Vec<f64>]) -> Vec<f64>
+where
+    F: Fn(&[f64]) -> f64,
+{
+    matrix.iter().map(|row| model(row)).collect()
+}
+
+/// The estimators, evaluated on a chosen set of sample rows.
+///
+/// Kept separate from the sampling so a bootstrap can call it on resampled rows without
+/// re-running the model. Returns the per-input `(first, total)` pairs and the variance.
+fn estimate(ya: &[f64], yb: &[f64], yabs: &[Vec<f64>], rows: &[usize]) -> (Vec<(f64, f64)>, f64) {
+    let n = rows.len() as f64;
+    let mean_a = rows.iter().map(|r| ya[*r]).sum::<f64>() / n;
+    let mean_b = rows.iter().map(|r| yb[*r]).sum::<f64>() / n;
+    let mean_square =
+        rows.iter().map(|r| ya[*r] * ya[*r] + yb[*r] * yb[*r]).sum::<f64>() / (2.0 * n);
+    let variance = mean_square - ((mean_a + mean_b) / 2.0).powi(2);
+    if variance <= 0.0 {
+        return (vec![(0.0, 0.0); yabs.len()], 0.0);
+    }
+
+    let mut out = Vec::with_capacity(yabs.len());
+    for series in yabs {
+        let first = rows.iter().map(|r| yb[*r] * (series[*r] - ya[*r])).sum::<f64>() / n / variance;
+        let total =
+            rows.iter().map(|r| (ya[*r] - series[*r]).powi(2)).sum::<f64>() / (2.0 * n) / variance;
+        out.push((first, total));
+    }
+    (out, variance)
+}
+
+fn percentile(sorted: &[f64], fraction: f64) -> f64 {
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    let index = ((sorted.len() - 1) as f64 * fraction).round() as usize;
+    sorted[index]
+}
+
+/// Saltelli estimators with optional percentile bootstrap intervals.
+///
+/// The interval is required to report a ranking. Two point estimates 16 points apart look
+/// ordered; if their intervals overlap, the ordering is not established, and a variance-based
+/// attribution whose whole purpose is to rank contributors would be overstating itself.
+pub fn sobol_with_ci<F>(
+    model: F,
+    bounds: &[(f64, f64)],
+    names: &[&'static str],
+    samples: usize,
+    seed: u64,
+    bootstrap: usize,
+    bootstrap_seed: u64,
+) -> SobolReport
+where
+    F: Fn(&[f64]) -> f64,
+{
+    let dimension = bounds.len();
+    assert_eq!(dimension, names.len(), "one name per dimension");
+    assert!(samples > 0, "need at least one sample");
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    let draw = |rng: &mut StdRng| -> Vec<Vec<f64>> {
+        (0..samples)
+            .map(|_| {
+                bounds.iter().map(|(low, high)| low + (high - low) * rng.gen::<f64>()).collect()
+            })
+            .collect()
+    };
+    let a = draw(&mut rng);
+    let b = draw(&mut rng);
+
+    let ya = evaluate(&model, &a);
+    let yb = evaluate(&model, &b);
+    let yabs: Vec<Vec<f64>> = (0..dimension)
+        .map(|i| {
+            (0..samples)
+                .map(|j| {
+                    let mut row = a[j].clone();
+                    row[i] = b[j][i];
+                    model(&row)
+                })
+                .collect()
+        })
+        .collect();
+
+    let all: Vec<usize> = (0..samples).collect();
+    let (point, variance) = estimate(&ya, &yb, &yabs, &all);
+
+    // Percentile bootstrap over the sample rows.
+    let mut first_draws = vec![Vec::with_capacity(bootstrap); dimension];
+    let mut total_draws = vec![Vec::with_capacity(bootstrap); dimension];
+    if bootstrap > 0 && variance > 0.0 {
+        let mut boot_rng = StdRng::seed_from_u64(bootstrap_seed);
+        for _ in 0..bootstrap {
+            let rows: Vec<usize> = (0..samples).map(|_| boot_rng.gen_range(0..samples)).collect();
+            let (draw, _) = estimate(&ya, &yb, &yabs, &rows);
+            for i in 0..dimension {
+                first_draws[i].push(draw[i].0);
+                total_draws[i].push(draw[i].1);
+            }
+        }
+    }
+
+    let mut indices = Vec::with_capacity(dimension);
+    for i in 0..dimension {
+        let (first_ci, total_ci) = if first_draws[i].is_empty() {
+            (None, None)
+        } else {
+            let mut f = first_draws[i].clone();
+            f.sort_by(|x, y| x.partial_cmp(y).unwrap());
+            let mut s = total_draws[i].clone();
+            s.sort_by(|x, y| x.partial_cmp(y).unwrap());
+            (
+                Some((percentile(&f, 0.025), percentile(&f, 0.975))),
+                Some((percentile(&s, 0.025), percentile(&s, 0.975))),
+            )
+        };
+        indices.push(SobolIndex {
+            name: names[i],
+            first: point[i].0,
+            total: point[i].1,
+            first_ci,
+            total_ci,
+        });
+    }
+
+    SobolReport {
+        sum_first: indices.iter().map(|index| index.first).sum(),
+        sum_total: indices.iter().map(|index| index.total).sum(),
+        indices,
+        variance,
+        samples,
+    }
+}
+
+/// Point estimates only, for callers that do not need intervals.
 pub fn sobol<F>(
     model: F,
     bounds: &[(f64, f64)],
@@ -228,74 +369,7 @@ pub fn sobol<F>(
 where
     F: Fn(&[f64]) -> f64,
 {
-    let dimension = bounds.len();
-    assert_eq!(dimension, names.len(), "one name per dimension");
-    assert!(samples > 0, "need at least one sample");
-    let mut rng = StdRng::seed_from_u64(seed);
-
-    let draw = |rng: &mut StdRng, matrix: &mut Vec<Vec<f64>>| {
-        for _ in 0..samples {
-            let row: Vec<f64> =
-                bounds.iter().map(|(low, high)| low + (high - low) * rng.gen::<f64>()).collect();
-            matrix.push(row);
-        }
-    };
-
-    let mut a: Vec<Vec<f64>> = Vec::with_capacity(samples);
-    let mut b: Vec<Vec<f64>> = Vec::with_capacity(samples);
-    draw(&mut rng, &mut a);
-    draw(&mut rng, &mut b);
-
-    let ya: Vec<f64> = a.iter().map(|row| model(row)).collect();
-    let yb: Vec<f64> = b.iter().map(|row| model(row)).collect();
-
-    let mean_a = ya.iter().sum::<f64>() / samples as f64;
-    let mean_b = yb.iter().sum::<f64>() / samples as f64;
-    // Pooled second moment: the variance of the outcome over the joint input space.
-    let mean_square =
-        ya.iter().chain(yb.iter()).map(|value| value * value).sum::<f64>() / (2 * samples) as f64;
-    let variance = mean_square - ((mean_a + mean_b) / 2.0).powi(2);
-    if variance <= 0.0 {
-        return SobolReport {
-            indices: names.iter().map(|name| SobolIndex { name, first: 0.0, total: 0.0 }).collect(),
-            variance: 0.0,
-            samples,
-            sum_first: 0.0,
-            sum_total: 0.0,
-        };
-    }
-
-    let mut indices = Vec::with_capacity(dimension);
-    for i in 0..dimension {
-        // AB_i: A with column i taken from B.
-        let yab: Vec<f64> = (0..samples)
-            .map(|j| {
-                let mut row = a[j].clone();
-                row[i] = b[j][i];
-                model(&row)
-            })
-            .collect();
-
-        // Saltelli et al. (2010), eqs. for the first and total effect.
-        let first = yb
-            .iter()
-            .zip(yab.iter())
-            .zip(ya.iter())
-            .map(|((b_j, ab_j), a_j)| b_j * (ab_j - a_j))
-            .sum::<f64>()
-            / samples as f64
-            / variance;
-
-        let total = ya.iter().zip(yab.iter()).map(|(a_j, ab_j)| (a_j - ab_j).powi(2)).sum::<f64>()
-            / (2.0 * samples as f64)
-            / variance;
-
-        indices.push(SobolIndex { name: names[i], first, total });
-    }
-
-    let sum_first = indices.iter().map(|index| index.first).sum();
-    let sum_total = indices.iter().map(|index| index.total).sum();
-    SobolReport { indices, variance, samples, sum_first, sum_total }
+    sobol_with_ci(model, bounds, names, samples, seed, 0, 0)
 }
 
 /// The global sensitivity analysis of the model's outcome at the horizon.
@@ -303,11 +377,21 @@ where
 /// The outcome is cumulative benefit at the horizon on the default parameterisation, with all
 /// sixteen inputs varying jointly over their ranges.
 pub fn model_indices(base: &Params, samples: usize, seed: u64) -> SobolReport {
+    model_indices_with_ci(base, samples, seed, 0)
+}
+
+/// As [`model_indices`], with a percentile bootstrap over the sample rows.
+pub fn model_indices_with_ci(
+    base: &Params,
+    samples: usize,
+    seed: u64,
+    bootstrap: usize,
+) -> SobolReport {
     let knobs = knobs();
     let bounds: Vec<(f64, f64)> = knobs.iter().map(|knob| range(knob, base)).collect();
     let names: Vec<&'static str> = knobs.iter().map(|knob| knob.name).collect();
 
-    sobol(
+    sobol_with_ci(
         |values| {
             let mut params = base.clone();
             for (knob, value) in knobs.iter().zip(values.iter()) {
@@ -319,5 +403,90 @@ pub fn model_indices(base: &Params, samples: usize, seed: u64) -> SobolReport {
         &names,
         samples,
         seed,
+        bootstrap,
+        seed ^ 0x5eed,
     )
+}
+
+/// The share of the plausible parameter space in which the net effect is negative.
+///
+/// A single central cell is one point in a space of Declared values, so "the net sign is
+/// negative" is either a statement about that point or a statement about the space. This
+/// measures the space: draw uniformly over every input's range, and count how often the
+/// cumulative benefit at the horizon is below zero.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SignAudit {
+    pub samples: usize,
+    pub negative: usize,
+    /// Proportion negative, with a Wilson score interval — a fraction without an interval is
+    /// the same error as an index without one.
+    pub fraction: f64,
+    pub ci_low: f64,
+    pub ci_high: f64,
+    /// The extremes of the outcome over the sampled space.
+    pub worst: f64,
+    pub best: f64,
+}
+
+impl SignAudit {
+    /// True when the interval excludes zero, so the sign is a property of the space rather
+    /// than of the sample.
+    pub fn is_unanimous(&self) -> bool {
+        self.negative == self.samples
+    }
+}
+
+/// Draw over the joint space and count the sign, on the default band.
+pub fn sign_audit(base: &Params, samples: usize, seed: u64) -> SignAudit {
+    sign_audit_with_spread(base, samples, seed, 0.5)
+}
+
+/// As [`sign_audit`], with the width of the band as a parameter.
+///
+/// A robustness claim is only as good as the band it was computed on, and the default ±50%
+/// band already excludes the one authoring-saving value that a measured study supports
+/// (`σ = 0`, METR's null for experienced developers). Sweeping the band is therefore not
+/// decoration: it tests whether the conclusion survives widening the prior, which is the
+/// question the identification argument actually turns on.
+pub fn sign_audit_with_spread(base: &Params, samples: usize, seed: u64, spread: f64) -> SignAudit {
+    let mut knobs = knobs();
+    for knob in knobs.iter_mut() {
+        knob.spread = spread;
+    }
+    let bounds: Vec<(f64, f64)> = knobs.iter().map(|knob| range(knob, base)).collect();
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    let mut negative = 0usize;
+    let mut worst = f64::INFINITY;
+    let mut best = f64::NEG_INFINITY;
+    for _ in 0..samples {
+        let mut params = base.clone();
+        for (knob, (low, high)) in knobs.iter().zip(bounds.iter()) {
+            let value = low + (high - low) * rng.gen::<f64>();
+            (knob.set)(&mut params, value);
+        }
+        let benefit = benefit_at_horizon(&params);
+        if benefit < 0.0 {
+            negative += 1;
+        }
+        worst = worst.min(benefit);
+        best = best.max(benefit);
+    }
+
+    let n = samples as f64;
+    let p = negative as f64 / n;
+    let z = 1.96;
+    let denominator = 1.0 + z * z / n;
+    let centre = (p + z * z / (2.0 * n)) / denominator;
+    let half = z * (p * (1.0 - p) / n + z * z / (4.0 * n * n)).sqrt() / denominator;
+
+    SignAudit {
+        samples,
+        negative,
+        fraction: p,
+        ci_low: (centre - half).max(0.0),
+        ci_high: (centre + half).min(1.0),
+        worst,
+        best,
+    }
 }
