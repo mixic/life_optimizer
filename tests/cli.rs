@@ -74,6 +74,8 @@ fn retirement_age_at_or_before_current_age_exits_with_error_not_panic() {
 fn life_expectancy_at_or_before_retirement_exits_with_error() {
     let output = run(&[
         "pension",
+        "--retirement-needs",
+        "4000",
         "--salary",
         "100000",
         "--age",
@@ -95,6 +97,8 @@ fn life_expectancy_at_or_before_retirement_exits_with_error() {
 fn pension_with_custom_conversion_rate_shows_the_custom_row() {
     let output = run(&[
         "pension",
+        "--retirement-needs",
+        "4000",
         "--salary",
         "100000",
         "--age",
@@ -119,7 +123,17 @@ fn pension_with_custom_conversion_rate_shows_the_custom_row() {
 /// uncertainty is visible even when the user has not supplied their own rate.
 #[test]
 fn pension_without_custom_rate_shows_all_three_scenarios() {
-    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
+    let output = run(&[
+        "pension",
+        "--retirement-needs",
+        "4000",
+        "--salary",
+        "100000",
+        "--age",
+        "40",
+        "--work-pct",
+        "0.8",
+    ]);
 
     assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
@@ -135,6 +149,8 @@ fn pension_without_custom_rate_shows_all_three_scenarios() {
 fn custom_rate_above_statutory_is_reported_as_better() {
     let output = run(&[
         "pension",
+        "--retirement-needs",
+        "4000",
         "--salary",
         "100000",
         "--age",
@@ -219,7 +235,17 @@ fn all_subcommands_run_successfully() {
         vec!["optimize", "--salary", "120000", "--age", "38"],
         vec!["compare", "--salary", "100000", "--age", "40"],
         vec!["lifetime", "--salary", "100000", "--age", "30"],
-        vec!["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"],
+        vec![
+            "pension",
+            "--retirement-needs",
+            "4000",
+            "--salary",
+            "100000",
+            "--age",
+            "40",
+            "--work-pct",
+            "0.8",
+        ],
     ];
 
     for args in cases {
@@ -271,6 +297,8 @@ fn unknown_flag_is_rejected() {
 fn pension_fund_profile_is_used_and_flagged_for_verification() {
     let output = run(&[
         "pension",
+        "--retirement-needs",
+        "4000",
         "--salary",
         "100000",
         "--age",
@@ -292,8 +320,17 @@ fn pension_fund_profile_is_used_and_flagged_for_verification() {
 /// An unknown fund id must fail with the valid options listed.
 #[test]
 fn unknown_pension_fund_is_rejected() {
-    let output =
-        run(&["pension", "--salary", "100000", "--age", "40", "--pension-fund", "not-a-fund"]);
+    let output = run(&[
+        "pension",
+        "--retirement-needs",
+        "4000",
+        "--salary",
+        "100000",
+        "--age",
+        "40",
+        "--pension-fund",
+        "not-a-fund",
+    ]);
 
     assert_eq!(output.status.code(), Some(2), "should exit 2");
     let err = stderr(&output);
@@ -307,6 +344,8 @@ fn unknown_pension_fund_is_rejected() {
 fn explicit_conversion_rate_overrides_fund_profile() {
     let output = run(&[
         "pension",
+        "--retirement-needs",
+        "4000",
         "--salary",
         "100000",
         "--age",
@@ -332,7 +371,17 @@ fn explicit_conversion_rate_overrides_fund_profile() {
 /// alongside the percentiles.
 #[test]
 fn stochastic_rate_uncertainty_is_reported() {
-    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
+    let output = run(&[
+        "pension",
+        "--retirement-needs",
+        "4000",
+        "--salary",
+        "100000",
+        "--age",
+        "40",
+        "--work-pct",
+        "0.8",
+    ]);
 
     assert!(output.status.success(), "command failed: {}", stderr(&output));
     let out = stdout(&output);
@@ -345,10 +394,81 @@ fn stochastic_rate_uncertainty_is_reported() {
 /// mistake it for total retirement income.
 #[test]
 fn bvg_only_pension_table_is_labelled() {
-    let output = run(&["pension", "--salary", "100000", "--age", "40", "--work-pct", "0.8"]);
+    let output = run(&[
+        "pension",
+        "--retirement-needs",
+        "4000",
+        "--salary",
+        "100000",
+        "--age",
+        "40",
+        "--work-pct",
+        "0.8",
+    ]);
     let out = stdout(&output);
     assert!(
         out.contains("BVG (occupational) annuity only"),
         "the BVG-only table must say so: {out}"
     );
+}
+
+// ─── The retirement need is an input, not an assumption ─────────────────────
+
+/// `pension` must refuse to run without a stated retirement need.
+///
+/// It used to apply 75% of net income — the conventional rule of thumb and a measurement of
+/// nothing — and that figure decided the adequacy verdict the command printed. A tool whose
+/// whole claim is that it does not invent numbers cannot put an invented one underneath its
+/// headline answer, so the flag is required and its absence is an error rather than a default.
+#[test]
+fn pension_refuses_to_invent_a_retirement_need() {
+    let output = run(&["pension", "--salary", "100000", "--age", "40"]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "omitting --retirement-needs must fail, got {:?}",
+        output.status.code()
+    );
+    let err = stderr(&output);
+    assert!(err.contains("retirement-needs"), "the error must name the missing flag, got: {err}");
+    assert!(!err.contains("panicked"), "must not panic, got: {err}");
+}
+
+/// The supplied figure must be the one used, and the output must say so.
+#[test]
+fn pension_uses_the_supplied_need_and_names_it() {
+    let output =
+        run(&["pension", "--salary", "100000", "--age", "40", "--retirement-needs", "4200"]);
+
+    assert!(output.status.success(), "command failed: {}", stderr(&output));
+    let out = stdout(&output);
+    assert!(
+        out.contains("CHF 4200/month"),
+        "the supplied figure should be echoed back, got: {out}"
+    );
+    assert!(
+        out.contains("your figure, not a rule of thumb"),
+        "the output must not describe the figure as a rule of thumb"
+    );
+}
+
+/// A non-positive need is rejected rather than simulated.
+#[test]
+fn pension_rejects_a_non_positive_need() {
+    for value in ["0", "-100"] {
+        let flag = format!("--retirement-needs={value}");
+        let output = run(&["pension", "--salary", "100000", "--age", "40", &flag]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "--retirement-needs {value} should exit 2, got {:?}",
+            output.status.code()
+        );
+        assert!(
+            stderr(&output).contains("greater than zero"),
+            "expected a clear message for {value}, got: {}",
+            stderr(&output)
+        );
+    }
 }

@@ -32,6 +32,32 @@ that actually determines whether reducing your work percentage is a good idea:
 utility, and Monte Carlo pension projections — and searches for the work percentage
 that maximizes your overall quality of life, not just your paycheck.
 
+**A second question, and a model built to answer it.** The same apparatus is applied to a question
+about AI-assisted development: for a fixed body of code, does the authoring time that machine
+generation saves survive the comprehension and maintenance cost of code the engineer did not write?
+`comprehension_cost` estimates the net effect on cumulative engineering hours over a 36-month
+horizon, decomposed into authoring, review, comprehension and maintenance. The grid, the decision
+rule and the falsification condition were pre-registered before the model was run, and every
+comprehension-side parameter is marked `Declared` rather than measured.
+
+In the central parameterisation the net effect is negative — cumulative benefit turns negative in
+month 3 and reaches −247 hours by month 36 — but the decomposition is more informative than the
+sign. The authoring saving contributes **+13 h**. The mechanism the hypothesis proposes, a faster
+decay of the mental model for code the engineer did not author, contributes **−39 h** and ranks
+seventh of sixteen in a one-at-a-time sensitivity analysis, at 7% of the total variation. The
+largest single channel is review leakage (**−127 h**): defects that a low-comprehension review
+fails to catch generate their own maintenance stream. The ranking is led by the diagnosis-cost
+terms (18% and 13%), the initial comprehension gap (11% for human-authored code, 8% for AI-authored)
+and the leakage hazard (11%).
+
+The inference available here is narrower than the effect size suggests. Because the load-bearing
+parameters are unmeasured, the result identifies which assumptions the conclusion depends on — and
+is a negative result about the model's power to settle the question — rather than evidence that
+AI-authored code is net-negative in practice. What would test it is a task-level measurement of
+diagnosis time on AI-authored versus human-authored modules; refining the decay rate would leave
+the conclusion where it is. Pre-registration, decision rule, sensitivity tables and figures are in
+[`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
+
 ### Design philosophy
 
 A decision this consequential deserves a model you can argue with. So every formula is written
@@ -178,6 +204,50 @@ accident — the boundary is a `use` statement that does not exist. The same sep
 means a build failure in the simulator cannot block the optimizer. See
 [`multipolar_sim/README.md`](multipolar_sim/README.md) for the model and
 its module map.
+
+---
+
+## Third question: is AI authoring time real time?
+
+`comprehension_cost` is a small, deliberately quarantined crate that asks whether the hours AI
+saves writing code are given back understanding it. It is in its own crate for the same reason
+`multipolar_sim` is: its parameters are hypotheses, and a `use` statement that does not exist is
+the strongest guarantee that they cannot reach a reported tax or pension figure.
+
+The design is a state-transition model. Modules carry an authoring mode, a comprehension level
+that decays while untouched, a Poisson maintenance hazard, a resolution cost that rises as
+comprehension falls, and a review gate whose catch probability is proportional to comprehension —
+so what a low-comprehension review misses becomes a further stream of events.
+
+It was **pre-registered**: the parameter ranges, the decision rule and the falsification condition
+were committed before the model existed, so the verdict could not be chosen after seeing the
+numbers. Two things came out of running it.
+
+- **The verdict is SUPPORTED, and that is the least interesting part.** The central cell crosses
+  over in month 3 and ends 247 hours worse off. But the decomposition says the authoring saving is
+  worth **+13 hours over three years**, against −61 for review, −39 for slower retention, −34 for
+  the defect multiplier and −127 for review leakage. The scale asymmetry is the argument: authoring
+  savings are tens of hours, comprehension and maintenance costs are hundreds.
+- **The answer does not depend on the parameter the hypothesis names.** The retention asymmetry
+  ranks seventh of sixteen in a one-at-a-time sweep, at 7% of the variation. The top two are how
+  much longer *diagnosis* takes when comprehension is low. That inverts the research priority and
+  is a negative result about the model's power as much as about AI: the anchors in the literature
+  do not constrain the parameters the conclusion actually rests on.
+
+Two safeguards are worth naming. Every comprehension-side parameter is marked `Declared` — invented,
+plausible in sign, unmeasured — and the CLI prints the provenance table on its own output. And there
+is a control: with the comprehension asymmetry removed, the same model reports **+13 h, +29 h and
+exactly 0 h** at 0%, 15% and 33% authoring savings. A model that could not report a win would make
+the loss meaningless; that it can is the only reason the result means anything.
+
+```bash
+cargo run -p comprehension_cost -- --sweep        # the grid, verdict, sensitivity, break-even
+cargo run -p comprehension_cost -- --verbose      # month by month, central cell
+cargo test -p comprehension_cost                  # eleven tests, including both controls
+```
+
+Figures are in [`figures/`](figures) and are produced from the model's own CSV export by
+`tools/plot_comprehension_cost.py`, which refuses to draw if the export is inconsistent.
 
 ---
 
@@ -366,8 +436,15 @@ command.
   --work-pct 1.0 \
   --retirement-age 70 \
   --life-expectancy 90 \
-  --pillar3a 7056
+  --pillar3a 7056 \
+  --retirement-needs 4200
 ```
+
+`--retirement-needs` is **required**, and the omission is an error rather than a default. This
+command used to apply 75% of net income — the conventional rule of thumb, and a measurement of
+nobody's life — which meant its headline "are you covered?" answer was produced by an invented
+number. `optimize` needs no such flag: it uses your own modelled budget, and reports the answer
+across a 60/75/90 range either way.
 
 ### Lifetime strategy across your whole career
 
@@ -389,7 +466,7 @@ command.
 |---|---|
 | `optimize` | Find the utility-maximizing work percentage for your situation |
 | `compare` | Show gross/net/tax/utility side by side for chosen percentages |
-| `pension` | Standalone Monte Carlo + regime-switching pension deep dive |
+| `pension` | Standalone Monte Carlo + regime-switching pension deep dive. Requires `--retirement-needs` |
 | `lifetime` | Optimal work percentage trajectory across your career |
 | `interactive` | Guided question-by-question setup |
 
@@ -466,6 +543,9 @@ life-optimizer/
 ├── knowledge_work/               Just-in-time logic in AI-assisted knowledge work, as a
 │                                 library plus CLI: the operating envelope, the rework loop,
 │                                 and the direction framework
+├── comprehension_cost/           Whether AI authoring time survives comprehension, as a
+│                                 library plus CLI: pre-registered, Declared parameters,
+│                                 a control that lets it report the opposite conclusion
 ├── multipolar_sim/               Companion Monte Carlo world simulator (see above)
 ├── src/
 │   ├── main.rs                   CLI, command dispatch, orchestration
@@ -490,6 +570,10 @@ life-optimizer/
 ├── SWISS_TAX_DATA.md             Tax data provenance, coverage and known defects
 ├── VALIDATION.md                 What has been checked against an outside source, what has
 │                                 not, and the BVG defect the check found
+├── AI_AUTHORING_AND_COMPREHENSION.md
+│                                 The pre-registered AI-authoring model: what the anchors
+│                                 actually say, the decision rule, and the result that
+│                                 argues against its own hypothesis
 ├── CRITIQUE_RESPONSE.md          An external review of this repository, audited claim by claim
 ├── CHANGELOG.md                  What changed, when, and why
 ├── TEAM_DEPENDENCIES.md          Why a reduced schedule is not a private transaction

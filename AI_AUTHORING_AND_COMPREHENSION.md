@@ -415,3 +415,79 @@ cargo test -p comprehension_cost                # ten tests, including both cont
 cargo run -p comprehension_cost -- --sweep --export out/comprehension
 python tools/plot_comprehension_cost.py out/comprehension
 ```
+
+---
+
+## Part 3 — Answering the third review
+
+A review of this work asked four questions and drew one inference. The inference is wrong, and it
+is worth correcting in writing because a reader would naturally make it too.
+
+### 3.1 Is there a pre-registration?
+
+Yes: §1.5 of this document, committed as `e3d2469` **before the model existed** (`596892a`). It
+fixes the grid axes, the central cell, the moderate region, the extreme corner, the three possible
+verdicts and the falsification condition. The rule is not only prose: `sweep::verdict` and
+`sweep::is_falsified` implement it, and `the_verdict_rule_is_the_preregistered_one` fails if the
+implementation drifts from the document.
+
+One post-hoc change is recorded in §2.1 — a structural bug in how AI authorship was assigned to
+modules, found by an arithmetic mismatch, which made the model *less* favourable to the hypothesis
+and did not change the verdict.
+
+### 3.2 Does the model produce a crossover month?
+
+Yes. The central cell (`σ = 0.15`, `h_ai = 9` months, `ε = 0.1`) crosses in **month 3** and ends
+the horizon at **−247 hours**. Across the whole 3 × 5 × 4 grid the crossover month runs from 1 to 9
+and the horizon benefit from −144 h to −411 h; §2.2 has the table.
+
+Two caveats the review could not have known and this document records against itself: the crossover
+month **saturates** near the creation phase and stops carrying information about the maintenance
+dynamics, and the mean-field run crosses earlier than a stochastic one (median month 6 over 300
+paths, spread 3 to 10). **The horizon benefit is the informative statistic; the crossover month is
+not.** The pre-registration asked for the latter because nobody knew where the crossing would land.
+
+### 3.3 The "wrong" term — the review's inference is incorrect
+
+The review inferred that the conclusion most likely depends on the **comprehension-decay asymmetry**
+`λ(AI)` versus `λ(human)`, since that is the least anchored parameter, and concluded that a result
+depending on it is a negative result about the model's power rather than about AI.
+
+**The final clause is right. The mechanism is wrong.** Measured by one-at-a-time swing on the
+central cell (§2.4):
+
+| Parameter | Share of the swing | Anchored? |
+|---|---:|---|
+| `diag_hours_per_unit` — diagnosis cost at full comprehension | 18% | No |
+| `diag_slope` — how much diagnosis cost rises as comprehension falls | 13% | No |
+| `c_human` — initial comprehension after authoring | 11% | No |
+| `leak_hazard` — defects a failed review lets through | 11% | No |
+| `c_ai` — initial comprehension of AI-authored code | 8% | No |
+| **`half_life_ai` — the decay asymmetry the review named** | **7%** | **No** |
+
+The decay asymmetry ranks **seventh of sixteen**. It is not what the answer turns on, and it is not
+even second. The parameters that do carry the answer are the **diagnosis-cost slope** and the
+**width of the initial comprehension gap** — and those are *equally unanchored*: no published study
+measures how much longer it takes to diagnose a defect in code you did not write.
+
+So the negative result is **stronger than the review supposed, not weaker**. The review's instinct
+was that the model's conclusion rests on invented numbers; that is correct. Its guess about *which*
+invented numbers was wrong, and the correction matters for what to do next: measuring decay rates
+would leave the conclusion exactly where it is, whereas measuring **diagnosis time on AI-authored
+versus human-authored modules** would test it.
+
+### 3.4 The README
+
+Updated. The finding is now in **"Why this exists"**, not only in a commit message, and
+`comprehension_cost` has a section of its own beside the simulator's, plus an entry in the project
+structure and the document list. The section states the scale asymmetry, the seventh-of-sixteen
+ranking, the control, and the fact that every comprehension parameter is Declared.
+
+### 3.5 The review's standing second item
+
+It also asked, across two reviews, that the retirement need stop being a silent 75% default. That
+was a real defect and it was narrower than it looked: `optimize` already used the household's own
+modelled budget, but the standalone `pension` command put `after_tax / 12 × 0.75` underneath every
+adequacy verdict it printed. `--retirement-needs` is now a **required** argument there, its absence
+exits 2 naming the flag, a non-positive value is rejected, and the output reports the figure as
+*your figure, not a rule of thumb*. Three CLI tests pin it.

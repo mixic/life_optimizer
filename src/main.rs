@@ -145,6 +145,17 @@ enum Commands {
         #[arg(long, default_value = "0")]
         pillar3a: f64,
 
+        /// What you will actually spend each month in retirement, in today's CHF.
+        ///
+        /// Required, deliberately. This figure decides the adequacy verdict and there is no
+        /// defensible default for it. The command used to apply 75% of net income — the
+        /// conventional rule of thumb, and no measurement of anybody's life — which meant the
+        /// headline "are you covered?" answer was produced by an invented number. Refusing to
+        /// guess is the point of the tool; `retirement_needs::provenance_table()` records what
+        /// is and is not known about the alternatives.
+        #[arg(long)]
+        retirement_needs: f64,
+
         /// Custom tax rate (as decimal, e.g. 0.1382 for 13.82%)
         #[arg(long)]
         custom_tax_rate: Option<f64>,
@@ -1344,6 +1355,7 @@ fn main() {
             custom_tax_rate,
             conversion_rate,
             pension_fund,
+            retirement_needs,
         } => {
             run_pension_simulation(
                 salary,
@@ -1355,6 +1367,7 @@ fn main() {
                 pillar3a,
                 custom_tax_rate,
                 resolve_conversion(conversion_rate, pension_fund),
+                retirement_needs,
             );
         }
     }
@@ -2435,10 +2448,15 @@ fn run_pension_simulation(
     pillar3a: f64,
     custom_tax_rate: Option<f64>,
     conversion: monte_carlo::ConversionRateScenario,
+    retirement_needs: f64,
 ) {
     println!("\n{}", "=== PENSION SIMULATION ===".bold().cyan());
 
     validate_ages(age, retirement_age, life_expectancy);
+    if !(retirement_needs > 0.0) {
+        eprintln!("error: --retirement-needs must be greater than zero, got {retirement_needs}");
+        std::process::exit(2);
+    }
 
     let tax_schedule = if let Some(rate) = custom_tax_rate {
         TaxSchedule::custom_rate(rate)
@@ -2448,10 +2466,9 @@ fn run_pension_simulation(
 
     let working_income = salary * work_pct;
     let after_tax = tax_schedule.after_tax_income(working_income);
-    // The conventional rule of thumb, named rather than repeated. The main optimization path
-    // uses a modelled budget instead; this standalone pension command has no household budget
-    // to draw on, so it states the assumption and labels it.
-    let monthly_needs = after_tax / 12.0 * retirement_needs::DEFAULT_PERCENT;
+    // Supplied by the caller. This used to be `after_tax / 12.0 * DEFAULT_PERCENT`, which put a
+    // 75% rule of thumb underneath every adequacy verdict the command printed.
+    let monthly_needs = retirement_needs;
 
     println!(
         "\n  Work:         {:.0}%  |  Gross: CHF {:.0}/year  |  Net: CHF {:.0}/month",
@@ -2467,9 +2484,9 @@ fn run_pension_simulation(
     );
     println!("  Pillar 3a:    CHF {:.0}/year", pillar3a);
     println!(
-        "  Target needs: CHF {:.0}/month ({:.0}% of current net -- a rule of thumb, not a budget)",
+        "  Target needs: CHF {:.0}/month ({:.0}% of current net -- your figure, not a rule of thumb)",
         monthly_needs,
-        retirement_needs::DEFAULT_PERCENT * 100.0
+        monthly_needs / (after_tax / 12.0) * 100.0
     );
 
     let mut sim = monte_carlo::PensionSimulator::new(
