@@ -348,7 +348,8 @@ here substitutes for it.
 ### 2.9 Reproducing this
 
 ```bash
-cargo run -p comprehension_cost                  # the grid, the verdict, sensitivity, break-even
+cargo run -p comprehension_cost -- --sweep      # the grid, the verdict, sensitivity, break-even
+                                                # (--sweep is the default; a typo exits 2)
 cargo run -p comprehension_cost -- --verbose    # the month-by-month ledger, central cell
 cargo run -p comprehension_cost -- --paths 300  # the Monte Carlo comparison
 cargo test -p comprehension_cost                # nine tests, including both controls

@@ -33,12 +33,43 @@ const EPSILONS: [f64; 4] = [0.00, 0.10, 0.20, 0.50];
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let verbose = args.iter().any(|a| a == "--verbose");
-    let paths = args
-        .iter()
-        .position(|a| a == "--paths")
-        .and_then(|i| args.get(i + 1))
-        .and_then(|v| v.parse::<usize>().ok());
+    let mut verbose = false;
+    let mut paths: Option<usize> = None;
+
+    // Flags are validated rather than sniffed. An ignored typo would silently run the
+    // default report and look like it had done what was asked.
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            // The grid is the default output; `--sweep` is accepted explicitly so the
+            // documented invocation matches the task and a reader can be explicit about
+            // which part of the report they asked for.
+            "--sweep" => index += 1,
+            "--verbose" => {
+                verbose = true;
+                index += 1;
+            }
+            "--paths" => {
+                let value = args.get(index + 1).unwrap_or_else(|| {
+                    eprintln!("--paths needs a path count, for example: --paths 300");
+                    std::process::exit(2);
+                });
+                match value.parse::<usize>() {
+                    Ok(count) if count > 0 => paths = Some(count),
+                    _ => {
+                        eprintln!("--paths expects a positive integer, got {value:?}");
+                        std::process::exit(2);
+                    }
+                }
+                index += 2;
+            }
+            other => {
+                eprintln!("unknown argument {other:?}");
+                eprintln!("usage: comprehension_cost [--sweep] [--verbose] [--paths N]");
+                std::process::exit(2);
+            }
+        }
+    }
 
     let base = Params::default();
 
@@ -165,7 +196,7 @@ fn main() {
 
     println!("  {:<44} {:>11} {:>10}", "configuration", "benefit m36", "delta");
     let mut previous = f64::NAN;
-    let mut apply = |label: &str, params: &Params, previous: &mut f64| {
+    let apply = |label: &str, params: &Params, previous: &mut f64| {
         let human = run(params, Scenario::Human);
         let ai = run(params, Scenario::Ai);
         let end = benefit_curve(&human, &ai).last().copied().unwrap_or(0.0);

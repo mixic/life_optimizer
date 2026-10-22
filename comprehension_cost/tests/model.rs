@@ -261,3 +261,47 @@ fn the_verdict_rule_is_the_preregistered_one() {
     );
     assert!(is_falsified(&wins));
 }
+
+/// The command line the document promises actually works, and a typo is not ignored.
+///
+/// `--sweep` is the default output, but the report documents it as a mode, so it has to
+/// be accepted. An unrejected typo would silently run the default report instead, which
+/// is worse than failing.
+#[test]
+fn the_cli_accepts_the_documented_flags_and_rejects_others() {
+    let exe = env!("CARGO_BIN_EXE_comprehension_cost");
+
+    let run = |args: &[&str]| {
+        std::process::Command::new(exe)
+            .args(args)
+            .output()
+            .expect("failed to execute the comprehension_cost binary")
+    };
+
+    let explicit = run(&["--sweep"]);
+    assert!(explicit.status.success(), "--sweep should succeed");
+    let stdout = String::from_utf8_lossy(&explicit.stdout);
+    assert!(stdout.contains("Cumulative-benefit phase diagram"), "--sweep must print the grid");
+    assert!(stdout.contains("Break-even"), "--sweep must print the break-even section");
+
+    let default = run(&[]);
+    assert!(default.status.success(), "no arguments should succeed");
+    assert_eq!(
+        String::from_utf8_lossy(&default.stdout),
+        stdout,
+        "--sweep is the default, so the two invocations must produce the same report"
+    );
+
+    let typo = run(&["--sweeep"]);
+    assert_eq!(typo.status.code(), Some(2), "an unknown flag must exit 2");
+    assert!(
+        String::from_utf8_lossy(&typo.stderr).contains("unknown argument"),
+        "an unknown flag must say so"
+    );
+
+    let missing = run(&["--paths"]);
+    assert_eq!(missing.status.code(), Some(2), "--paths without a value must exit 2");
+
+    let bad = run(&["--paths", "zero"]);
+    assert_eq!(bad.status.code(), Some(2), "a non-numeric path count must exit 2");
+}
