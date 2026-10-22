@@ -25,6 +25,7 @@ Nothing in this directory is needed to run the tool. If you are here to compute 
 
 | Document | The argument |
 |---|---|
+| [`THE_BY_PRODUCT_THEORY.md`](THE_BY_PRODUCT_THEORY.md) | The four AI models in this repository as one mechanism: AI substitutes for production, and production was also producing the judgement, slack, skill and comprehension that the system needs to govern itself. Flow versus stock, why the loss is invisible, and three regimes with the observables that distinguish them. |
 | [`AI_AS_CATALYST.md`](AI_AS_CATALYST.md) | What is actually measured about AI-assisted software work, the 75-point spread in the published evidence, and what it implies for validating delivered quality. |
 | [`THE_PSYCHOLOGICAL_LAYER.md`](THE_PSYCHOLOGICAL_LAYER.md) | Assistance is solved for rather than chosen. The machine sets the tempo, the person tracks it, and the capacity to judge is what gets spent. A deskilling threshold, a defect floor review cannot remove, and the bar as the argument's empirical joint. |
 | [`OPTIMIZING_FOR_WHAT.md`](OPTIMIZING_FOR_WHAT.md) | Just-in-time logic transplanted into knowledge work: the load identity, two thresholds, the year a workflow leaves its envelope because the person reviewing it changed, and a direction framework that reports its indeterminacy instead of ranking. |

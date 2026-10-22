@@ -276,6 +276,12 @@ The pre-registration, the decision rule fixed before the run, the audit of each 
 and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
+This is one of four models in the repository that find AI harming the people using it, from four
+unrelated angles. [`documents/THE_BY_PRODUCT_THEORY.md`](documents/THE_BY_PRODUCT_THEORY.md) argues
+they are one mechanism — AI substitutes for production, and production was also producing the
+judgement, slack, skill and comprehension a system needs to govern itself — and sets out what would
+falsify that reading.
+
 ---
 
 ## Example output

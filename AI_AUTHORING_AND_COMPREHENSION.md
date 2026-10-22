@@ -350,6 +350,16 @@ is reported because the model has to produce some output, not because the output
 **It does not establish that AI code is net-negative in practice.** The verdict is conditional on
 those Declared magnitudes.
 
+**And one of those magnitudes is conditional in a way this document should have said earlier.**
+`c_ai` — the comprehension an AI-authored module starts with — is modelled as a property of machine
+authorship. The memory literature on the generation effect says it is a property of *review mode*:
+the advantage of generating material over reading it disappears when readers are instructed to
+perform the processing that generating would have forced. A reviewer who reconstructs the code can
+start well above the declared 0.25; a reviewer who reads it passively starts at or below. The
+verdict therefore holds **for passive review**, which is the default and probably the common case,
+and not for AI-authored code as such. `documents/THE_BY_PRODUCT_THEORY.md` §3.2 and §6 develop the
+point; `params.rs` records it on the parameter.
+
 **What it does establish, and what is worth acting on:**
 
 1. **The scale asymmetry is the real argument.** Authoring savings are tens of hours over three

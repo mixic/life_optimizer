@@ -76,6 +76,17 @@ pub struct Params {
     /// Comprehension on creation when a human wrote the module.
     pub c_human: f64,
     /// Comprehension on creation when a machine wrote it.
+    ///
+    /// **This is a property of the review mode, not of machine authorship.** The memory
+    /// literature on the generation effect finds that generating material improves later recall
+    /// over reading it, *but that the advantage disappears when readers are instructed to perform
+    /// the same processing that generating would force* (deWinstanley & Bjork, 2004). So a
+    /// reviewer who reconstructs the code can start far above this value, and one who reads it
+    /// passively starts at or below it.
+    ///
+    /// The declared 0.25 therefore describes **passive review**, which is the default and the
+    /// case the report's verdict is conditional on. It is not a claim about AI-authored code as
+    /// such. See `documents/THE_BY_PRODUCT_THEORY.md` §3.2 and §6.
     pub c_ai: f64,
     /// Fraction of the remaining gap closed by one review or one fix.
     pub review_gain: f64,
