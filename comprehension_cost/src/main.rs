@@ -21,20 +21,19 @@
 //! phase diagram from here as a forecast has been misled by the presentation rather
 //! than by the arithmetic.
 
+use comprehension_cost::analysis::{breakeven as breakeven_curve, breakeven_threshold, channels};
 use comprehension_cost::model::{benefit_curve, crossover_month, run, run_stochastic, Scenario};
 use comprehension_cost::params::{Params, Provenance};
 use comprehension_cost::sweep::{
     is_falsified, sensitivity, sweep, verdict, CENTRAL_EPSILON, CENTRAL_HALF_LIFE, CENTRAL_SAVINGS,
+    EPSILON_LEVELS, HALF_LIFE_LEVELS, SAVINGS_LEVELS,
 };
-
-const SAVINGS: [f64; 3] = [0.00, 0.15, 0.33];
-const HALF_LIVES: [f64; 5] = [6.0, 9.0, 12.0, 18.0, 24.0];
-const EPSILONS: [f64; 4] = [0.00, 0.10, 0.20, 0.50];
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut verbose = false;
     let mut paths: Option<usize> = None;
+    let mut export_dir: Option<std::path::PathBuf> = None;
 
     // Flags are validated rather than sniffed. An ignored typo would silently run the
     // default report and look like it had done what was asked.
@@ -63,6 +62,16 @@ fn main() {
                 }
                 index += 2;
             }
+            "--export" => {
+                let value = args.get(index + 1).unwrap_or_else(|| {
+                    eprintln!(
+                        "--export needs a directory, for example: --export out/comprehension"
+                    );
+                    std::process::exit(2);
+                });
+                export_dir = Some(std::path::PathBuf::from(value));
+                index += 2;
+            }
             other => {
                 eprintln!("unknown argument {other:?}");
                 eprintln!("usage: comprehension_cost [--sweep] [--verbose] [--paths N]");
@@ -86,15 +95,15 @@ fn main() {
     println!("The baseline is all-human and identical in every other respect, so the");
     println!("difference between the two runs is attributable to authoring mode alone.\n");
 
-    let cells = sweep(&base, &SAVINGS, &HALF_LIVES, &EPSILONS);
-    let decision = verdict(&cells, &SAVINGS);
+    let cells = sweep(&base, &SAVINGS_LEVELS, &HALF_LIFE_LEVELS, &EPSILON_LEVELS);
+    let decision = verdict(&cells, &SAVINGS_LEVELS);
 
     println!("Cumulative-benefit phase diagram");
     println!("-------------------------------");
     println!("Entry = the month at which cumulative AI benefit turns negative (AI has");
     println!("cost more hours than it saved). \"—\" = no crossover within the horizon.\n");
 
-    for &s in &SAVINGS {
+    for &s in &SAVINGS_LEVELS {
         let label = if s == 0.0 {
             "AI saves nothing — METR's measured result for experts"
         } else if (s - 0.33).abs() < 1e-9 {
@@ -104,13 +113,13 @@ fn main() {
         };
         println!("sigma = {s:.2}  ({label})");
         print!("  {:>5} \\ eps", "h_ai");
-        for &e in &EPSILONS {
+        for &e in &EPSILON_LEVELS {
             print!("  {:>5.2}", e);
         }
         println!();
-        for &h in &HALF_LIVES {
+        for &h in &HALF_LIFE_LEVELS {
             print!("  {h:>9.0}");
-            for &e in &EPSILONS {
+            for &e in &EPSILON_LEVELS {
                 let cell = cells
                     .iter()
                     .find(|c| {
@@ -132,13 +141,13 @@ fn main() {
             base.horizon_months
         );
         print!("  {:>5} \\ eps", "h_ai");
-        for &e in &EPSILONS {
+        for &e in &EPSILON_LEVELS {
             print!("  {:>5.2}", e);
         }
         println!();
-        for &h in &HALF_LIVES {
+        for &h in &HALF_LIFE_LEVELS {
             print!("  {h:>9.0}");
-            for &e in &EPSILONS {
+            for &e in &EPSILON_LEVELS {
                 let cell = cells
                     .iter()
                     .find(|c| {
@@ -186,39 +195,14 @@ fn main() {
     println!("--------------------------------------");
     println!("The same central cell, switching on one mechanism at a time. Each row adds");
     println!("the named channel to the row above, so the delta is that channel's cost.\n");
-    let mut staged = base.clone();
-    staged.savings = CENTRAL_SAVINGS;
-    // Start neutral: AI code as well understood and as well retained as human code.
-    staged.c_ai = staged.c_human;
-    staged.half_life_ai = staged.half_life_human;
-    staged.ai_defect_multiplier = 0.0;
-    staged.leak_hazard = 0.0;
-
     println!("  {:<44} {:>11} {:>10}", "configuration", "benefit m36", "delta");
-    let mut previous = f64::NAN;
-    let apply = |label: &str, params: &Params, previous: &mut f64| {
-        let human = run(params, Scenario::Human);
-        let ai = run(params, Scenario::Ai);
-        let end = benefit_curve(&human, &ai).last().copied().unwrap_or(0.0);
-        let delta = if previous.is_nan() { f64::NAN } else { end - *previous };
-        println!(
-            "  {:<44} {:+11.0} {:>10}",
-            label,
-            end,
-            if delta.is_nan() { "—".to_string() } else { format!("{delta:+.0}") }
-        );
-        *previous = end;
-    };
-
-    apply("authoring saving only", &staged, &mut previous);
-    staged.c_ai = base.c_ai;
-    apply("+ review at declared comprehension", &staged, &mut previous);
-    staged.half_life_ai = base.half_life_ai;
-    apply("+ slower retention", &staged, &mut previous);
-    staged.ai_defect_multiplier = base.ai_defect_multiplier;
-    apply("+ AI defect multiplier", &staged, &mut previous);
-    staged.leak_hazard = base.leak_hazard;
-    apply("+ review leakage", &staged, &mut previous);
+    for row in channels(&base) {
+        let delta = match row.delta {
+            Some(value) => format!("{value:+.0}"),
+            None => "—".to_string(),
+        };
+        println!("  {:<44} {:+11.0} {:>10}", row.label, row.benefit, delta);
+    }
     println!("\n  A negative delta is that channel costing hours.");
 
     // ---- sensitivity ---------------------------------------------------------
@@ -253,35 +237,21 @@ fn main() {
     println!("module starts with. The question becomes how small the gap must be before");
     println!("the economics stop favouring the human author.\n");
     println!("  {:>8} {:>12} {:>14} {:>11}", "c_ai", "benefit m36", "crossover", "mean c m36");
-    let mut breakeven: Option<f64> = None;
-    for step in 0..=15 {
-        let c_ai = 0.10 + step as f64 * 0.05;
-        let mut params = base.clone();
-        params.savings = CENTRAL_SAVINGS;
-        params.half_life_ai = CENTRAL_HALF_LIFE;
-        params.ai_defect_multiplier = CENTRAL_EPSILON;
-        params.c_ai = c_ai;
-
-        let human = run(&params, Scenario::Human);
-        let ai = run(&params, Scenario::Ai);
-        let benefit = benefit_curve(&human, &ai);
-        let end = benefit.last().copied().unwrap_or(0.0);
-        let cross = crossover_month(&human, &ai);
-        if end >= 0.0 && breakeven.is_none() {
-            breakeven = Some(c_ai);
-        }
+    let curve = breakeven_curve(&base);
+    let first_positive = breakeven_threshold(&curve);
+    for row in &curve {
         println!(
             "  {:>8.2} {:+12.0} {:>14} {:>11.3}",
-            c_ai,
-            end,
-            match cross {
+            row.c_ai,
+            row.benefit,
+            match row.crossover {
                 Some(month) => format!("month {month}"),
                 None => "none".to_string(),
             },
-            ai.months.last().map(|m| m.comprehension_mean).unwrap_or(0.0)
+            row.mean_comprehension
         );
     }
-    match breakeven {
+    match first_positive {
         Some(c) => println!(
             "\n  Break-even at c_ai = {c:.2}: AI has to leave the engineer understanding about\n  \
              {:.0}% of what authoring the code would have left, for the run to pay for itself.",
@@ -302,7 +272,7 @@ fn main() {
     println!("If AI-authored code started at the same comprehension as human code and");
     println!("carried no defect penalty, the only remaining difference would be the");
     println!("authoring saving — and the benefit should stay positive throughout.\n");
-    for &s in &SAVINGS {
+    for &s in &SAVINGS_LEVELS {
         let mut symmetric = base.clone();
         symmetric.savings = s;
         symmetric.c_ai = symmetric.c_human;
@@ -419,4 +389,20 @@ fn main() {
     println!("  conclusion is most sensitive to — see AI_AUTHORING_AND_COMPREHENSION.md.");
     println!("\n  This is a hypothesis-generating exercise, not a measurement of any");
     println!("  developer. A phase diagram says where to look.");
+
+    if let Some(dir) = &export_dir {
+        match comprehension_cost::export::write_all(dir, &base, paths.unwrap_or(300)) {
+            Ok(files) => {
+                println!("\nExported {} file(s) to {}", files.len(), dir.display());
+                println!(
+                    "  Draw the figures with: python tools/plot_comprehension_cost.py {}",
+                    dir.display()
+                );
+            }
+            Err(error) => {
+                eprintln!("could not write the export to {}: {error}", dir.display());
+                std::process::exit(1);
+            }
+        }
+    }
 }

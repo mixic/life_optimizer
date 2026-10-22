@@ -28,6 +28,25 @@ pub const CENTRAL_SAVINGS: f64 = 0.15;
 pub const CENTRAL_HALF_LIFE: f64 = 9.0;
 pub const CENTRAL_EPSILON: f64 = 0.1;
 
+/// The pre-registered grid axes, shared by the report and the export so a figure
+/// cannot be drawn on a different grid from the one the verdict was computed on.
+pub const SAVINGS_LEVELS: [f64; 3] = [0.00, 0.15, 0.33];
+pub const HALF_LIFE_LEVELS: [f64; 5] = [6.0, 9.0, 12.0, 18.0, 24.0];
+pub const EPSILON_LEVELS: [f64; 4] = [0.00, 0.10, 0.20, 0.50];
+
+/// The central cell: `base` with the pre-registered sweep values applied.
+///
+/// One definition. The report, the analyses and the CSV export all go through it, which
+/// is the only way the printed table and the PNG can be guaranteed to describe the same
+/// run.
+pub fn central_cell(base: &Params) -> Params {
+    let mut params = base.clone();
+    params.savings = CENTRAL_SAVINGS;
+    params.half_life_ai = CENTRAL_HALF_LIFE;
+    params.ai_defect_multiplier = CENTRAL_EPSILON;
+    params
+}
+
 fn same(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-9
 }
@@ -202,13 +221,7 @@ fn benefit_at_horizon(p: &Params) -> f64 {
 /// does the conclusion depend on", and it is reported instead of a point estimate
 /// because the parameters are Declared and their values are not knowledge.
 pub fn sensitivity(base: &Params) -> Vec<SensitivityRow> {
-    let central = {
-        let mut p = base.clone();
-        p.savings = CENTRAL_SAVINGS;
-        p.half_life_ai = CENTRAL_HALF_LIFE;
-        p.ai_defect_multiplier = CENTRAL_EPSILON;
-        p
-    };
+    let central = central_cell(base);
 
     type Apply = fn(&mut Params, f64);
     let knobs: Vec<(&'static str, f64, Apply)> = vec![

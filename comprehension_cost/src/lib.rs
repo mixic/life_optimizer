@@ -45,6 +45,8 @@
 //! the provenance of every parameter, and the decision rule that was fixed before any
 //! of these numbers existed.
 
+pub mod analysis;
+pub mod export;
 pub mod model;
 pub mod params;
 pub mod sweep;

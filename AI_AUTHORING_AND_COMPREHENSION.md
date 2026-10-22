@@ -345,12 +345,73 @@ which assumptions the conclusion rests on.
 AI-authored versus human-authored modules, with comprehension measured rather than assumed. Nothing
 here substitutes for it.
 
-### 2.9 Reproducing this
+### 2.9 The figures
+
+Six figures, drawn by `tools/plot_comprehension_cost.py` from the CSV that
+`--export` writes — so they come from the same functions the tables above came from,
+not from a reimplementation. The script checks the export first and **refuses to draw**
+if it is inconsistent; the control figure additionally refuses to exist unless the
+control holds.
+
+Every figure carries the same footer on its face: *model output with Declared
+parameters, an illustration of the model's structure, not a measurement of any
+developer*. That is not decoration. A graph is more persuasive than a table, which
+makes it more dangerous when its inputs are invented.
+
+![Cumulative cost and cumulative benefit over 36 months](figures/comprehension-1-crossover.png)
+
+**1 — the central cell.** Cumulative hours for both scenarios, and the difference. The
+crossing is at month 3, and by month 36 the AI path has cost 247 hours more. Note that
+the left panel's two curves are indistinguishable for the first nine months: the AI
+saving and the review penalty very nearly cancel early, which is why the *benefit* panel
+rather than the cost panel is the one that shows when the sign turns.
+
+![Channel decomposition](figures/comprehension-2-channels.png)
+
+**2 — where the difference comes from.** The waterfall from §2.3. The authoring saving
+is the small bar on the right; review leakage is the long one. This is the figure that
+makes the argument, because it shows the two sides of the ledger at the same scale.
+
+![Phase diagram](figures/comprehension-3-phase.png)
+
+**3 — the phase diagram.** Top row: benefit at the horizon, dark for a larger loss. Bottom
+row: the crossover month, scaled to the observed range. The point is the flat bottom row
+— in the 0% and 15% panels every cell is identical, and in the 33% panel the only
+movement is a 9-to-7 step. **The parameters the hypothesis names do not move the answer.**
+
+![Sensitivity ranking](figures/comprehension-4-sensitivity.png)
+
+**4 — what the answer depends on.** The one-at-a-time swing, as a share. The two red bars
+are the hypothesis's own parameters; `half_life_ai` is seventh and `ai_defect_multiplier`
+eleventh. The top four are diagnosis cost and the width of the initial gap.
+
+![Break-even and spread](figures/comprehension-5-breakeven.png)
+
+**5 — break-even and spread.** Left: benefit against the comprehension an AI module starts
+with. It never crosses zero. There is a visible kink at `c_ai = 0.70`, and it is not an
+artefact: that is where `c_ai / c_threshold` reaches 1, the review gate saturates, and the
+leakage stream switches off. It is the clearest single illustration that the model's
+behaviour is driven by the review gate rather than by retention. Right: 300 seeded paths,
+all of them negative.
+
+![The control](figures/comprehension-6-control.png)
+
+**6 — the control, which is the one that matters.** With the comprehension asymmetry
+removed, the same model reports a benefit: +13 h at 15%, +29 h at 33%, exactly 0 at 0%. The
+right panel puts the declared case beside it, so the sign flip is attributable to the
+asymmetry and nothing else. A model that could not produce a positive result would make
+every other figure here worthless, and this is the evidence that it can.
+
+### 2.10 Reproducing this
 
 ```bash
 cargo run -p comprehension_cost -- --sweep      # the grid, the verdict, sensitivity, break-even
                                                 # (--sweep is the default; a typo exits 2)
 cargo run -p comprehension_cost -- --verbose    # the month-by-month ledger, central cell
 cargo run -p comprehension_cost -- --paths 300  # the Monte Carlo comparison
-cargo test -p comprehension_cost                # nine tests, including both controls
+cargo test -p comprehension_cost                # ten tests, including both controls
+
+# the figures: export the numbers, then draw them
+cargo run -p comprehension_cost -- --sweep --export out/comprehension
+python tools/plot_comprehension_cost.py out/comprehension
 ```

@@ -305,3 +305,66 @@ fn the_cli_accepts_the_documented_flags_and_rejects_others() {
     let bad = run(&["--paths", "zero"]);
     assert_eq!(bad.status.code(), Some(2), "a non-numeric path count must exit 2");
 }
+
+/// The export the figures are drawn from is complete, and the control it carries holds.
+///
+/// `tools/plot_comprehension_cost.py` refuses to draw when these files are missing or the
+/// control fails. This test is the other half of that arrangement: it pins the contract
+/// from the Rust side, so a change to the export breaks a test rather than silently
+/// producing a figure with a hole in it.
+#[test]
+fn the_export_is_complete_and_the_control_holds() {
+    let exe = env!("CARGO_BIN_EXE_comprehension_cost");
+    let dir = std::env::temp_dir().join(format!("comprehension-export-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+
+    let output = std::process::Command::new(exe)
+        .args(["--export", &dir.to_string_lossy()])
+        .output()
+        .expect("failed to execute the comprehension_cost binary");
+    assert!(output.status.success(), "export failed: {}", String::from_utf8_lossy(&output.stderr));
+
+    for name in [
+        "phase.csv",
+        "central.csv",
+        "channels.csv",
+        "sensitivity.csv",
+        "breakeven.csv",
+        "paths.csv",
+        "control.csv",
+    ] {
+        let path = dir.join(name);
+        assert!(path.exists(), "the export is missing {name}");
+        let text = std::fs::read_to_string(&path).expect("readable export");
+        assert!(text.lines().count() > 1, "{name} has no data rows");
+    }
+
+    // The control is the row set that proves the model can report a win. If it ever
+    // contains a loss, the negative result elsewhere is a construction artefact.
+    let control = std::fs::read_to_string(dir.join("control.csv")).expect("control.csv");
+    let mut rows = 0;
+    for line in control.lines().skip(1) {
+        let fields: Vec<&str> = line.split(',').collect();
+        assert_eq!(fields.len(), 3, "malformed control row: {line}");
+        let benefit: f64 = fields[1].parse().expect("benefit");
+        assert!(
+            benefit >= 0.0,
+            "the control reports a loss ({benefit:+.1} h) at savings {}; the figures must \
+             not be drawn from this export",
+            fields[0]
+        );
+        assert!(fields[2].is_empty(), "the control reports a crossover at savings {}", fields[0]);
+        rows += 1;
+    }
+    assert_eq!(rows, 3, "the control needs one row per savings level");
+
+    // And the grid the phase figure draws has one cell per axis combination.
+    let phase = std::fs::read_to_string(dir.join("phase.csv")).expect("phase.csv");
+    assert_eq!(
+        phase.lines().count(),
+        1 + 3 * 5 * 4,
+        "the phase grid should be 3 x 5 x 4 cells plus a header"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
