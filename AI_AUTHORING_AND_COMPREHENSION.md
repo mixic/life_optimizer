@@ -222,59 +222,81 @@ anticipated, because it did not know where the crossing would land.
 
 ### 2.3 Where the difference actually comes from
 
-Switching the mechanisms on one at a time, central cell, cumulative benefit after 36 months:
+Switching the mechanisms on one at a time, central cell, cumulative benefit after 36 months.
+The comprehension gap is split into its two distinct cost channels — an earlier version ran
+them together under a "review" label, and the split is a correction, not a refinement (see
+§2.10).
 
 | Configuration | Benefit | Δ from the row above |
 |---|---:|---:|
 | Authoring saving only | **+13 h** | — |
-| + review at the declared comprehension | −47 h | **−61 h** |
-| + slower retention (the "synapses" channel) | −86 h | **−39 h** |
+| + review of code understood less well | +3 h | **−11 h** |
+| + diagnosis of code understood less well | −47 h | **−50 h** |
+| + faster retention loss | −86 h | **−39 h** |
 | + AI defect multiplier | −120 h | **−34 h** |
 | + review leakage | −247 h | **−127 h** |
 
-Three things follow, and the first is the one that matters most.
+Four things follow.
 
 1. **The authoring saving is trivially small in absolute terms.** Over three years it is worth
-   **13 hours**. That is not a transcription of the BairesDev figure — at `σ = 0.15` it is a
-   deliberately conservative fraction — but even at `σ = 0.33` it is 29 hours. Comprehension and
-   maintenance costs are measured in hundreds. The asymmetry of *scale* between the two sides of the
-   ledger is the substantive finding, and it does not depend on the comprehension parameters at all.
-2. **Review leakage is the largest single channel**, at −127 h. Defects that a low-comprehension
-   review lets through generate their own maintenance stream, and that feedback loop — not decay —
-   is what dominates.
-3. **The retention asymmetry contributes −39 h**, about 15% of the total loss. It matters. It is not
-   the main event.
+   **13 hours**. Even at `σ = 0.33` it is 29 hours. Comprehension and maintenance costs are
+   measured in hundreds. The asymmetry of *scale* between the two sides of the ledger is the
+   substantive finding, and it does not depend on the comprehension parameters at all.
+2. **Review is not the large term, and saying so required fixing a label.** The review excess is
+   **−11 h**; the earlier table attributed **−61 h** to review by running it together with the
+   diagnosis cost that opens at the same moment. Diagnosis is the larger of the two, at −50 h.
+3. **Review leakage is the largest single channel**, at −127 h. Defects that a low-comprehension
+   review lets through generate their own maintenance stream.
+4. **The retention asymmetry contributes −39 h**, about one sixth of the total loss. It matters.
+   It is not the main event.
 
 ### 2.4 Which parameter the answer depends on
 
-One-at-a-time, ±50%, central cell, ranked by the swing in benefit at the horizon:
+The first version of this document answered with a one-at-a-time (OAT) sweep: vary one input,
+hold the other fifteen at their central values. A referee objected, correctly, that the
+parameters interact by construction — the review catch probability is a function of
+comprehension, comprehension is a function of retention and touch rate, touch rate is a function
+of the defect multiplier — so an OAT attribution drops every input's influence through
+combinations. It has been replaced by a variance-based decomposition (Sobol first-order `S` and
+total-order `ST`, Saltelli 2010 estimators) over the joint space. The implementation is validated
+against two analytic functions with known indices, one additive and one purely interactive, in
+`tests/global_sensitivity.rs`.
 
-| Parameter | at 0.5× | at 1.5× | swing | share |
-|---|---:|---:|---:|---:|
-| `diag_hours_per_unit` | −143 | −351 | 209 | 18% |
-| `diag_slope` | −173 | −321 | 148 | 13% |
-| `c_human` | −137 | −262 | 125 | 11% |
-| `leak_hazard` | −184 | −308 | 124 | 11% |
-| `c_ai` | −293 | −202 | 91 | 8% |
-| `hazard` | −201 | −289 | 88 | 8% |
-| **`half_life_ai`** | −298 | −220 | **79** | **7%** |
-| `catch_threshold` | −177 | −244 | 66 | 6% |
-| `review_gain` | −282 | −221 | 61 | 5% |
-| `half_life_human` | −209 | −263 | 54 | 5% |
-| `ai_defect_multiplier` | −231 | −263 | 32 | 3% |
-| `alpha`, `savings` | −254 | −240 | 13 | 1% |
-| `review_slope`, `review_hours_per_unit` | −242 | −252 | 11 | 1% |
+Ranked by total-order effect, 1024 base samples, inputs uniform over ±50% of their declared
+values:
 
-**This inverts the proposal's own framing.** The proposal argued that the retention asymmetry
-`λ(AI) / λ(human)` is "the core of your hypothesis and the least anchored parameter", and that the
-first run should report "a crossover occurs only if `λ(AI)` exceeds `λ(human)` by a factor of X".
-The model says something different: the retention asymmetry ranks **seventh of sixteen** and
-accounts for 7% of the variation. The answer turns on **how much slower diagnosis is when
-comprehension is low** (`diag_hours_per_unit`, `diag_slope`) and on **how wide the initial
-comprehension gap is** (`c_human`, `c_ai`).
+| Parameter | S (alone) | ST (incl. interactions) | Anchored? |
+|---|---:|---:|---|
+| `diag_hours_per_unit` — diagnosis cost at full comprehension | 29.0% | **35.2%** | No |
+| `diag_slope` — how much diagnosis cost rises as comprehension falls | 9.8% | **19.4%** | No |
+| `c_human` — initial comprehension after authoring | 12.2% | 14.3% | No |
+| `c_ai` — initial comprehension of AI-authored code | 5.8% | 12.2% | No |
+| `leak_hazard` — defects a failed review lets through | 6.1% | 10.9% | No |
+| `hazard` — baseline maintenance rate | 4.8% | 8.7% | No |
+| **`half_life_ai` — the decay asymmetry the hypothesis names** | **3.6%** | **6.1%** | **No** |
+| `catch_threshold` | 3.4% | 4.4% | No |
+| `half_life_human` | 1.9% | 2.7% | No |
+| …the remaining six, each below 3% | | | |
 
-And the authoring saving — the parameter the commodity narrative is entirely about — is **joint
-last at 1%**, because maintenance dwarfs authoring over a multi-year horizon.
+**Interaction accounts for 36.9% of the outcome variance.** That is the referee's point made
+quantitatively: a one-at-a-time sweep leaves more than a third of the variance unattributed and
+assigns it to whichever parameter happens to move first in the chain.
+
+Three conclusions, in order of how much they change the earlier text.
+
+1. **The headline attribution survives the correction.** The retention asymmetry is 6.1% by
+   total-order effect against 7% under the OAT sweep. The method changed; its verdict did not.
+   The hypothesis's own mechanism is a minor contributor under both analyses.
+2. **What dominates is diagnosis cost**, at 35.2% total-order, and the initial comprehension gap,
+   at 14.3% and 12.2%. Neither is constrained by any published anchor. That is the identification
+   failure, and it is not an artefact of the sensitivity method used.
+3. **The interaction structure is where the OAT sweep misled**, more than any single ranking:
+   `diag_slope` rises from 9.8% to 19.4% and `c_ai` from 5.8% to 12.2% once interactions are
+   counted. Those were the two most understated inputs.
+
+Small negative first-order indices (magnitude below 1%) appear for three inputs. A first-order
+Sobol index is non-negative in expectation; a small negative value is estimator noise at this
+sample size and indicates no detectable main effect.
 
 ### 2.5 Break-even, and what it takes
 
@@ -315,11 +337,18 @@ that could not produce a positive result would be a model with the conclusion wi
 
 ### 2.8 What this does and does not establish
 
-**It does not establish that AI code is net-negative in practice.** Every magnitude on the
-comprehension side is Declared — invented, plausible in sign, unmeasured. The verdict is therefore
-conditional on those magnitudes, and the sensitivity table says exactly which ones. The model is a
-machine for converting assumptions into consequences, and what it has produced is a statement about
-which assumptions the conclusion rests on.
+**The conclusion is not identified by the available anchors.** That is the finding, and it comes
+before any number. Every magnitude on the comprehension side is Declared — invented, plausible in
+sign, unmeasured — and the two that carry most of the outcome variance, diagnosis cost at 35.2%
+and its comprehension slope at 19.4%, are constrained by no published study. The model is a machine
+for converting assumptions into consequences; what it has produced is a specification of the
+measurement that would settle the question, and that measurement does not exist yet.
+
+The −247 hour figure is an illustration of the model's behaviour, not an estimate of anything. It
+is reported because the model has to produce some output, not because the output is knowledge.
+
+**It does not establish that AI code is net-negative in practice.** The verdict is conditional on
+those Declared magnitudes.
 
 **What it does establish, and what is worth acting on:**
 
@@ -402,7 +431,35 @@ right panel puts the declared case beside it, so the sign flip is attributable t
 asymmetry and nothing else. A model that could not produce a positive result would make
 every other figure here worthless, and this is the evidence that it can.
 
-### 2.10 Reproducing this
+### 2.10 The review term: incremental, or reallocated?
+
+A referee asked whether review hours are an addition charged only to the AI arm — which would
+build the conclusion into the cost structure — or a cost both arms pay. They are a cost both arms
+pay. `model.rs` charges review on every module at creation regardless of authoring mode, with a
+comment saying that charging it only for AI code would be rigging the comparison, and
+`review_hours_are_charged_to_both_arms` fails if that stops being true.
+
+| Activity | Human arm | AI arm | Excess |
+|---|---:|---:|---:|
+| Authoring | 160 h | 147 h | −13 h |
+| Review | 37 h | 47 h | +11 h |
+| Maintenance | 509 h | 759 h | +250 h |
+
+AI review is 1.29× the human figure, not a charge against a zero baseline. Two consequences, and
+the first is a correction to this document rather than to the model.
+
+1. **The −11 h review channel in §2.3 is the same eleven hours as the excess above.** The earlier
+   single row labelled "+ review at declared comprehension" reported −61 h. About a sixth of that
+   was review; the remainder was diagnosis cost, which opens at the same parameter change because
+   the diagnosis term also depends on comprehension. The label was wrong and the row has been
+   split.
+2. **The dominant accounting difference is maintenance, at +250 h**, where leakage and diagnosis
+   both land. So the model does not assume its conclusion in the review term. If it assumes it
+   anywhere, it is in the diagnosis term — which is `Declared` and unmeasured, and which §2.4
+   independently identifies as the largest single contributor. That is a narrower and more
+   accurate charge than the one the referee made.
+
+### 2.11 Reproducing this
 
 ```bash
 cargo run -p comprehension_cost -- --sweep      # the grid, the verdict, sensitivity, break-even
@@ -466,7 +523,8 @@ central cell (§2.4):
 | **`half_life_ai` — the decay asymmetry the review named** | **7%** | **No** |
 
 The decay asymmetry ranks **seventh of sixteen**. It is not what the answer turns on, and it is not
-even second. The parameters that do carry the answer are the **diagnosis-cost slope** and the
+even second. The variance-based analysis added in Part 4, which counts interactions, confirms the
+ranking rather than overturning it: 6.1% by total-order effect against 7% here. The parameters that do carry the answer are the **diagnosis-cost slope** and the
 **width of the initial comprehension gap** — and those are *equally unanchored*: no published study
 measures how much longer it takes to diagnose a defect in code you did not write.
 
@@ -491,3 +549,83 @@ modelled budget, but the standalone `pension` command put `after_tax / 12 × 0.7
 adequacy verdict it printed. `--retirement-needs` is now a **required** argument there, its absence
 exits 2 naming the flag, a non-positive value is rejected, and the output reports the figure as
 *your figure, not a rule of thumb*. Three CLI tests pin it.
+
+---
+
+## Part 4 — Answering the referee
+
+A second review returned the work with four required revisions. All four are addressed; two of
+them changed the numbers, and one of them found that the referee's diagnosis was right about the
+defect and wrong about its location.
+
+### 4.1 Lead with the identification failure
+
+**Fixed.** The README now opens the AI section with the identification problem and presents
+−247 h as an illustration of the model's behaviour rather than as a finding, and §2.8 is
+restructured the same way. The claim the work actually supports is:
+
+> The net effect is negative in the central cell, but the mechanism the hypothesis proposes
+> accounts for about 6% of the outcome variance; the dominant channels are diagnosis cost and
+> review leakage, which the hypothesis did not name. Because the load-bearing parameters are
+> unmeasured, the conclusion is **not identified** by any published anchor.
+
+### 4.2 Replace one-at-a-time sensitivity with a variance-based analysis
+
+**Fixed.** `comprehension_cost/src/global_sensitivity.rs` implements the Saltelli (2010)
+first-order and total-order estimators over the joint input space. It is validated twice against
+functions with analytically known indices — an additive model, where `S` must equal `ST` and the
+indices must be the squared-coefficient shares, and a purely interactive model, where `S` must be
+zero and `ST` one. Without those two tests the implementation would be a method checked only
+against the model it was written for.
+
+Interaction accounts for **36.9%** of the outcome variance, so the referee was right that the
+parameters interact materially. Two nuances the referee could not have known:
+
+- **The correction did not rescue the hypothesis.** The retention asymmetry scores 6.1% by
+  total-order effect against 7% under the one-at-a-time sweep. The method changed and the ranking
+  did not: its mechanism is a minor contributor under both analyses.
+- **The main casualty was the ranking's precision, not its order.** `diag_slope` rises from 9.8%
+  to 19.4% and `c_ai` from 5.8% to 12.2% once interactions are counted, so the one-at-a-time sweep
+  understated the parameters that interact most — which is exactly the failure mode the referee
+  predicted, though not for the parameter the referee named.
+
+The one-at-a-time table is kept in the report and in figure 4, labelled as a comparison. The two
+make different claims and the difference is instructive rather than embarrassing.
+
+### 4.3 Defend the accounting asymmetry in the review term
+
+**Fixed, and the referee's inference was wrong in a way that matters.** Review is charged to both
+arms; §2.10 gives the ledger. The AI arm spends 47 h on review against the human arm's 37 h, so
+the review term is a comprehension-driven *excess*, not an addition to zero, and the model does
+not assume its conclusion there.
+
+What the referee did catch is a real defect one level down: the channel labelled "review" was
+carrying the diagnosis cost as well, because both open when the comprehension gap does. It has
+been split into −11 h of review and −50 h of diagnosis, and the review figure now reconciles to
+the ledger to the hour. The assumption the referee was looking for is in the **diagnosis** term,
+which §2.4 ranks first at 35.2% of the variance and which is `Declared` and unmeasured.
+
+### 4.4 Downgrade "SUPPORTED"
+
+**Fixed, without rewriting the pre-registration.** The pre-registered hypothesis `H` was a claim
+about the sign of the net effect, and it is supported. The mechanism claim `M` — that the erosion
+is driven by the decay asymmetry — was the framing that motivated the work rather than part of the
+pre-registered rule, and it is not supported. The report now separates them explicitly:
+
+| Claim | Status | Evidence |
+|---|---|---|
+| **H**: cumulative net benefit turns negative in the central cell within the horizon | **Supported** | crosses in month 3, −247 h at month 36 |
+| **M**: the decay asymmetry is the mechanism | **Not supported** | 6.1% of total-order variance; −39 h of −247 h |
+| Dominant channel | **Review leakage and diagnosis cost** | −127 h; 35.2% of variance |
+
+Changing the pre-registered verdict after seeing the result would have been the worse error, so
+it is untouched. What changed is the claim printed beside it.
+
+### 4.5 What remains open
+
+- **The two models are still siloed.** The referee's comparison table is right: `stress-ai` and
+  `comprehension_cost` remain separate verbs and `lifetime` consumes neither. That is a real gap
+  and it is not addressed here.
+- **The measurement to make is diagnosis time.** Both the global analysis and the decomposition
+  point at the same quantity: how much longer it takes to diagnose a defect in code you did not
+  write. That is a task-level measurement and it is not in the literature the anchors came from.

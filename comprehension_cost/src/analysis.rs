@@ -50,15 +50,22 @@ pub struct ChannelRow {
 /// report quotes, and it exists because the total says nothing about where it came from.
 pub fn channels(base: &Params) -> Vec<ChannelRow> {
     let mut staged = central_cell(base);
-    // Neutral to begin with: only the authoring saving differs.
+    // Neutral to begin with: AI code understood and retained exactly as well as human code,
+    // so the first row isolates the authoring saving.
     staged.c_ai = staged.c_human;
     staged.half_life_ai = staged.half_life_human;
     staged.ai_defect_multiplier = 0.0;
     staged.leak_hazard = 0.0;
 
+    // The comprehension gap costs hours through two separate channels, and an earlier version
+    // of this function ran them together in one row labelled "review". A referee asked whether
+    // review was incremental or reallocated, and the answer exposed the label: review excess is
+    // about 11 hours, while the row it sat in was 61. Holding the diagnosis slope at zero while
+    // the gap opens isolates the review term; restoring it adds the diagnosis term.
+    let diagnosis_slope = staged.diag_slope;
+
     let mut rows: Vec<ChannelRow> = Vec::new();
     let mut previous: Option<f64> = None;
-
     let push = |label: &'static str,
                 params: &Params,
                 rows: &mut Vec<ChannelRow>,
@@ -70,9 +77,12 @@ pub fn channels(base: &Params) -> Vec<ChannelRow> {
 
     push("authoring saving only", &staged, &mut rows, &mut previous);
     staged.c_ai = base.c_ai;
-    push("+ review at declared comprehension", &staged, &mut rows, &mut previous);
+    staged.diag_slope = 0.0;
+    push("+ review of code understood less well", &staged, &mut rows, &mut previous);
+    staged.diag_slope = diagnosis_slope;
+    push("+ diagnosis of code understood less well", &staged, &mut rows, &mut previous);
     staged.half_life_ai = base.half_life_ai;
-    push("+ slower retention", &staged, &mut rows, &mut previous);
+    push("+ faster retention loss", &staged, &mut rows, &mut previous);
     staged.ai_defect_multiplier = base.ai_defect_multiplier;
     push("+ AI defect multiplier", &staged, &mut rows, &mut previous);
     staged.leak_hazard = base.leak_hazard;
@@ -151,3 +161,52 @@ pub fn central_summary(base: &Params) -> (f64, Option<usize>) {
 // Keeps the constants in one place for the documentation links above.
 #[allow(dead_code)]
 const _: (f64, f64, f64) = (CENTRAL_SAVINGS, CENTRAL_HALF_LIFE, CENTRAL_EPSILON);
+
+/// Review hours in each arm, so the accounting question has a number attached.
+///
+/// A referee asked whether review is *incremental* to the AI arm or a *reallocation* of the
+/// review a human would have done anyway. In this model review is charged to **both** arms:
+/// every module is reviewed on creation whether a human or a machine wrote it, and the only
+/// difference is that reviewing code the reviewer understands less of costs more hours and
+/// catches fewer defects. This function makes that checkable rather than asserted.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewAccounting {
+    pub human_review: f64,
+    pub ai_review: f64,
+    pub human_authoring: f64,
+    pub ai_authoring: f64,
+    pub human_maintenance: f64,
+    pub ai_maintenance: f64,
+}
+
+impl ReviewAccounting {
+    /// Review hours the AI arm spends *in excess of* the human arm. This is the quantity the
+    /// channel decomposition attributes to comprehension, not the whole review bill.
+    pub fn excess_review(&self) -> f64 {
+        self.ai_review - self.human_review
+    }
+
+    /// True when both arms are actually reviewed, which is the property that makes the
+    /// comparison a comparison rather than a one-sided charge.
+    pub fn both_arms_reviewed(&self) -> bool {
+        self.human_review > 0.0 && self.ai_review > 0.0
+    }
+}
+
+/// Sum the ledger by activity, for each arm, on the central cell.
+pub fn review_accounting(base: &Params) -> ReviewAccounting {
+    let params = central_cell(base);
+    let human = run(&params, Scenario::Human);
+    let ai = run(&params, Scenario::Ai);
+    let total = |ledger: &crate::model::Ledger, pick: fn(&crate::model::MonthLedger) -> f64| {
+        ledger.months.iter().map(pick).sum::<f64>()
+    };
+    ReviewAccounting {
+        human_review: total(&human, |month| month.review),
+        ai_review: total(&ai, |month| month.review),
+        human_authoring: total(&human, |month| month.authoring),
+        ai_authoring: total(&ai, |month| month.authoring),
+        human_maintenance: total(&human, |month| month.maintenance),
+        ai_maintenance: total(&ai, |month| month.maintenance),
+    }
+}

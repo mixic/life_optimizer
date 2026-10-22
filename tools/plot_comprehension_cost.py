@@ -136,8 +136,8 @@ def check_central(rows, horizon):
 
 def check_channels(rows):
     path = "channels.csv"
-    if len(rows) != 5:
-        raise CheckError(f"{path}: {len(rows)} rows, expected 5")
+    if len(rows) != 6:
+        raise CheckError(f"{path}: {len(rows)} rows, expected 6")
     previous = None
     for index, row in enumerate(rows):
         benefit = float(row["benefit"])
@@ -258,6 +258,7 @@ def figure_channels(rows, out_dir):
     benefits = [float(r["benefit"]) for r in rows]
     deltas = [None] + [float(r["delta"]) for r in rows[1:]]
 
+    span = (max(benefits) - min(benefits)) or 1.0
     fig, ax = plt.subplots(figsize=(9.5, 4.8))
     positions = range(len(labels))
     for index, (label, benefit, delta) in enumerate(zip(labels, benefits, deltas)):
@@ -266,11 +267,17 @@ def figure_channels(rows, out_dir):
             ax.text(benefit + 4, index, f"{benefit:+.0f} h", va="center", fontsize=9)
             continue
         colour = "#c0504d" if delta < 0 else "#4f6228"
-        ax.barh(index, delta, left=benefit - delta, color=colour, height=0.6)
-        # Inside the bar. Placing the label off the end pushed it off the axes on the
-        # longest bar, where it collided with the category labels.
-        ax.text(benefit - delta / 2.0, index, f"{delta:+.0f} h", va="center",
-                ha="center", fontsize=9, color="white", fontweight="bold")
+        left_edge = benefit - delta
+        ax.barh(index, delta, left=left_edge, color=colour, height=0.6)
+        # Inside the bar when it is wide enough to hold the text; alongside it when it is not.
+        # The narrow review bar (11 hours against a 260-hour axis) overflowed its own rectangle
+        # and the label spilled across the zero line.
+        if abs(delta) < 0.06 * span:
+            ax.text(max(left_edge, benefit) + span * 0.012, index, f"{delta:+.0f} h",
+                    va="center", ha="left", fontsize=9, color=colour)
+        else:
+            ax.text(benefit - delta / 2.0, index, f"{delta:+.0f} h", va="center",
+                    ha="center", fontsize=9, color="white", fontweight="bold")
 
     ax.axvline(0, color="#333333", lw=1)
     ax.set_yticks(list(positions))
@@ -388,34 +395,50 @@ def figure_phase(rows, horizon, out_dir):
     return path
 
 
-def figure_sensitivity(rows, out_dir):
-    names = [r["parameter"] for r in rows]
-    sweeps = [float(r["swing"]) for r in rows]
-    shares = [s / sum(sweeps) * 100 for s in sweeps]
+def figure_sensitivity(sobol_rows, oat_rows, out_dir):
+    """The global attribution, with the one-at-a-time table beside it for contrast."""
+    sobol_rows = sorted(sobol_rows, key=lambda r: float(r["total_order"]), reverse=True)
+    names = [r["parameter"] for r in sobol_rows]
+    first = [float(r["first_order"]) * 100 for r in sobol_rows]
+    total = [float(r["total_order"]) * 100 for r in sobol_rows]
+    interaction = [float(r["interaction"]) * 100 for r in sobol_rows]
 
-    fig, ax = plt.subplots(figsize=(9.5, 5.4))
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13.5, 5.6))
+
     positions = range(len(names))
-    colours = ["#c0504d" if "half_life_ai" in n or "defect" in n else "#1f4e79" for n in names]
-    ax.barh(list(positions), shares, color=colours, height=0.66)
-    for index, share in enumerate(shares):
-        ax.text(share + 0.3, index, f"{share:.0f}%", va="center", fontsize=8)
-    ax.set_yticks(list(positions))
-    ax.set_yticklabels(names, fontsize=8)
-    ax.invert_yaxis()
-    ax.set_xlabel("share of the total one-at-a-time swing in benefit at month 36")
-    ax.set_title("What the answer depends on")
-    ax.grid(axis="x", alpha=0.25)
-    ax.annotate(
-        "the decay asymmetry — the parameter\nthe hypothesis is actually about",
-        xy=(shares[names.index("half_life_ai (months)")],
-            names.index("half_life_ai (months)")),
-        xytext=(shares[names.index("half_life_ai (months)")] + 4,
-                names.index("half_life_ai (months)") + 2.2),
+    left.barh([p for p in positions], first, height=0.38, color="#1f4e79", label="S (alone)")
+    left.barh([p + 0.4 for p in positions], total, height=0.38, color="#c0504d",
+              label="ST (including interactions)")
+    left.set_yticks([p + 0.2 for p in positions])
+    left.set_yticklabels(names, fontsize=8)
+    left.invert_yaxis()
+    left.set_xlabel("share of outcome variance (%)")
+    left.set_title("Global: variance-based, interaction-aware")
+    left.legend(frameon=False, fontsize=8)
+    left.grid(axis="x", alpha=0.25)
+    retention = names.index("half_life_ai (months)")
+    left.annotate(
+        f"ST − S = {interaction[retention]:.1f} pp\nfor the retention asymmetry",
+        xy=(total[retention], retention + 0.4),
+        xytext=(max(total) * 0.55, retention + 2.4),
         fontsize=8, color="#c0504d",
         arrowprops=dict(arrowstyle="->", color="#c0504d", lw=1),
     )
+
+    oat_names = [r["parameter"] for r in oat_rows]
+    oat_swings = [float(r["swing"]) for r in oat_rows]
+    oat_total = sum(oat_swings) or 1.0
+    oat_share = [s / oat_total * 100 for s in oat_swings]
+    right.barh(range(len(oat_names)), oat_share, color="#7f7f7f", height=0.66)
+    right.set_yticks(range(len(oat_names)))
+    right.set_yticklabels(oat_names, fontsize=8)
+    right.invert_yaxis()
+    right.set_xlabel("share of the one-at-a-time swing (%)")
+    right.set_title("For comparison: one-at-a-time, which drops interactions")
+
+    fig.suptitle("What the answer depends on", fontsize=12)
     footer(fig)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.03, 1, 0.94))
     path = os.path.join(out_dir, "comprehension-4-sensitivity.png")
     fig.savefig(path, dpi=170)
     plt.close(fig)
@@ -511,6 +534,7 @@ def main():
         channels_rows = read_csv(os.path.join(root, "channels.csv"))
         phase_rows = read_csv(os.path.join(root, "phase.csv"))
         sensitivity_rows = read_csv(os.path.join(root, "sensitivity.csv"))
+        sobol_rows = read_csv(os.path.join(root, "sobol.csv"))
         breakeven_rows = read_csv(os.path.join(root, "breakeven.csv"))
         path_rows = read_csv(os.path.join(root, "paths.csv"))
         control_rows = read_csv(os.path.join(root, "control.csv"))
@@ -531,7 +555,7 @@ def main():
         figure_crossover(central, args.out),
         figure_channels(channels_rows, args.out),
         figure_phase(phase_rows, args.horizon, args.out),
-        figure_sensitivity(sensitivity_rows, args.out),
+        figure_sensitivity(sobol_rows, sensitivity_rows, args.out),
         figure_breakeven(breakeven_rows, path_rows, args.out),
         figure_control(control_rows, channels_rows, args.out),
     ]

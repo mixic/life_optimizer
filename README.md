@@ -73,29 +73,26 @@ The intended output is a number together with the conditions under which it fail
 **A second question, with its own model.** The same apparatus is applied to a question about
 AI-assisted development: for a fixed body of code, does the authoring time that machine
 generation saves survive the comprehension and maintenance cost of code the engineer did not
-write? `comprehension_cost` estimates the net effect on cumulative engineering hours over a
-36-month horizon, decomposed into authoring, review, comprehension and maintenance. The
-grid, the decision rule and the falsification condition were pre-registered before the model
-was run, and every comprehension-side parameter is marked `Declared` rather than measured.
+write? `comprehension_cost` estimates that net effect on cumulative engineering hours over a
+36-month horizon.
 
-In the central parameterisation the net effect is negative — cumulative benefit turns
-negative in month 3 and reaches −247 hours by month 36 — but the decomposition is more
-informative than the sign. The authoring saving contributes **+13 h**. The mechanism the
-hypothesis proposes, faster decay of the mental model for code the engineer did not author,
-contributes **−39 h** and ranks seventh of sixteen in a one-at-a-time sensitivity analysis,
-at 7% of the total variation. The largest single channel is review leakage (**−127 h**):
-defects that a low-comprehension review fails to catch generate their own maintenance
-stream. The ranking is led by the diagnosis-cost terms (18% and 13%), the initial
-comprehension gap (11% for human-authored code, 8% for AI-authored) and the leakage hazard
-(11%).
+**The result is an identification failure, and that is the finding.** The model's load-bearing
+parameters are all `Declared` — invented, plausible in sign, and unmeasured by any source the
+literature provides. The largest single contributor, at 35.2% of the outcome variance, is how much
+longer it takes to *diagnose* a defect in code you did not write; next is how steeply that cost
+rises as comprehension falls (19.4%), then how wide the comprehension gap is on arrival (14.3% for
+human-authored code, 12.2% for AI-authored). No published anchor constrains any of them. The honest headline is therefore not a
+number of hours but this sentence: **the conclusion is not identified by the available anchors.**
+What the model delivers is the specification of the measurement that would settle the question,
+and it does not exist yet.
 
-The inference available is narrower than the effect size suggests. Because the load-bearing
-parameters are unmeasured, the result identifies which assumptions the conclusion depends
-on, and is a negative result about the model's power to settle the question, rather than
-evidence that AI-authored code is net-negative in practice. What would test it is a
-task-level measurement of diagnosis time on AI-authored versus human-authored modules;
-refining the decay rate would leave the conclusion where it is. Pre-registration, decision
-rule, sensitivity tables and figures are in
+For scale only, and to be read as an illustration of the model's behaviour rather than as a
+finding: in the central cell the net effect is negative, reaching −247 hours by month 36. The
+mechanism the original hypothesis proposed — faster decay of the mental model — accounts for
+6.1% of the outcome variance once interactions are counted, and 39 of those 247 hours. The
+dominant channels are diagnosis cost and review leakage, neither of which the hypothesis named.
+
+Pre-registration, decision rule, variance decomposition and figures are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
 ---
@@ -218,50 +215,65 @@ its module map.
 
 ---
 
-## Third question: is AI authoring time real time?
+## AI authoring and comprehension: an identification failure, and what it would take
 
-`comprehension_cost` is a small, deliberately quarantined crate that asks whether the hours AI
-saves writing code are given back understanding it. It is in its own crate for the same reason
-`multipolar_sim` is: its parameters are hypotheses, and a `use` statement that does not exist is
-the strongest guarantee that they cannot reach a reported tax or pension figure.
+`comprehension_cost` asks whether the hours AI saves writing code are given back understanding
+it. It is a separate crate for the same reason `multipolar_sim` is: its parameters are
+hypotheses, and a `use` statement that does not exist is the strongest guarantee that they cannot
+reach a reported tax or pension figure.
 
 The design is a state-transition model. Modules carry an authoring mode, a comprehension level
 that decays while untouched, a Poisson maintenance hazard, a resolution cost that rises as
 comprehension falls, and a review gate whose catch probability is proportional to comprehension —
-so what a low-comprehension review misses becomes a further stream of events.
+so what a low-comprehension review misses becomes a further stream of events. The parameter
+ranges, the decision rule and the falsification condition were pre-registered before the model
+ran, so the verdict could not be chosen after seeing the numbers.
 
-It was **pre-registered**: the parameter ranges, the decision rule and the falsification condition
-were committed before the model existed, so the verdict could not be chosen after seeing the
-numbers. Two things came out of running it.
+**What the model establishes is narrower than its own output suggests, and that is the point.**
+A variance-based decomposition over all sixteen inputs, varying jointly, attributes the outcome
+as follows:
 
-- **The verdict is SUPPORTED, and that is the least interesting part.** The central cell crosses
-  over in month 3 and ends 247 hours worse off. But the decomposition says the authoring saving is
-  worth **+13 hours over three years**, against −61 for review, −39 for slower retention, −34 for
-  the defect multiplier and −127 for review leakage. The scale asymmetry is the argument: authoring
-  savings are tens of hours, comprehension and maintenance costs are hundreds.
-- **The answer does not depend on the parameter the hypothesis names.** The retention asymmetry
-  ranks seventh of sixteen in a one-at-a-time sweep, at 7% of the variation. The top two are how
-  much longer *diagnosis* takes when comprehension is low. That inverts the research priority and
-  is a negative result about the model's power as much as about AI: the anchors in the literature
-  do not constrain the parameters the conclusion actually rests on.
+| Contributor | Share of variance (total order) | Constrained by a published anchor? |
+|---|---:|---|
+| Diagnosis cost at full comprehension | **35.2%** | No |
+| How diagnosis cost rises as comprehension falls | **19.4%** | No |
+| Initial comprehension after human authoring | 14.3% | No |
+| Initial comprehension of AI-authored code | 12.2% | No |
+| Leakage of defects past a failed review | 10.9% | No |
+| **Retention asymmetry — the hypothesis's own mechanism** | **6.1%** | No |
 
-Two safeguards are worth naming. Every comprehension-side parameter is marked `Declared` — invented,
-plausible in sign, unmeasured — and the CLI prints the provenance table on its own output. And there
-is a control: with the comprehension asymmetry removed, the same model reports **+13 h, +29 h and
-exactly 0 h** at 0%, 15% and 33% authoring savings. A model that could not report a win would make
-the loss meaningless; that it can is the only reason the result means anything.
+Interactions account for **36.9%** of the variance, which is why a one-at-a-time sweep is
+inadequate for this question and why the analysis is variance-based instead. The conclusion splits
+into three separate claims, which the earlier version ran together:
+
+- **The net sign is supported.** Cumulative benefit turns negative in month 3 and reaches −247
+  hours at month 36, in the pre-registered central cell.
+- **The proposed mechanism is not.** Faster retention loss accounts for 6.1% of the variance. It
+  contributes, at 39 of those 247 hours; it does not explain.
+- **The dominant channels are review leakage and diagnosis cost**, at 127 hours and 35.2% of the
+  variance respectively. The hypothesis named neither.
+
+The model does not assume its conclusion in the review term: review is charged in **both** arms.
+The AI arm spends 47 hours reviewing against the human arm's 37, so every review figure in the
+decomposition is a comprehension-driven excess, not an addition to a zero baseline.
+
+Two safeguards are worth naming. Every comprehension-side parameter is marked `Declared`, and the
+CLI prints the provenance table on its own output. And there is a control: with the comprehension
+asymmetry removed, the same model reports **+13 h, +29 h and exactly 0 h** at 0%, 15% and 33%
+authoring savings. A model that could not report a win would make the loss meaningless; that it
+can is the only reason the result means anything.
 
 ```bash
-cargo run -p comprehension_cost -- --sweep        # the grid, verdict, sensitivity, break-even
+cargo run -p comprehension_cost -- --sweep        # grid, verdict, global sensitivity, accounting
 cargo run -p comprehension_cost -- --verbose      # month by month, central cell
-cargo test -p comprehension_cost                  # eleven tests, including both controls
+cargo test -p comprehension_cost                  # eighteen tests, including both controls
 ```
 
-Figures are in [`figures/`](figures) and are produced from the model's own CSV export by
+Figures are in [`figures/`](figures), produced from the model's own CSV export by
 `tools/plot_comprehension_cost.py`, which refuses to draw if the export is inconsistent.
 
-The pre-registration, the decision rule fixed before the run, the reading of each published anchor
-(including the two that did not survive as stated) and the full sensitivity tables are in
+The pre-registration, the decision rule fixed before the run, the audit of each published anchor
+and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
 ---

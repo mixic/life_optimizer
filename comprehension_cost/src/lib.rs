@@ -47,6 +47,7 @@
 
 pub mod analysis;
 pub mod export;
+pub mod global_sensitivity;
 pub mod model;
 pub mod params;
 pub mod sweep;

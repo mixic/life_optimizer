@@ -21,7 +21,10 @@
 //! phase diagram from here as a forecast has been misled by the presentation rather
 //! than by the arithmetic.
 
-use comprehension_cost::analysis::{breakeven as breakeven_curve, breakeven_threshold, channels};
+use comprehension_cost::analysis::{
+    breakeven as breakeven_curve, breakeven_threshold, channels, review_accounting,
+};
+use comprehension_cost::global_sensitivity::model_indices;
 use comprehension_cost::model::{benefit_curve, crossover_month, run, run_stochastic, Scenario};
 use comprehension_cost::params::{Params, Provenance};
 use comprehension_cost::sweep::{
@@ -205,11 +208,81 @@ fn main() {
     }
     println!("\n  A negative delta is that channel costing hours.");
 
-    // ---- sensitivity ---------------------------------------------------------
-    println!("\nSensitivity: which parameter does the answer depend on?");
-    println!("-----------------------------------------------------");
-    println!("One at a time, perturbed by half and by half again, on the central cell.");
-    println!("Ranked by how far the change moves cumulative benefit at the horizon.\n");
+    // ---- global sensitivity --------------------------------------------------
+    let sobol = model_indices(&base, 1024, 2024);
+    println!("\nGlobal sensitivity: which parameter does the answer depend on?");
+    println!("-----------------------------------------------------------");
+    println!("Variance-based decomposition over all sixteen inputs varying jointly, so an");
+    println!("input whose influence runs through interactions is not understated. S is the");
+    println!("share of outcome variance explained by the input alone; ST is the share that");
+    println!("would remain if every other input were fixed, so it includes interactions;");
+    println!("ST - S is the part of its influence that exists only in combination.\n");
+    println!("  {:<30} {:>8} {:>8} {:>8}", "parameter", "S", "ST", "ST - S");
+    for index in sobol.ranked() {
+        println!(
+            "  {:<30} {:>8.1}% {:>8.1}% {:>8.1}%",
+            index.name,
+            index.first * 100.0,
+            index.total * 100.0,
+            index.interaction() * 100.0
+        );
+    }
+    println!(
+        "\n  interaction share of the variance: {:.1}% (sum of ST exceeds the sum of S by this)",
+        sobol.interaction_share() * 100.0
+    );
+    match sobol.by_name("half_life_ai (months)") {
+        Some(retention) => println!(
+            "  the retention asymmetry: S = {:.1}%, ST = {:.1}% — {:.0}% of the outcome\n  \
+             variance once interactions are counted",
+            retention.first * 100.0,
+            retention.total * 100.0,
+            retention.total * 100.0
+        ),
+        None => println!("  the retention asymmetry is not in the attributed set"),
+    }
+
+    // ---- review accounting ---------------------------------------------------
+    println!("\nReview accounting: incremental, or reallocated?");
+    println!("-------------------------------------------------");
+    let accounting = review_accounting(&base);
+    println!("Every module is reviewed on creation in both arms, so review is a cost the");
+    println!("human arm also pays. The comparison is therefore not 'human code audited");
+    println!("free'; it is the excess a reviewer spends on code understood less well.\n");
+    println!("  {:<26} {:>10} {:>10} {:>10}", "", "human", "AI", "excess");
+    println!(
+        "  {:<26} {:>10.0} {:>10.0} {:>10.0}",
+        "authoring hours",
+        accounting.human_authoring,
+        accounting.ai_authoring,
+        accounting.ai_authoring - accounting.human_authoring
+    );
+    println!(
+        "  {:<26} {:>10.0} {:>10.0} {:>10.0}",
+        "review hours",
+        accounting.human_review,
+        accounting.ai_review,
+        accounting.excess_review()
+    );
+    println!(
+        "  {:<26} {:>10.0} {:>10.0} {:>10.0}",
+        "maintenance hours",
+        accounting.human_maintenance,
+        accounting.ai_maintenance,
+        accounting.ai_maintenance - accounting.human_maintenance
+    );
+    println!(
+        "\n  AI review is {:.2}x the human figure, not an addition to a zero baseline.",
+        accounting.ai_review / accounting.human_review
+    );
+
+    // ---- one-at-a-time, kept only for comparison -----------------------------
+    println!("\nOne-at-a-time, for comparison only");
+    println!("---------------------------------");
+    println!("This is the analysis the global sweep above replaces. It varies one input with");
+    println!("the other fifteen fixed, so it attributes only the variance an input contributes");
+    println!("along its own axis and drops everything it contributes in combination. It is");
+    println!("kept because the two make different claims, and the difference is the point.\n");
     let rows = sensitivity(&base);
     println!(
         "  {:<32} {:>9} {:>9} {:>9} {:>9}",
@@ -226,8 +299,9 @@ fn main() {
             row.swing / total_swing * 100.0
         );
     }
-    println!("\n  The decay asymmetry is the hypothesis, and it is ranked where it is ranked");
-    println!("  above: a model whose answer turned on it would show it at the top.");
+    println!("\n  Compare the retention asymmetry's position here with its total-order index");
+    println!("  above: the difference between the two tables is what the interaction");
+    println!("  correction buys.");
 
     // ---- break-even ----------------------------------------------------------
     println!("\nBreak-even: how much comprehension has to survive?");

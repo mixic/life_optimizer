@@ -26,7 +26,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::analysis::{breakeven, breakeven_threshold, channels, monte_carlo};
+use crate::analysis::{breakeven, breakeven_threshold, channels, monte_carlo, review_accounting};
+use crate::global_sensitivity::model_indices;
 use crate::model::{benefit_curve, crossover_month, run, Scenario};
 use crate::params::Params;
 use crate::sweep::{
@@ -100,6 +101,39 @@ pub fn write_all(dir: &Path, base: &Params, paths: usize) -> io::Result<Vec<Path
         writeln!(body, "\"{}\",{:.4},{:.4},{:.4}", row.name, row.low, row.high, row.swing).unwrap();
     }
     written.push(write_file(dir, "sensitivity.csv", &body)?);
+
+    // ---- global sensitivity --------------------------------------------------
+    let sobol = model_indices(base, 1024, 2024);
+    let mut body = String::from("parameter,first_order,total_order,interaction\n");
+    for index in sobol.indices.iter() {
+        writeln!(
+            body,
+            "\"{}\",{:.6},{:.6},{:.6}",
+            index.name,
+            index.first,
+            index.total,
+            index.interaction()
+        )
+        .unwrap();
+    }
+    written.push(write_file(dir, "sobol.csv", &body)?);
+    written.push(write_file(
+        dir,
+        "sobol_interaction_share.txt",
+        &format!("{:.6}\n", sobol.interaction_share()),
+    )?);
+
+    // ---- review accounting ---------------------------------------------------
+    let accounting = review_accounting(base);
+    let mut body = String::from("activity,human,ai,excess\n");
+    for (name, human, ai) in [
+        ("authoring", accounting.human_authoring, accounting.ai_authoring),
+        ("review", accounting.human_review, accounting.ai_review),
+        ("maintenance", accounting.human_maintenance, accounting.ai_maintenance),
+    ] {
+        writeln!(body, "{name},{human:.4},{ai:.4},{:.4}", ai - human).unwrap();
+    }
+    written.push(write_file(dir, "review_accounting.csv", &body)?);
 
     // ---- break-even ----------------------------------------------------------
     let mut body = String::from("c_ai,benefit,crossover_month,mean_comprehension\n");

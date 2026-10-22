@@ -222,52 +222,29 @@ fn benefit_at_horizon(p: &Params) -> f64 {
 /// because the parameters are Declared and their values are not knowledge.
 pub fn sensitivity(base: &Params) -> Vec<SensitivityRow> {
     let central = central_cell(base);
-
-    type Apply = fn(&mut Params, f64);
-    let knobs: Vec<(&'static str, f64, Apply)> = vec![
-        ("c_ai (initial comprehension)", central.c_ai, |p, v| p.c_ai = v),
-        ("c_human (initial comprehension)", central.c_human, |p, v| p.c_human = v),
-        ("catch_threshold", central.catch_threshold, |p, v| p.catch_threshold = v),
-        ("leak_hazard", central.leak_hazard, |p, v| p.leak_hazard = v),
-        ("half_life_ai (months)", central.half_life_ai, |p, v| p.half_life_ai = v),
-        ("half_life_human (months)", central.half_life_human, |p, v| p.half_life_human = v),
-        ("ai_defect_multiplier", central.ai_defect_multiplier, |p, v| p.ai_defect_multiplier = v),
-        ("diag_slope", central.diag_slope, |p, v| p.diag_slope = v),
-        ("review_slope", central.review_slope, |p, v| p.review_slope = v),
-        ("review_gain", central.review_gain, |p, v| p.review_gain = v),
-        ("hazard", central.hazard, |p, v| p.hazard = v),
-        ("review_hours_per_unit", central.review_hours_per_unit, |p, v| {
-            p.review_hours_per_unit = v
-        }),
-        ("diag_hours_per_unit", central.diag_hours_per_unit, |p, v| p.diag_hours_per_unit = v),
-        ("fix_hours_per_unit", central.fix_hours_per_unit, |p, v| p.fix_hours_per_unit = v),
-        ("alpha (authoring h/unit)", central.alpha, |p, v| p.alpha = v),
-        ("savings (authoring fraction)", central.savings, |p, v| p.savings = v),
-    ];
-
     let baseline = benefit_at_horizon(&central);
-    let mut rows = Vec::with_capacity(knobs.len());
-    for (name, value, apply) in knobs {
-        let mut low_params = central.clone();
-        apply(&mut low_params, (value * 0.5).max(0.0));
-        let mut high_params = central.clone();
-        apply(&mut high_params, value * 1.5);
 
-        // Comprehensions are probabilities; a 50% perturbation must not leave [0, 1].
-        let clamp = |p: &mut Params| {
-            p.c_ai = p.c_ai.clamp(0.0, 1.0);
-            p.c_human = p.c_human.clamp(0.0, 1.0);
-            p.catch_threshold = p.catch_threshold.clamp(0.01, 1.0);
-            p.review_gain = p.review_gain.clamp(0.0, 1.0);
-            p.half_life_ai = p.half_life_ai.max(0.5);
-            p.half_life_human = p.half_life_human.max(0.5);
-        };
-        clamp(&mut low_params);
-        clamp(&mut high_params);
+    let mut rows = Vec::new();
+    for knob in crate::global_sensitivity::knobs() {
+        // The ranges come from the shared knob table, so the one-at-a-time sweep and the
+        // variance-based analysis describe the same input space. They answer different
+        // questions, but they must at least be asking about the same parameters.
+        let (low_value, high_value) = crate::global_sensitivity::range(&knob, &central);
+
+        let mut low_params = central.clone();
+        (knob.set)(&mut low_params, low_value);
+        let mut high_params = central.clone();
+        (knob.set)(&mut high_params, high_value);
 
         let low = benefit_at_horizon(&low_params);
         let high = benefit_at_horizon(&high_params);
-        rows.push(SensitivityRow { name, base: baseline, low, high, swing: (high - low).abs() });
+        rows.push(SensitivityRow {
+            name: knob.name,
+            base: baseline,
+            low,
+            high,
+            swing: (high - low).abs(),
+        });
     }
     rows.sort_by(|a, b| b.swing.partial_cmp(&a.swing).unwrap());
     rows
