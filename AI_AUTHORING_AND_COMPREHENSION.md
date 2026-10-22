@@ -478,7 +478,7 @@ versus human-authored modules** would test it.
 
 ### 3.4 The README
 
-Updated. The finding is now in **"Why this exists"**, not only in a commit message, and
+Updated. The finding is now in **"The problem it models"**, not only in a commit message, and
 `comprehension_cost` has a section of its own beside the simulator's, plus an entry in the project
 structure and the document list. The section states the scale asymmetry, the seventh-of-sixteen
 ranking, the control, and the fact that every comprehension parameter is Declared.

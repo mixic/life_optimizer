@@ -13,7 +13,7 @@
 
 ---
 
-## Why this exists
+## The problem it models
 
 The tool answers one decision problem: given a salary, an age, a canton and a stated
 household budget, which work percentage in the 50–100% range maximises the objective
@@ -615,11 +615,13 @@ life-optimizer/
   For those three, use `--custom-tax-rate` with your own observed effective rate.
 - Pension projections are **estimates**, not financial advice. Real BVG plans vary
   by employer (contribution rates, conversion rates, buy-in options).
-- Market return assumptions are calibrated to historical Swiss BVG fund performance
-  and general developed-market business-cycle statistics — not a guarantee of future
-  returns.
-- The retirement "needs" figure defaults to 75% of current net income, a common
-  rule of thumb, not a personalized budget.
+- Market return assumptions are **three illustrative presets** (2.0%, 3.2% and 4.5% real),
+  not a fitted model: no calibration to historical fund performance exists in this
+  repository. They are compared against the published Swisscanto pension-fund study figures
+  in `VALIDATION.md` §5.6, and the comparison is a bound check rather than a fit.
+- The retirement "needs" figure has **no default**. `optimize` uses this household's
+  modelled budget; `pension` requires `--retirement-needs` and exits rather than substituting
+  75% of net income, which is a rule of thumb and a measurement of nobody's life.
 - The achievement-capacity coefficients (AI productivity gain, quality retention,
   compression sensitivity, replacement risk) are **illustrative sensitivities, not
   estimates**. Nothing in the tool predicts your AI productivity; it exposes the

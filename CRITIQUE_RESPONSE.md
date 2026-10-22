@@ -92,9 +92,11 @@ responsibility.
 
 ### 3.2 The needs default — the same error the tool was built to avoid
 
-The tool's "Why this exists" (`README.md:15-28`) attacks calculators that stop at gross-minus-tax and
-miss what determines the decision. Then it adopts the least examined retirement assumption available:
-75% of net income, "a common rule of thumb, not a personalized budget" (`README.md:450-451`).
+The tool's "The problem it models" (`README.md:16-43`) states that a calculation stopping at
+gross-minus-tax is insufficient and sets out the four features that make it so. It then adopted the
+least examined retirement assumption available: 75% of net income, "a common rule of thumb, not a
+personalized budget". **Since resolved**: that default was removed, and the figure is now either the
+household's modelled budget or a required `--retirement-needs` argument.
 
 The critique of gross-minus-tax was that it hides the thing that decides the answer. So does this.
 The fix the review proposes is the right one and goes further than it says: **a break-even needs
