@@ -512,7 +512,7 @@ def figure_band(rows, out_dir):
 
     fig, ax = plt.subplots(figsize=(9.6, 5.2))
     ax.fill_between(band, low, high, color="#1f4e79", alpha=0.18, lw=0,
-                    label="95% interval")
+                    label="95% Wilson CI on the proportion")
     ax.plot(band, fraction, color="#1f4e79", lw=2.2, label="share of draws with a negative net effect")
     ax.axhline(100, color="#333333", lw=0.8, ls=":")
 
@@ -529,7 +529,11 @@ def figure_band(rows, out_dir):
     ax.set_xlabel("band around each declared value, ± per cent")
     ax.set_ylabel("draws with a negative net effect (per cent)")
     ax.set_ylim(0, 105)
-    ax.set_title("How much of the sign verdict is the prior?")
+    ax.set_title(
+        "How much of the sign verdict is the prior?\n"
+        "twenty widths in steps of 0.1; the band is binomial sampling error, not the spread of draws",
+        fontsize=11,
+    )
     ax.legend(frameon=False, fontsize=8, loc="lower left")
     ax.grid(alpha=0.25)
     footer(fig)

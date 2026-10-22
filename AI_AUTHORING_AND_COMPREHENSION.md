@@ -687,11 +687,22 @@ the wrong endpoints when testing separation and reported the top two as overlapp
 The earlier version supported the net sign on the strength of one central cell. That is now
 measured across the space, by drawing uniformly over every input's range:
 
+The sweep behind figure 7 runs **twenty widths from ±10% to ±200% in steps of 0.1**, 2,048 draws
+at each. The interval reported with each width is a **Wilson score interval** on the proportion of
+the sampled space, so it measures binomial sampling error — how well 2,048 draws estimate the
+fraction — and not the spread of individual outcomes, which is far wider (the "worst" and "best"
+columns are that spread).
+
 | Band around the declared values | Draws with a negative net effect | 95% CI | Worst | Best |
 |---|---:|---|---:|---:|
 | ±50% | **100.0%** | 99.9%–100.0% | −808 h | −20 h |
 | ±100% | **79.4%** | 78.1%–80.6% | −2046 h | +611 h |
 | ±150% | **77.2%** | 75.9%–78.5% | −3882 h | +1394 h |
+
+At the widest band the sign is still negative in **74.4%** of draws. That floor is worth stating:
+even where the band is wide enough to contain essentially any plausible value, the model says the
+sign is negative about three times in four, and that residual is a property of the model's structure
+rather than a measurement of anything outside it.
 
 The conclusion is therefore not a single-cell result: within a ±50% band the sign is unanimous
 across 4,096 draws. But the band is a **prior**, and the ±50% band excludes `σ = 0` — the authoring

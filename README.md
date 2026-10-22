@@ -189,6 +189,12 @@ and returns the percentage that maximizes total utility, not just income.
   Lohnausweis instead of relying on tables that can't capture every personal deduction
 
 ### 3. Monte Carlo pension simulation
+
+> **One input on this path is `Unverified`.** The economic-regime transition probabilities are
+> described in the code as "calibrated loosely" to post-WWII business-cycle frequency, with no
+> series fitted to them. They are load-bearing for the projection and the repository does not claim
+> otherwise; the ledger in [How to read a claim here](#how-to-read-a-claim-here) records it with the
+> check that would settle it.
 Every work-percentage scenario is stress-tested against your actual retirement, not
 just projected with a single "expected return" assumption:
 - **10,000-path simulation** under Conservative / Base Case / Optimistic market
@@ -379,8 +385,14 @@ claim rather than illustrate one prior.
   study than any the current literature offers, which is part of why it has not been done.
 - **A figure worth more than any number above**, because it shows how much of the verdict is the
   prior rather than the model: the share of draws with a negative net effect, as the band widens.
-  It is flat at 100% only while the band is narrow, and settles near 73% at ±200%. See
-  [`figures/comprehension-7-band.png`](figures/comprehension-7-band.png).
+  Twenty widths from ±10% to ±200% in steps of 0.1, 2,048 draws at each. It is flat at 100% only
+  while the band is narrow, and settles at **74.4%** at ±200%. That floor is the last point of the
+  curve and it is worth stating what it buys: even at a band wide enough to contain essentially any
+  plausible value, the sign is still negative in about three draws in four — and that residual is a
+  property of the model's structure, not a measurement of anything. See
+  [`figures/comprehension-7-band.png`](figures/comprehension-7-band.png); the interval drawn around
+  the curve is binomial sampling error on the proportion (Wilson), not the spread of individual
+  draws.
 
 ### Generative review is necessary, not sufficient
 
