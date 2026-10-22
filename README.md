@@ -97,6 +97,54 @@ Pre-registration, decision rule, variance decomposition and figures are in
 
 ---
 
+## How to read a claim here
+
+The repository's rule is that every parameter and every empirical claim carries one of four marks.
+Outputs of the tool are neither — they are consequences of the marks, not claims about the world.
+The three are used consistently across the documents so a reader can tell immediately what kind of
+statement they are looking at:
+
+| Mark | Means | Where it is enforced |
+|---|---|---|
+| **Sourced** | checked against an external document, which is cited, and the check is reproducible | `VALIDATION.md`, `SWISS_TAX_DATA.md`, the `tools/verify_*.py` derivations |
+| **Declared** | invented. Plausible in sign, labelled at the point of use, never presented as a measurement | the `Provenance` enum in `comprehension_cost`, `SWISS_TAX_DATA.md` §7 |
+| **Unverified** | relied upon, but the source needed to check it could not be obtained. Distinct from Declared: the problem is access, not invention | `VALIDATION.md` §5.4 |
+| **Conjecture** | an argument, not a result, carrying a stated refutation | `documents/THE_BY_PRODUCT_THEORY.md` opens with its refutation before its claim |
+
+Four marks, and nothing is claimed at a fifth level. There is no category for "widely believed" or
+"obvious" — those are the two that turn a claim into a defect.
+
+### The claims, their standing, and what would overturn them
+
+The point of this table is that the most confident claims and the least supported ones should not be
+the same claims. If they ever are, the repository has a defect, and the defect is the one a
+scientific reader will find first.
+
+| Claim | Standing | What would overturn it | Where it is argued |
+|---|---|---|---|
+| Cantonal and federal tax scales match the official ESTV workbooks | **Sourced** — 46 bracket ladders, 635 rows, zero mismatches | one ladder that disagrees with its workbook | `VALIDATION.md` §2a |
+| The deduction tables match their rules and phase-out workbooks | **Sourced** — 617 rules, 22 scales, zero discrepancies | a rule or scale that disagrees with the export | `VALIDATION.md` §5.7 |
+| BVG contributions are levied on the coordinated salary | **Sourced** — worked from the statute by hand, asserted as a test | a contrary reading of BVG Art. 8 / BVV 2 Art. 5 | `VALIDATION.md` §3, §5.5 |
+| Bern's 24.73% top rate is correct | **Unverified** — no Bern workbook exists and the tariff PDF's rate column did not decode | the Stadt Bern tariff being read by anyone | `VALIDATION.md` §5.4 |
+| The Bern table's 2024-to-2025 vintage drift is 0.271 pp | **Sourced** — computed from the Steuerfuss rows | a base-tariff change between the two years | `VALIDATION.md` §5.3 |
+| Market presets bracket a plausible range | **Declared** — compared against a published fund study as a bound check only | evidence that the presets overstate a favourable year | `VALIDATION.md` §5.6 |
+| AI authoring time is not recovered over a 36-month horizon | **Declared and band-conditional** — negative in 100% of a ±50% band, 79% of a ±100% band | a positive sign across most of the wider band | `AI_AUTHORING_AND_COMPREHENSION.md` §5.3 |
+| The erosion is driven by the decay asymmetry | **Not supported** — 6.1% of total-order variance, seventh of sixteen | — the analysis already argues against it | `AI_AUTHORING_AND_COMPREHENSION.md` §2.4 |
+| Generative review is the repair | **Necessary, not sufficient** — closing the whole gap recovers 70% of the loss and leaves the sign negative | a run in which full reconstruction breaks even | `AI_AUTHORING_AND_COMPREHENSION.md` §5.5 |
+| The four AI models share one mechanism | **Conjecture** — one author, one epistemic stance, evidence is non-independent | no stock decay in organisations that both adopt AI heavily and review generatively | `documents/THE_BY_PRODUCT_THEORY.md` |
+
+### A note for reviewers
+
+This repository is reviewed by fetching its files, and a fetched copy is a snapshot. Three review
+rounds have now returned findings against text that had already been changed in a later commit — the
+most recent being a synthesis sentence that was reframed as a conjecture one commit before it was
+reported as unaddressed.
+
+That is not an argument that the findings were wrong. It is a note about what a further round over
+an unchanged copy can establish: it returns the same findings with more confidence, which is not the
+same as new evidence. Before a review round, `git log --oneline -5` distinguishes the two cases in
+one command.
+
 ## What it does
 
 ### 1. Work-life balance optimization
