@@ -1,0 +1,14 @@
+[package]
+name = "comprehension_cost"
+version = "0.1.0"
+edition = "2021"
+description = "Whether AI authoring time survives the cost of understanding what it wrote: a mean-field state-transition model with a pre-registered sweep"
+
+# The comprehension-side parameters are Declared rather than Sourced, and the
+# authoring saving is contested between two published sources. Keeping this in its
+# own crate means none of the illustrative figures here can reach a reported tax or
+# pension number by accident, for the same reason `multipolar_sim` is separate.
+
+[dependencies]
+rand = "0.8"
+rand_distr = "0.4"

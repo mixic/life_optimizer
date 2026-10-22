@@ -79,5 +79,11 @@ jobs:
           RUSTDOCFLAGS: -D warnings
       - name: cargo doc (knowledge_work)
         run: cargo doc -p knowledge_work --no-deps
+
+      # The comprehension-cost model has its own Declared parameters and its own
+      # doc-to-code claims about them, so it needs the same treatment: a stale
+      # intra-doc link there would go unnoticed otherwise.
+      - name: cargo doc (comprehension_cost)
+        run: cargo doc -p comprehension_cost --no-deps
         env:
           RUSTDOCFLAGS: -D warnings

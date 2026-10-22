@@ -170,3 +170,186 @@ be tuned to produce anything.
 does not tell you what is true. The empirical study that would settle it — a longitudinal measurement
 of comprehension on AI-authored versus human-authored code in the same repository — is not
 substituted for by anything below.
+
+---
+
+## Part 2 — Results
+
+The grid was run after Part 1 was committed (`e3d2469`). The decision rule in §1.5 was not
+touched. Everything below is produced by `cargo run -p comprehension_cost`, and the numbers are
+reproducible from that command.
+
+### 2.1 A defect in the model, found and logged
+
+The pre-registration §1.6 requires post-hoc changes to be recorded. There was one, and it is a
+correction rather than a tune.
+
+The first version assigned AI authorship to the **first** `ai_share` of the modules. Because module
+complexity rises with index, that handed AI the cheapest half of the codebase. The symptom was an
+arithmetic mismatch: with every comprehension asymmetry switched off, the authoring channel produced
+**+6 h** where `alpha × Σ complexity(AI modules) × sigma` predicted **+12 h**. The assignment is now
+spread across the range (every other module), which is both unbiased and makes the two agree
+exactly — pinned by `ai_authored_modules_are_spread_across_the_complexity_range`, which asserts the
+predicted saving against the realised one.
+
+That bug made the model *less* favourable to the hypothesis, not more. Correcting it doubled the
+authoring saving, and the verdict did not change, which is some evidence the result is not sitting
+on a knife edge of that particular choice.
+
+### 2.2 The pre-registered verdict
+
+**SUPPORTED.** The central cell (`σ = 0.15`, `h_ai = 9` months, `ε = 0.1`) crosses over in **month
+3** and ends the horizon at **−247 hours**.
+
+The full grid, entry by entry, is `—` for no crossover:
+
+| `σ` | crossover month, across `h_ai ∈ {6,9,12,18,24}` and `ε ∈ {0,0.1,0.2,0.5}` |
+|---|---|
+| 0.00 — AI saves nothing (METR's measured result for experts) | 1, 1, 1, 1 in every row |
+| 0.15 — between the anchors | 3, 3, 3, 3 in every row |
+| 0.33 — BairesDev's self-report | 7, 7, 7, 6 in every row |
+
+**The crossover month is almost entirely insensitive to the two parameters the hypothesis is
+about.** It moves by a month across a four-fold change in retention half-life and a five-fold change
+in the defect multiplier. The *magnitude* at the horizon does vary — from −70 h to −145 h across the
+grid — but the *sign* never flips.
+
+An early crossover also makes that statistic a poor summary: once the crossing happens in month 3 or
+7, it has saturated near the creation phase and stops carrying information about the maintenance
+dynamics, which is where the interesting variation lives. **The horizon benefit is the informative
+number; the crossover month is not.** That is a design lesson the pre-registration could not have
+anticipated, because it did not know where the crossing would land.
+
+### 2.3 Where the difference actually comes from
+
+Switching the mechanisms on one at a time, central cell, cumulative benefit after 36 months:
+
+| Configuration | Benefit | Δ from the row above |
+|---|---:|---:|
+| Authoring saving only | **+13 h** | — |
+| + review at the declared comprehension | −47 h | **−61 h** |
+| + slower retention (the "synapses" channel) | −86 h | **−39 h** |
+| + AI defect multiplier | −120 h | **−34 h** |
+| + review leakage | −247 h | **−127 h** |
+
+Three things follow, and the first is the one that matters most.
+
+1. **The authoring saving is trivially small in absolute terms.** Over three years it is worth
+   **13 hours**. That is not a transcription of the BairesDev figure — at `σ = 0.15` it is a
+   deliberately conservative fraction — but even at `σ = 0.33` it is 29 hours. Comprehension and
+   maintenance costs are measured in hundreds. The asymmetry of *scale* between the two sides of the
+   ledger is the substantive finding, and it does not depend on the comprehension parameters at all.
+2. **Review leakage is the largest single channel**, at −127 h. Defects that a low-comprehension
+   review lets through generate their own maintenance stream, and that feedback loop — not decay —
+   is what dominates.
+3. **The retention asymmetry contributes −39 h**, about 15% of the total loss. It matters. It is not
+   the main event.
+
+### 2.4 Which parameter the answer depends on
+
+One-at-a-time, ±50%, central cell, ranked by the swing in benefit at the horizon:
+
+| Parameter | at 0.5× | at 1.5× | swing | share |
+|---|---:|---:|---:|---:|
+| `diag_hours_per_unit` | −143 | −351 | 209 | 18% |
+| `diag_slope` | −173 | −321 | 148 | 13% |
+| `c_human` | −137 | −262 | 125 | 11% |
+| `leak_hazard` | −184 | −308 | 124 | 11% |
+| `c_ai` | −293 | −202 | 91 | 8% |
+| `hazard` | −201 | −289 | 88 | 8% |
+| **`half_life_ai`** | −298 | −220 | **79** | **7%** |
+| `catch_threshold` | −177 | −244 | 66 | 6% |
+| `review_gain` | −282 | −221 | 61 | 5% |
+| `half_life_human` | −209 | −263 | 54 | 5% |
+| `ai_defect_multiplier` | −231 | −263 | 32 | 3% |
+| `alpha`, `savings` | −254 | −240 | 13 | 1% |
+| `review_slope`, `review_hours_per_unit` | −242 | −252 | 11 | 1% |
+
+**This inverts the proposal's own framing.** The proposal argued that the retention asymmetry
+`λ(AI) / λ(human)` is "the core of your hypothesis and the least anchored parameter", and that the
+first run should report "a crossover occurs only if `λ(AI)` exceeds `λ(human)` by a factor of X".
+The model says something different: the retention asymmetry ranks **seventh of sixteen** and
+accounts for 7% of the variation. The answer turns on **how much slower diagnosis is when
+comprehension is low** (`diag_hours_per_unit`, `diag_slope`) and on **how wide the initial
+comprehension gap is** (`c_human`, `c_ai`).
+
+And the authoring saving — the parameter the commodity narrative is entirely about — is **joint
+last at 1%**, because maintenance dwarfs authoring over a multi-year horizon.
+
+### 2.5 Break-even, and what it takes
+
+Varying only the comprehension an AI-authored module starts with, everything else at the central
+cell, the benefit improves steadily — from −175 h at `c_ai = 0.45` to −75 h at `c_ai = 0.85` — and
+**never reaches zero**. No initial comprehension gap, short of removing it entirely, pays for the
+run on its own. Reaching break-even needs the comprehension gap *and* the retention asymmetry to be
+small at once.
+
+That is a sharper and more falsifiable claim than "AI can be net-negative": the model says the
+**comprehension that AI must preserve is on the order of what authoring would have produced**, and
+anything less loses over three years.
+
+### 2.6 What the mean-field assumption costs
+
+300 seeded Poisson paths on the central cell:
+
+| | Mean-field | Simulated median | 10th | 90th |
+|---|---:|---:|---:|---:|
+| Crossover month | 3 | **6** | 3 | 10 |
+| Benefit at month 36 | −247 h | **−239 h** | −386 h | −101 h |
+
+The magnitude is estimated well by the deterministic run (−247 against −239). The **timing is not**:
+the mean-field charges a fraction of an event every month, so it crosses earlier and without
+variance, while real arrivals are lumpy and the crossing spreads over months 3 to 10. Every path
+crosses, so this is not a headline reversal — but a model that reported "month 3" as though it were
+a date would be over-claiming.
+
+### 2.7 The control: the model can report a win
+
+With the comprehension asymmetry removed — AI code understood as well, retained as well, no defect
+penalty — the benefit is **+13 h** at `σ = 0.15`, **+29 h** at `σ = 0.33`, and **exactly 0 h** at
+`σ = 0`, with no crossover anywhere.
+
+That control is the reason the −247 h is a finding rather than a restatement of the assumptions, and
+it is pinned as a test (`the_model_can_report_a_win`, `the_null_scenario_is_exactly_zero`). A model
+that could not produce a positive result would be a model with the conclusion wired in.
+
+### 2.8 What this does and does not establish
+
+**It does not establish that AI code is net-negative in practice.** Every magnitude on the
+comprehension side is Declared — invented, plausible in sign, unmeasured. The verdict is therefore
+conditional on those magnitudes, and the sensitivity table says exactly which ones. The model is a
+machine for converting assumptions into consequences, and what it has produced is a statement about
+which assumptions the conclusion rests on.
+
+**What it does establish, and what is worth acting on:**
+
+1. **The scale asymmetry is the real argument.** Authoring savings are tens of hours over three
+   years; comprehension and maintenance costs are hundreds. Any claim that AI "saves X hours" is
+   answering a question an order of magnitude smaller than the one that decides the outcome. This
+   does not depend on the Declared parameters being right — it depends on authoring being a smaller
+   share of an engineer's time than maintenance, which is the practitioner claim in the proposal
+   itself.
+2. **The research priority should move.** The proposal nominated retention decay as the thing to
+   measure. The model says the thing to measure is **how much longer it takes to diagnose a problem
+   in code you did not write** — `diag_slope` and `diag_hours_per_unit` are the top two
+   parameters — together with the size of the initial comprehension gap. That is a far more
+   tractable study than tracking decay over years: it is a task-level measurement, and it is the
+   kind of thing METR's design could capture by recording diagnosis time separately from
+   implementation time.
+3. **The measured authoring effect is not the binding constraint.** Since the authoring term ranks
+   last in sensitivity, resolving whether it is +19% or −19% (the METR dispute) changes almost
+   nothing about the conclusion. That is a genuinely useful disambiguation: the field is arguing
+   hard about the one parameter that does not matter.
+
+**The empirical study that would settle it** is a within-repository comparison of diagnosis time on
+AI-authored versus human-authored modules, with comprehension measured rather than assumed. Nothing
+here substitutes for it.
+
+### 2.9 Reproducing this
+
+```bash
+cargo run -p comprehension_cost                  # the grid, the verdict, sensitivity, break-even
+cargo run -p comprehension_cost -- --verbose    # the month-by-month ledger, central cell
+cargo run -p comprehension_cost -- --paths 300  # the Monte Carlo comparison
+cargo test -p comprehension_cost                # nine tests, including both controls
+```
