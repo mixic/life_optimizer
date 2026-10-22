@@ -260,6 +260,10 @@ cargo test -p comprehension_cost                  # eleven tests, including both
 Figures are in [`figures/`](figures) and are produced from the model's own CSV export by
 `tools/plot_comprehension_cost.py`, which refuses to draw if the export is inconsistent.
 
+The pre-registration, the decision rule fixed before the run, the reading of each published anchor
+(including the two that did not survive as stated) and the full sensitivity tables are in
+[`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
+
 ---
 
 ## Example output
