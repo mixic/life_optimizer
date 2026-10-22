@@ -481,6 +481,65 @@ def figure_breakeven(breakeven, paths, out_dir):
     return path
 
 
+def check_band(rows):
+    path = "band_sweep.csv"
+    if len(rows) < 5:
+        raise CheckError(f"{path}: only {len(rows)} band widths")
+    spreads = [float(r["spread"]) for r in rows]
+    if spreads != sorted(spreads):
+        raise CheckError(f"{path}: the band widths are not increasing")
+    for row in rows:
+        fraction = float(row["fraction"])
+        low, high = float(row["ci_low"]), float(row["ci_high"])
+        if not 0.0 <= fraction <= 1.0:
+            raise CheckError(f"{path}: a proportion of {fraction} is outside [0, 1]")
+        if not (low <= fraction <= high):
+            raise CheckError(f"{path}: the interval does not bracket the estimate in {row}")
+
+
+def figure_band(rows, out_dir):
+    """How much of the conclusion is the prior, rather than the model.
+
+    This is the repository's most consequential figure: the sign verdict is not a property of
+    the world but a function of how wide a band around the invented values you are willing to
+    call plausible. A reader who takes "the net effect is negative" from the central cell is
+    reading the left-hand edge of this curve and calling it the whole of it.
+    """
+    band = [float(r["spread"]) * 100 for r in rows]
+    fraction = [float(r["fraction"]) * 100 for r in rows]
+    low = [float(r["ci_low"]) * 100 for r in rows]
+    high = [float(r["ci_high"]) * 100 for r in rows]
+
+    fig, ax = plt.subplots(figsize=(9.6, 5.2))
+    ax.fill_between(band, low, high, color="#1f4e79", alpha=0.18, lw=0,
+                    label="95% interval")
+    ax.plot(band, fraction, color="#1f4e79", lw=2.2, label="share of draws with a negative net effect")
+    ax.axhline(100, color="#333333", lw=0.8, ls=":")
+
+    # The pre-registered band, and the width at which sigma = 0 enters the space.
+    ax.axvline(50, color="#4f6228", lw=1.2, ls="--")
+    ax.annotate("the declared band\n(used for the headline)",
+                xy=(50, 55), xytext=(56, 40), fontsize=8, color="#4f6228",
+                arrowprops=dict(arrowstyle="->", color="#4f6228", lw=1))
+    ax.axvline(100, color="#c0504d", lw=1.2, ls="--")
+    ax.annotate("width at which the band\nfirst contains σ = 0",
+                xy=(100, 30), xytext=(108, 18), fontsize=8, color="#c0504d",
+                arrowprops=dict(arrowstyle="->", color="#c0504d", lw=1))
+
+    ax.set_xlabel("band around each declared value, ± per cent")
+    ax.set_ylabel("draws with a negative net effect (per cent)")
+    ax.set_ylim(0, 105)
+    ax.set_title("How much of the sign verdict is the prior?")
+    ax.legend(frameon=False, fontsize=8, loc="lower left")
+    ax.grid(alpha=0.25)
+    footer(fig)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    path = os.path.join(out_dir, "comprehension-7-band.png")
+    fig.savefig(path, dpi=170)
+    plt.close(fig)
+    return path
+
+
 def figure_control(control, channels_rows, out_dir):
     """The figure that makes the rest of them worth anything."""
     savings = [float(r["savings"]) for r in control]
@@ -538,6 +597,7 @@ def main():
         breakeven_rows = read_csv(os.path.join(root, "breakeven.csv"))
         path_rows = read_csv(os.path.join(root, "paths.csv"))
         control_rows = read_csv(os.path.join(root, "control.csv"))
+        band_rows = read_csv(os.path.join(root, "band_sweep.csv"))
 
         check_central(central, args.horizon)
         check_channels(channels_rows)
@@ -546,6 +606,7 @@ def main():
         check_breakeven(breakeven_rows)
         check_paths(path_rows, args.horizon)
         check_control(control_rows)
+        check_band(band_rows)
     except CheckError as error:
         print(f"refusing to draw: {error}", file=sys.stderr)
         return 2
@@ -558,6 +619,7 @@ def main():
         figure_sensitivity(sobol_rows, sensitivity_rows, args.out),
         figure_breakeven(breakeven_rows, path_rows, args.out),
         figure_control(control_rows, channels_rows, args.out),
+        figure_band(band_rows, args.out),
     ]
     for path in written:
         print(f"wrote {path}")

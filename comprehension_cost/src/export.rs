@@ -147,6 +147,25 @@ pub fn write_all(dir: &Path, base: &Params, paths: usize) -> io::Result<Vec<Path
     }
     written.push(write_file(dir, "sign_audit.csv", &body)?);
 
+    // ---- the band sweep ------------------------------------------------------
+    //
+    // The band width is a prior. This is the curve that shows how much of the conclusion
+    // is the prior: the share of draws with a negative net effect, as the band widens from
+    // ten per cent to two hundred per cent of the declared values. At 100% the band first
+    // contains sigma = 0, the authoring saving a controlled study supports.
+    let mut body = String::from("spread,fraction,ci_low,ci_high,worst,best\n");
+    for step in 1..=20 {
+        let spread = step as f64 / 10.0;
+        let audit = crate::global_sensitivity::sign_audit_with_spread(base, 2048, 7, spread);
+        writeln!(
+            body,
+            "{spread:.2},{:.6},{:.6},{:.6},{:.4},{:.4}",
+            audit.fraction, audit.ci_low, audit.ci_high, audit.worst, audit.best
+        )
+        .unwrap();
+    }
+    written.push(write_file(dir, "band_sweep.csv", &body)?);
+
     // ---- generative review ---------------------------------------------------
     let mut body = String::from("closed,c_ai,benefit,crossover_month\n");
     for row in crate::analysis::generativity(base) {

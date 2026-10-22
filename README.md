@@ -9,6 +9,10 @@
 [![Rust](https://img.shields.io/badge/rust-2021-orange.svg)](https://www.rust-lang.org)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](#license)
 
+**Every claim in this repository is recorded with its standing and the condition that would
+overturn it — [the claim ledger](#how-to-read-a-claim-here).** It is the shortest honest description
+of what the project is entitled to say, and the table to read first.
+
 </div>
 
 ---
@@ -126,12 +130,31 @@ scientific reader will find first.
 | The deduction tables match their rules and phase-out workbooks | **Sourced** — 617 rules, 22 scales, zero discrepancies | a rule or scale that disagrees with the export | `VALIDATION.md` §5.7 |
 | BVG contributions are levied on the coordinated salary | **Sourced** — worked from the statute by hand, asserted as a test | a contrary reading of BVG Art. 8 / BVV 2 Art. 5 | `VALIDATION.md` §3, §5.5 |
 | Bern's 24.73% top rate is correct | **Unverified** — no Bern workbook exists and the tariff PDF's rate column did not decode | the Stadt Bern tariff being read by anyone | `VALIDATION.md` §5.4 |
+| Economic regime transitions reflect business-cycle frequency | **Unverified** — "calibrated loosely" to post-WWII frequency, with no series fitted to it | a fit against a named business-cycle dataset | `src/economic_regimes.rs` |
+| The named pension-fund conversion rates are current fund practice | **Unverified** — published reference rates, not checked against any fund's statement | any fund's published `Umwandlungssatz` | `src/main.rs`, `PENSION_OPTIMIZATION.md` |
 | The Bern table's 2024-to-2025 vintage drift is 0.271 pp | **Sourced** — computed from the Steuerfuss rows | a base-tariff change between the two years | `VALIDATION.md` §5.3 |
 | Market presets bracket a plausible range | **Declared** — compared against a published fund study as a bound check only | evidence that the presets overstate a favourable year | `VALIDATION.md` §5.6 |
 | AI authoring time is not recovered over a 36-month horizon | **Declared and band-conditional** — negative in 100% of a ±50% band, 79% of a ±100% band | a positive sign across most of the wider band | `AI_AUTHORING_AND_COMPREHENSION.md` §5.3 |
 | The erosion is driven by the decay asymmetry | **Not supported** — 6.1% of total-order variance, seventh of sixteen | — the analysis already argues against it | `AI_AUTHORING_AND_COMPREHENSION.md` §2.4 |
 | Generative review is the repair | **Necessary, not sufficient** — closing the whole gap recovers 70% of the loss and leaves the sign negative | a run in which full reconstruction breaks even | `AI_AUTHORING_AND_COMPREHENSION.md` §5.5 |
 | The four AI models share one mechanism | **Conjecture** — one author, one epistemic stance, evidence is non-independent | no stock decay in organisations that both adopt AI heavily and review generatively | `documents/THE_BY_PRODUCT_THEORY.md` |
+
+### Why the market presets are Declared and not Unverified
+
+The two marks are easy to blur, and the boundary is worth one paragraph because the whole value of
+the distinction is that it is applied with judgement rather than mechanically.
+
+**Declared means the number was constructed. Unverified means a number was relied upon and its
+source could not be obtained.** They fail differently and they are fixed differently: a Declared
+value is fixed by a better model or a better argument, an Unverified one by getting hold of the
+document.
+
+So the three market presets (2.0%, 3.2%, 4.5% real) are **Declared** — they were constructed, and
+the fact that they were afterwards bound-checked against a published fund study does not make them
+retrieved. Bern's top rate is the opposite case: it came from a real published document, that
+document could not be read, and no amount of modelling will settle it. The regime-switching
+transition probabilities and the pension-fund conversion profiles sit with Bern, which is why the
+mark is used four times rather than once.
 
 ### A note for reviewers
 
@@ -354,10 +377,35 @@ claim rather than illustrate one prior.
   parameter effects, so **no single measurement can settle this question**. Settling it requires a
   joint design varying diagnosis cost, comprehension gap and leakage together — a more expensive
   study than any the current literature offers, which is part of why it has not been done.
-- **Generative review is necessary but not sufficient**, which corrects this project's own argument.
-  Closing the entire initial comprehension gap — a reviewer who reconstructs until they understand
-  as well as an author would — still leaves the run negative, because four other channels remain
-  open. The correction is recorded in place rather than dropped.
+- **A figure worth more than any number above**, because it shows how much of the verdict is the
+  prior rather than the model: the share of draws with a negative net effect, as the band widens.
+  It is flat at 100% only while the band is narrow, and settles near 73% at ±200%. See
+  [`figures/comprehension-7-band.png`](figures/comprehension-7-band.png).
+
+### Generative review is necessary, not sufficient
+
+This is a correction to the project's own argument, so it gets a subsection rather than a bullet.
+
+The theory this work produced says the defect is *passive review*, not machine authorship, because
+the memory literature finds the advantage of generating material over reading it disappears when
+the reader performs the processing generation would force. That is a claim about the model's
+parameterisation, so the model can test it — and it should, or the theory is an interpretation
+protected from its own subject matter.
+
+Making the share of the comprehension gap that review closes into a parameter and sweeping it:
+
+| Gap closed by review | Comprehension on arrival | Benefit at month 36 | Crossover |
+|---:|---:|---:|---|
+| 0% — passive reading | 0.25 | −247 h | month 3 |
+| 50% | 0.55 | −139 h | month 9 |
+| 100% — full reconstruction | 0.85 | **−75 h** | **month 15** |
+
+Full generative review recovers about **70% of the loss** and **twelve months of grace**, and leaves
+the run negative, because four channels stay open: faster retention loss, the defect multiplier,
+review leakage, and a diagnosis cost that scales with comprehension from whatever level it starts
+at. An organisation that retrains its reviewers buys time and is still losing. Regime B in
+[`documents/THE_BY_PRODUCT_THEORY.md`](documents/THE_BY_PRODUCT_THEORY.md) §5.2 is revised upward to
+match.
 
 ---
 
