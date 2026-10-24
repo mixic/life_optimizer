@@ -353,6 +353,14 @@ The pre-registration, the decision rule fixed before the run, the audit of each 
 and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
+**And the question after that is pre-registered too, and its first finding is negative.**
+[`PERCEPTION_GAP.md`](PERCEPTION_GAP.md) designs the estimator for the gap between what a person
+believes about their own comprehension and what is true of it. The obstacle is not the filter: it is
+that competence and confidence push the same observable signals in the same direction, so the gap is
+generically **unidentifiable** from behavioural telemetry, and a Kalman filter will report it with a
+tight band that means nothing. The document specifies the observability test, the confounded-versus-
+identified control, and the probe design — a randomised review regime — that restores identifiability.
+
 **The next question is pre-registered and not yet built.** Amdahl's law bounds the speedup of an
 accelerated stage by the fraction of the cycle that stage occupies, which means a 19% *slowdown*
 cannot be produced by any code-stage speedup at all: inverted, the measurement implies a code stage
