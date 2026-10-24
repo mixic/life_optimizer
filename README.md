@@ -138,6 +138,7 @@ scientific reader will find first.
 | The erosion is driven by the decay asymmetry | **Not supported** — 6.1% of total-order variance, seventh of sixteen | — the analysis already argues against it | `AI_AUTHORING_AND_COMPREHENSION.md` §2.4 |
 | Generative review is the repair | **Necessary, not sufficient** — closing the whole gap recovers 70% of the loss and leaves the sign negative | a run in which full reconstruction breaks even | `AI_AUTHORING_AND_COMPREHENSION.md` §5.5 |
 | The four AI models share one mechanism | **Conjecture** — one author, one epistemic stance, evidence is non-independent | no stock decay in organisations that both adopt AI heavily and review generatively | `documents/THE_BY_PRODUCT_THEORY.md` |
+| The perception gap is recoverable from telemetry when one channel observes belief directly | **Declared and simulation-checked** — rank 2 with condition 1.8; rank 1 and no estimate from behaviour alone | a rank-1 design that nonetheless achieves nominal calibration | `PERCEPTION_GAP_OBSERVABILITY.md` §3–§4 |
 
 ### Why the market presets are Declared and not Unverified
 
@@ -363,15 +364,22 @@ identified control, and the probe design — a randomised review regime — that
 
 `perception_gap` is now built and run. Three results worth having:
 
-- **Adoption changes the speed of the gap, not its destination.** The steady-state gap is the same at
-  every adoption share; what adoption buys is a half-life that falls from 55 months to 13.5. At any
-  substantial adoption the gap opens fastest in **month 3**, so a guardrail installed after the first
-  year is installed after most of the damage.
+- **Adoption changes the speed of the gap, not its destination.** This is a **property of the model's
+  transition matrix, not a measurement**: both latents converge to fixed ceilings, so the steady-state
+  gap is `β_ceiling − τ_floor` at every adoption share and what adoption buys is a half-life falling
+  from 55 months to 13.5. It is reported because it organises the model, not because the world was
+  observed to behave this way.
 - **The identifiability result is sharper than predicted, and the pre-registration's own claim was
   too broad.** With self-report the design is well conditioned (1.8) at every level of the confound.
   Behaviour-only is *unobservable* at γ = 0 and merely *fragile* above it — it can see believed
   competence only because confidence contaminates behaviour, so the estimand becomes identifiable
   through the very quantity one was avoiding assuming.
+- **The non-linearity objection was tested, not answered.** A bootstrap particle filter now ships
+  beside the Kalman filter and agrees with it to three decimal places, because every map in this
+  specification is affine — so no alternative filter changes the identifiability result *here*. Making
+  that measurement exposed a bug in my own resampler that had produced a 25–35% false disagreement.
+  [`PERCEPTION_GAP_OBSERVABILITY.md`](PERCEPTION_GAP_OBSERVABILITY.md) supplies the formal condition
+  and corrects the derivation it was commissioned from; see below.
 - **Unidentifiability shows up as miscalibration, not as error.** In the unobservable design the
   filter's RMSE stayed respectable while its band drifted from 73% to 62% coverage. A study reporting
   error alone would have called it healthy. That trap is why the crate carries a prior-only baseline

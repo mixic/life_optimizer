@@ -251,6 +251,58 @@ def figure_calibration(rows, out_dir):
     return path
 
 
+def figure_headline(rows, out_dir):
+    """The repository's own thesis applied to itself: error stays put, the band does not.
+
+    This is the figure the correction deserves. A filter whose RMSE is flat and whose coverage
+    drifts from 73% to 62% passes every conventional accuracy check and is still wrong. The two
+    panels use the same cells, so the divergence between them is the finding.
+    """
+    fig, (left, right) = plt.subplots(1, 2, figsize=(11.5, 4.9), sharex=True)
+    order = sorted({r["design"] for r in rows})
+    colours = dict(zip(order, ["#1f4e79", "#c0504d"]))
+    markers = dict(zip(order, ["o", "s"]))
+
+    for design in order:
+        series = sorted(
+            (float(r["mismatch"]), float(r["kalman_rmse"]), float(r["coverage"]))
+            for r in rows
+            if r["design"] == design and abs(float(r["gamma"]) - 0.0) < 1e-9
+        )
+        xs = [s[0] for s in series]
+        left.plot(xs, [s[1] for s in series], color=colours[design], marker=markers[design],
+                  lw=2, label=design)
+        right.plot(xs, [s[2] for s in series], color=colours[design], marker=markers[design],
+                   lw=2, label=design)
+
+    left.set_ylabel("RMSE of the gap estimate")
+    left.set_title("The point estimate passes every check")
+    left.set_xlabel("dynamics mismatch")
+    left.grid(alpha=0.25)
+    left.legend(frameon=False, fontsize=8)
+    left.annotate("flat", xy=(0.5, 0.065), fontsize=9, color="#666666")
+
+    right.axhline(0.68, color="#333333", lw=0.9, ls=":")
+    right.annotate("nominal 68%", xy=(0.02, 0.683), xytext=(0.06, 0.70), fontsize=8,
+                   color="#333333")
+    right.set_ylabel("coverage of the one-sigma band")
+    right.set_title("…and the uncertainty is quietly wrong")
+    right.set_xlabel("dynamics mismatch")
+    right.set_ylim(0.55, 0.78)
+    right.grid(alpha=0.25)
+    right.annotate("drifts from 0.73\nto 0.62", xy=(1.0, 0.62), xytext=(0.35, 0.60),
+                   fontsize=9, color="#c0504d",
+                   arrowprops=dict(arrowstyle="->", color="#c0504d", lw=1))
+
+    fig.suptitle("Passing the point-estimate check does not mean the model is right", fontsize=12)
+    footer(fig)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.93))
+    path = os.path.join(out_dir, "perception-5-headline.png")
+    fig.savefig(path, dpi=165)
+    plt.close(fig)
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("export_dir", help="directory written by --export")
@@ -279,6 +331,7 @@ def main():
         figure_identifiability(obs_rows, args.out),
         figure_estimators(est_rows, args.out),
         figure_calibration(cal_rows, args.out),
+        figure_headline(cal_rows, args.out),
     ]
     for path in written:
         print(f"wrote {path}")

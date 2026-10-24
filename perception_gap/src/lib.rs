@@ -37,6 +37,7 @@
 pub mod analysis;
 
 use rand::rngs::StdRng;
+use rand::Rng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal};
 
@@ -558,4 +559,122 @@ pub fn observability(params: &Params, design: Design, adoption: f64) -> Observab
     };
 
     Observability { rank, condition, null_direction }
+}
+
+/// A bootstrap particle filter over the same state space.
+///
+/// # Why this exists
+///
+/// A referee objected that the linear-Gaussian assumption is doing unacknowledged work, and that a
+/// standard Kalman filter's "well conditioned" result is a property of the linearisation rather than
+/// of the problem. The objection is correct in general and testable here.
+///
+/// In *this* model every map is affine — the transition is `F x + u` with a known input, and the
+/// observation is `H x` — so the extended and unscented filters reduce to the Kalman filter exactly,
+/// and a particle filter should agree with it up to Monte Carlo error. That is a claim about this
+/// specification, not about state estimation in general, and it is checked empirically by
+/// `the_particle_filter_agrees_with_the_kalman_filter` rather than asserted.
+///
+/// If a later version makes the transition depend on the state multiplicatively, or puts the
+/// adoption share inside the covariance, this equality breaks and the choice of filter must be
+/// argued rather than inherited.
+pub fn particle_filter(
+    trace: &Trace,
+    params: &Params,
+    design: Design,
+    adoption: f64,
+    particles: usize,
+    seed: u64,
+) -> Estimate {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let init = Normal::new(0.0, 0.03).expect("positive sigma");
+    let (f, u) = transition(params, adoption);
+    let rows = observation_matrix(params, design);
+    let channels: Vec<usize> = (0..CHANNELS).filter(|c| design.permits(*c)).collect();
+
+    let mut xs: Vec<[f64; 2]> = (0..particles)
+        .map(|_| {
+            [
+                (params.tau0 + init.sample(&mut rng)).clamp(0.0, 1.0),
+                (params.beta0 + init.sample(&mut rng)).clamp(0.0, 1.0),
+            ]
+        })
+        .collect();
+    let mut weights = vec![1.0 / particles as f64; particles];
+    let mut gap = Vec::with_capacity(trace.observations.len());
+    let mut sigma = Vec::with_capacity(trace.observations.len());
+
+    for z in &trace.observations {
+        // Propagate.
+        for x in xs.iter_mut() {
+            x[0] =
+                (f[0] * x[0] + u[0] + Normal::new(0.0, params.sigma_tau).unwrap().sample(&mut rng))
+                    .clamp(0.0, 1.0);
+            x[1] = (f[1] * x[1]
+                + u[1]
+                + Normal::new(0.0, params.sigma_beta).unwrap().sample(&mut rng))
+            .clamp(0.0, 1.0);
+        }
+
+        // Weight by the likelihood of the observations this design can see.
+        let mut total = 0.0;
+        for (x, w) in xs.iter().zip(weights.iter_mut()) {
+            let mut log_likelihood = 0.0;
+            for (row, channel) in rows.iter().zip(channels.iter()) {
+                let variance = params.sigma_obs[*channel].powi(2);
+                let predicted = row[0] * x[0] + row[1] * x[1];
+                log_likelihood -= 0.5 * (z[*channel] - predicted).powi(2) / variance;
+            }
+            *w *= log_likelihood.exp();
+            total += *w;
+        }
+        if total <= 0.0 || !total.is_finite() {
+            // Every particle is implausible; fall back to uniform rather than emitting NaN.
+            weights.iter_mut().for_each(|w| *w = 1.0 / particles as f64);
+        } else {
+            weights.iter_mut().for_each(|w| *w /= total);
+        }
+
+        // Weighted moments of the gap.
+        let mean_gap: f64 = xs.iter().zip(weights.iter()).map(|(x, w)| (x[1] - x[0]) * w).sum();
+        let var_gap: f64 = xs
+            .iter()
+            .zip(weights.iter())
+            .map(|(x, w)| ((x[1] - x[0]) - mean_gap).powi(2) * w)
+            .sum();
+        gap.push(mean_gap);
+        sigma.push(var_gap.max(0.0).sqrt());
+
+        // Resample when the effective sample size collapses.
+        let ess = 1.0 / weights.iter().map(|w| w * w).sum::<f64>();
+        if ess < particles as f64 / 2.0 {
+            let mut cumulative = Vec::with_capacity(particles);
+            let mut running = 0.0;
+            for w in &weights {
+                running += *w;
+                cumulative.push(running);
+            }
+            // Systematic resampling: ONE uniform offset, then evenly spaced targets. Drawing a
+            // fresh random target per particle is the classic wrong version — it lets the index
+            // advance monotonically while the targets do not, which biases the sample and was
+            // producing a 25-35% error against the Kalman filter on a model where the two filters
+            // are supposed to coincide.
+            let mut rebuilt = Vec::with_capacity(particles);
+            let offset = rng.gen::<f64>() / particles as f64;
+            let mut index = 0;
+            let mut running = cumulative[0];
+            for i in 0..particles {
+                let target = offset + i as f64 / particles as f64;
+                while target > running && index < particles - 1 {
+                    index += 1;
+                    running = cumulative[index];
+                }
+                rebuilt.push(xs[index]);
+            }
+            xs = rebuilt;
+            weights.iter_mut().for_each(|w| *w = 1.0 / particles as f64);
+        }
+    }
+
+    Estimate { gap, sigma }
 }

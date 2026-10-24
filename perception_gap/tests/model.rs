@@ -277,3 +277,57 @@ fn the_prior_only_run_follows_the_transition() {
     );
     assert!(estimate.sigma.iter().all(|s| s.is_finite() && *s >= 0.0));
 }
+
+/// The referee's objection, tested rather than answered.
+///
+/// The objection: a standard Kalman filter's result is a property of the linearisation, so an
+/// extended, unscented or particle filter might give a different answer. In this model every map is
+/// affine — the transition is `F x + u` with a known input and the observation is `H x` — so all four
+/// filters are the same estimator, and a particle filter must converge to the Kalman filter as the
+/// particle count rises. If it does not converge, the model contains a nonlinearity the
+/// specification did not declare, and the Kalman results in the report are unsafe.
+///
+/// The test therefore checks *convergence*, not equality. A particle filter carries Monte Carlo error
+/// on top of the estimation error, so it is expected to be worse at finite particle counts; what
+/// matters is that the discrepancy shrinks.
+#[test]
+fn the_particle_filter_converges_to_the_kalman_filter() {
+    let params = Params::default();
+    let design = Design::Full;
+    let seeds = 12u64;
+
+    let mean_rmse = |particles: usize| {
+        let mut kalman_total = 0.0;
+        let mut particle_total = 0.0;
+        for seed in 0..seeds {
+            let trace = simulate(&params, 0.5, seed);
+            let truth = trace.gap();
+
+            let mut filter = Kalman::new(&params, design, 0.5);
+            let kalman = filter.run(&trace);
+            let particle =
+                perception_gap::particle_filter(&trace, &params, design, 0.5, particles, seed);
+
+            kalman_total += kalman.rmse(&truth);
+            particle_total += particle.rmse(&truth);
+        }
+        (kalman_total / seeds as f64, particle_total / seeds as f64)
+    };
+
+    let (kalman_coarse, particle_coarse) = mean_rmse(200);
+    let (kalman_fine, particle_fine) = mean_rmse(4000);
+
+    let coarse_gap = (particle_coarse - kalman_coarse).abs();
+    let fine_gap = (particle_fine - kalman_fine).abs();
+
+    assert!(
+        fine_gap < coarse_gap * 0.75,
+        "the particle filter should converge toward the Kalman filter, but the discrepancy went \
+         from {coarse_gap:.4} at 200 particles to {fine_gap:.4} at 4000"
+    );
+    assert!(
+        fine_gap / kalman_fine < 0.05,
+        "at 4000 particles the two filters should agree within 5%: {particle_fine:.4} against \
+         {kalman_fine:.4}"
+    );
+}
