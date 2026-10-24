@@ -353,6 +353,15 @@ The pre-registration, the decision rule fixed before the run, the audit of each 
 and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
+**The next question is pre-registered and not yet built.** Amdahl's law bounds the speedup of an
+accelerated stage by the fraction of the cycle that stage occupies, which means a 19% *slowdown*
+cannot be produced by any code-stage speedup at all: inverted, the measurement implies a code stage
+somewhere between 0.61× and 0.81× depending on the coding fraction. Something downstream must have
+got slower. [`DELIVERY_FLOW.md`](DELIVERY_FLOW.md) specifies the two-stage queueing model that would
+test whether comprehension is that something — its state transitions, its parameter set, its control,
+and the observations that would give the Amdahl null the win over the queueing alternative. No crate
+exists yet; that ordering is deliberate.
+
 **What that agreement is worth, stated before the claim.** This is one of four models in the
 repository that report AI costing the people using it more than the headline suggests. The four were
 built by one author working from one epistemic stance, and all four rest on `Declared` parameters,
