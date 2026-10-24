@@ -353,13 +353,29 @@ The pre-registration, the decision rule fixed before the run, the audit of each 
 and the referee response are in
 [`AI_AUTHORING_AND_COMPREHENSION.md`](AI_AUTHORING_AND_COMPREHENSION.md).
 
-**And the question after that is pre-registered too, and its first finding is negative.**
+**And the question after that is pre-registered too, and it has now been run.**
 [`PERCEPTION_GAP.md`](PERCEPTION_GAP.md) designs the estimator for the gap between what a person
 believes about their own comprehension and what is true of it. The obstacle is not the filter: it is
 that competence and confidence push the same observable signals in the same direction, so the gap is
 generically **unidentifiable** from behavioural telemetry, and a Kalman filter will report it with a
 tight band that means nothing. The document specifies the observability test, the confounded-versus-
 identified control, and the probe design — a randomised review regime — that restores identifiability.
+
+`perception_gap` is now built and run. Three results worth having:
+
+- **Adoption changes the speed of the gap, not its destination.** The steady-state gap is the same at
+  every adoption share; what adoption buys is a half-life that falls from 55 months to 13.5. At any
+  substantial adoption the gap opens fastest in **month 3**, so a guardrail installed after the first
+  year is installed after most of the damage.
+- **The identifiability result is sharper than predicted, and the pre-registration's own claim was
+  too broad.** With self-report the design is well conditioned (1.8) at every level of the confound.
+  Behaviour-only is *unobservable* at γ = 0 and merely *fragile* above it — it can see believed
+  competence only because confidence contaminates behaviour, so the estimand becomes identifiable
+  through the very quantity one was avoiding assuming.
+- **Unidentifiability shows up as miscalibration, not as error.** In the unobservable design the
+  filter's RMSE stayed respectable while its band drifted from 73% to 62% coverage. A study reporting
+  error alone would have called it healthy. That trap is why the crate carries a prior-only baseline
+  and a dynamics-mismatch axis, both added after the first run and recorded as such.
 
 **The next question is pre-registered and not yet built.** Amdahl's law bounds the speedup of an
 accelerated stage by the fraction of the cycle that stage occupies, which means a 19% *slowdown*

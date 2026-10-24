@@ -365,3 +365,130 @@ pre-declared explanation probe and a randomised review regime, instrumented on t
 5. **Mistaking a synthetic success for a finding about engineers.** The filter will be validated
    against data this model generates. That establishes whether the estimator works on its own
    assumptions, which is all a simulation can establish.
+
+---
+
+## Part 2 — Results
+
+Run as pre-registered, at `cargo run -p perception_gap -- --export out/perception`, 200 seeds per
+cell. Two of the pre-registration's expectations did not survive contact with the run, and both are
+recorded below rather than edited out of Part 1.
+
+### 2.1 When the gap is largest
+
+The pre-registration expected this to be uninteresting and it is: both latents saturate, so the gap
+grows monotonically and peaks at the horizon. What is not obvious is the *speed*.
+
+| Adoption | Steady-state gap | Half-life to reach it | Gap at month 36 | Month of fastest growth |
+|---:|---:|---:|---:|---:|
+| 25% | 0.600 | 55.1 months | 0.195 | 20 |
+| 50% | 0.600 | 27.4 months | 0.354 | 3 |
+| 75% | 0.600 | 18.1 months | 0.447 | 3 |
+| 100% | 0.600 | 13.5 months | 0.503 | 3 |
+
+**Adoption changes the speed, not the destination.** The steady-state gap is identical at every
+adoption share because it is `β_ceiling − τ_floor`; what adoption buys is a half-life that falls
+from 55 months to 13.5. And at any substantial adoption the gap opens fastest in **month 3**, not
+gradually — which is the practically important fact, because a guardrail installed after the first
+year is installed after most of the damage.
+
+The gap also **starts negative** with the declared values (`β₀ = 0.75` against `τ₀ = 0.80`): the
+person begins with modest underconfidence and the assistance effects invert the sign. That is a
+property of the parameters and is pinned by a test so it cannot drift unnoticed.
+
+![The gap over time, and its growth rate](figures/perception-1-gap.png)
+
+### 2.2 The identifiability result, and a correction to §3.3
+
+The pre-registration said the gap is "generically unidentifiable from behavioural telemetry". **That
+was too broad.** The run shows it is unidentifiable for one design, and the reason is sharper than
+the original claim:
+
+| Design | γ = 0 | γ = 0.1 | γ = 0.3 | γ = 0.5 |
+|---|---|---|---|---|
+| All five channels | rank 2, cond **1.8** | rank 2, 1.8 | rank 2, 1.8 | rank 2, 1.9 |
+| Behavioural only | **rank 1, infinite** | rank 2, **25.5** | rank 2, **8.9** | rank 2, **5.9** |
+
+With self-report the design is well conditioned at every level of the confound. Without it the state
+is *unobservable* when the confound is absent and *fragile* when it is present.
+
+**The irony is the finding.** Behavioural telemetry can see believed competence only because
+confidence contaminates behaviour — the estimand becomes identifiable precisely through the quantity
+one was trying to avoid assuming. That is a sharper statement than "the gap is unidentifiable", and
+it is the one the figure makes visible.
+
+![Condition number against the confound](figures/perception-2-identifiability.png)
+
+### 2.3 Does the filter earn its place?
+
+At adoption 0.5, γ = 0, full design, RMSE against the simulated truth:
+
+| Estimator | RMSE | vs subtraction |
+|---|---:|---:|
+| **Kalman filter** | **0.043** | **0.30** |
+| Static weighted least squares | 0.080 | 0.56 |
+| Filter's own model, no data | 0.097 | 0.68 |
+| Subtraction | 0.142 | 1.00 |
+
+**H₁ wins.** The filter beats subtraction by a factor of 3.3 and its own prior-only model by 2.3,
+with coverage **0.68** against a nominal 0.68 band. It is reading the data and it is calibrated.
+
+That second comparison is the one worth insisting on, and it was **added after seeing the run** — see
+§2.4.
+
+![Estimator comparison](figures/perception-3-estimators.png)
+
+### 2.4 The trap the pre-registration missed
+
+A simulation generates its truth with the same transition the filter assumes. So at zero mismatch the
+filter's process model already knows the answer, and a filter can look excellent while reading nothing.
+
+The pre-registration's §3.1 warned about a confident-and-wrong band. It did not predict the converse
+failure, which the run exposed: **the unidentifiable design looked fine.** At γ = 0, behavioural only,
+rank 1, the filter reported RMSE 0.060 and coverage 0.73. Nothing about those two numbers says the
+state was unobservable.
+
+Two additions, made after the first run and recorded as such:
+
+1. **A prior-only baseline** — the filter with no observations at all. If `kalman ≈ prior`, the
+   apparent accuracy is the model rather than the measurement.
+2. **A dynamics-mismatch axis** — the world's assistance coefficients exceed the filter's by 0–100%,
+   so the process model cannot carry the estimate and only the observations can.
+
+| Mismatch | Full design RMSE | Prior-only RMSE | Behavioural RMSE | Behavioural coverage |
+|---:|---:|---:|---:|---:|
+| 0% | 0.043 | 0.097 | 0.060 | 0.73 |
+| 50% | 0.043 | 0.118 | 0.060 | 0.72 |
+| 100% | 0.045 | 0.159 | 0.068 | **0.62** |
+
+The full design's error is flat while its prior-only baseline degrades by 64%, which is the evidence
+that the observations carry the estimate. The behavioural design's *error* also stays flat — and its
+**calibration falls from 0.73 to 0.62**, crossing from over- to under-coverage.
+
+**Unidentifiability announces itself as miscalibration, not as error.** That is the most useful
+methodological result here, and it means a study that reported RMSE alone would have declared the
+unidentifiable design healthy.
+
+![Calibration under model mismatch](figures/perception-4-calibration.png)
+
+### 2.5 Against the pre-registered rule
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| **H₁** — identifiable and the filter helps | **Supported** on the full design | ratio 0.30 vs subtraction, 0.45 vs prior-only, coverage 0.68 |
+| **H₂** — identifiable but the filter adds nothing | Rejected | the filter beats both baselines by wide margins |
+| **H₃** — not identifiable | **Confirmed for the behavioural design at γ = 0**, and its calibration degrades from 0.73 to 0.62 under mismatch |
+
+So the answer to the research question is conditional and specific: **the AI–human perception gap is
+estimable from telemetry provided at least one channel observes belief directly, and not estimable
+from behaviour alone unless confidence is assumed to contaminate behaviour.** The measurement that
+would settle the confound is §8's randomised review regime, and `γ` remains the number nobody has.
+
+### 2.6 What this does and does not establish
+
+It establishes properties of the estimator under its own assumptions: the filter is calibrated and
+beats its baselines when the state is identifiable, and miscalibrates when it is not. It establishes
+nothing about any engineer, because the truth is synthetic and generated by the same model.
+
+The load-bearing unmeasured quantity is `γ`. Every conclusion above is conditional on it, and it has
+never been measured.

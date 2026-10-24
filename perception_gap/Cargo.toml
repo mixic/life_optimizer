@@ -1,0 +1,13 @@
+[package]
+name = "perception_gap"
+version = "0.1.0"
+edition = "2021"
+description = "Whether the gap between believed and true competence is estimable from telemetry, and when the estimate fails"
+
+# Every parameter here is Declared. The crate is separate for the same reason the
+# others are: a `use` statement that does not exist cannot leak an invented number
+# into a reported result.
+
+[dependencies]
+rand = "0.8"
+rand_distr = "0.4"

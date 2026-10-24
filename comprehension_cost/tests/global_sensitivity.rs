@@ -27,8 +27,7 @@ use comprehension_cost::analysis::{
     benefit_at_horizon, generativity, generativity_threshold, review_accounting,
 };
 use comprehension_cost::global_sensitivity::{
-    knobs, model_indices, model_indices_with_ci, range, sign_audit_with_spread, sobol,
-    sobol_with_ci,
+    knobs, model_indices, range, sign_audit_with_spread, sobol, sobol_with_ci,
 };
 use comprehension_cost::params::Params;
 
